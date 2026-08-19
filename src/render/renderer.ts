@@ -6,6 +6,7 @@ import type { PatternRegistry } from "../patterns/registry.js";
 import { defaultRegistry } from "../patterns/registry.js";
 import {
   buildVisualPlan,
+  parseVisualPlan,
   type BuildVisualPlanOptions,
   type SlideProvenance,
   type VisualPlan,
@@ -50,24 +51,31 @@ export interface RenderResult {
  * 同じ Visual Plan からは常に同じスライド構造が出力される。
  *
  * 再生の契約:
+ *  - 入口で必ず `parseVisualPlan()` を通す。schemaVersion / 構造 / patternId /
+ *    patternVersion / variantId / bindings のすべてが、渡された Registry を基準に
+ *    検証される。検証を通らない Plan は描画されず必ず例外になる。
  *  - Theme は既定で `plan.themeId` から解決される（options.theme で上書き可）。
  *    ビルトイン以外のテーマで生成した Plan は、同じテーマを options.theme で
  *    再度渡さない限り再生できない（未知の themeId は例外になる）。
- *  - 各スライドの patternVersion が現在の Pattern 実装と一致しない場合は例外。
- *  - bindings は描画前に Pattern の bindingsSchema で検証される。
  *  「黙って違う出力になる」ことはない。
  */
 export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}): RenderResult {
   const registry = options.registry ?? defaultRegistry;
-  const theme = resolveTheme(options.theme ?? getTheme(plan.themeId));
+
+  // 描画の境界で検証する。parseVisualPlan 済みの Plan を渡しても冪等。
+  // これにより「parseVisualPlan は拒否するが renderVisualPlan は受け入れる」
+  // という抜け道が塞がれる。
+  const validatedPlan = parseVisualPlan(plan, { registry });
+
+  const theme = resolveTheme(options.theme ?? getTheme(validatedPlan.themeId));
   const includeTitleSlide = options.includeTitleSlide ?? true;
   const showSlideNumbers = options.showSlideNumbers ?? true;
 
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
-  pptx.title = plan.title;
-  pptx.subject = plan.subtitle ?? "";
-  pptx.author = plan.author ?? "";
+  pptx.title = validatedPlan.title;
+  pptx.subject = validatedPlan.subtitle ?? "";
+  pptx.author = validatedPlan.author ?? "";
   pptx.company = "";
 
   const canvas: Rect = rect(0, 0, SLIDE_WIDTH_IN, SLIDE_HEIGHT_IN);
@@ -79,13 +87,13 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
   );
 
   const reports: SlideRenderReport[] = [];
-  const total = plan.slides.length;
+  const total = validatedPlan.slides.length;
 
   if (includeTitleSlide) {
     const slide = pptx.addSlide();
     slide.background = { color: normalizeHex(theme.colors.background) };
     const surface = new SlideSurface(slide, theme, canvas, frame, "title", 0, total);
-    renderTitleSlide(surface, plan);
+    renderTitleSlide(surface, validatedPlan);
     reports.push({
       slideId: "__title__",
       slideNumber: 0,
@@ -102,19 +110,10 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
     });
   }
 
-  for (const planSlide of plan.slides) {
+  // ここから先の planSlide は parseVisualPlan により
+  // patternId / patternVersion / variantId / bindings がすべて検証済み。
+  for (const planSlide of validatedPlan.slides) {
     const pattern = registry.get(planSlide.patternId);
-
-    // Pattern バージョン契約: 実装が変わった Plan を黙って再生しない
-    if (pattern.version !== planSlide.patternVersion) {
-      throw new Error(
-        `slide ${planSlide.slideId}: Pattern '${planSlide.patternId}' のバージョンが不一致です (plan=${planSlide.patternVersion}, 実装=${pattern.version})。presentation.json から再生成してください`,
-      );
-    }
-
-    // Bindings 契約: 描画直前に必ず bindingsSchema を通す
-    const bindings = pattern.bindingsSchema.parse(planSlide.bindings);
-
     const slide = pptx.addSlide();
     slide.background = { color: normalizeHex(theme.colors.background) };
 
@@ -128,7 +127,7 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
       total,
     );
 
-    pattern.render(bindings, surface);
+    pattern.render(planSlide.bindings, surface);
 
     if (showSlideNumbers) {
       drawSlideNumberChrome(slide, theme, planSlide.slideNumber, total);

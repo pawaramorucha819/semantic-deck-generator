@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { buildVisualPlan, parseVisualPlan, serializeVisualPlan } from "../src/plan/visual-plan.js";
+import { messageOnlyPattern } from "../src/patterns/message-only/index.js";
+import { PatternRegistry } from "../src/patterns/registry.js";
+import {
+  buildVisualPlan,
+  parseVisualPlan,
+  serializeVisualPlan,
+  VisualPlanValidationError,
+} from "../src/plan/visual-plan.js";
 import { renderVisualPlan, toPptxBuffer } from "../src/render/renderer.js";
 import { validatePlacements } from "../src/render/validate.js";
 import type { Placement } from "../src/render/surface.js";
 import { midnightTheme } from "../src/theme/theme.js";
-import { countMatches, extractTexts, loadExample, readPptx } from "./helpers.js";
+import { countMatches, extractTexts, loadExample, readPptx, slide } from "./helpers.js";
 
 describe("PPTX 生成", () => {
   it("16:9 のスライドが表紙 + 本文ぶん生成される", async () => {
@@ -141,18 +148,105 @@ describe("PPTX 生成", () => {
     expect(fromJson.slideXmls).toEqual(fromObject.slideXmls);
   });
 
-  it("patternVersion が一致しない Plan の描画は拒否される", async () => {
-    const plan = buildVisualPlan(await loadExample());
-    const tampered = JSON.parse(serializeVisualPlan(plan));
-    tampered.slides[0].patternVersion = "0.0.1";
-    expect(() => renderVisualPlan(tampered)).toThrow(/バージョンが不一致/);
-  });
+  /**
+   * renderVisualPlan は描画の境界であり、parseVisualPlan と同じ検証を必ず通す。
+   * 「parseVisualPlan は拒否するが renderVisualPlan は受け入れる」抜け道を塞ぐ。
+   */
+  describe("renderVisualPlan の入口検証", () => {
+    async function tamperedPlan(
+      mutate: (plan: Record<string, any>) => void,
+    ): Promise<Record<string, any>> {
+      const plan = JSON.parse(serializeVisualPlan(buildVisualPlan(await loadExample())));
+      mutate(plan);
+      return plan;
+    }
 
-  it("bindings が契約違反の Plan の描画は拒否される", async () => {
-    const plan = buildVisualPlan(await loadExample());
-    const tampered = JSON.parse(serializeVisualPlan(plan));
-    tampered.slides[0].bindings = { garbage: true };
-    expect(() => renderVisualPlan(tampered)).toThrow();
+    it("patternVersion が一致しない Plan の描画は拒否される", async () => {
+      const plan = await tamperedPlan((p) => {
+        p.slides[0].patternVersion = "0.0.1";
+      });
+      expect(() => renderVisualPlan(plan as any)).toThrow(/バージョンが不一致/);
+    });
+
+    it("bindings が契約違反の Plan の描画は拒否される", async () => {
+      const plan = await tamperedPlan((p) => {
+        p.slides[0].bindings = { garbage: true };
+      });
+      expect(() => renderVisualPlan(plan as any)).toThrow(/契約に違反/);
+    });
+
+    it("schemaVersion が一致しない Plan の描画は拒否される", async () => {
+      const plan = await tamperedPlan((p) => {
+        p.schemaVersion = "0.9";
+      });
+      expect(() => renderVisualPlan(plan as any)).toThrow(VisualPlanValidationError);
+      expect(() => renderVisualPlan(plan as any)).toThrow(/schemaVersion/);
+    });
+
+    it("未実装の variantId を持つ Plan の描画は拒否される", async () => {
+      const plan = await tamperedPlan((p) => {
+        p.slides[0].variantId = "compact";
+      });
+      expect(() => renderVisualPlan(plan as any)).toThrow(VisualPlanValidationError);
+      expect(() => renderVisualPlan(plan as any)).toThrow(/variant/);
+    });
+
+    it("未登録の patternId を持つ Plan の描画は拒否される", async () => {
+      const plan = await tamperedPlan((p) => {
+        p.slides[0].patternId = "nonexistent-pattern";
+      });
+      expect(() => renderVisualPlan(plan as any)).toThrow(/未登録の patternId/);
+    });
+
+    it("構造が壊れた Plan の描画は拒否される", async () => {
+      const plan = await tamperedPlan((p) => {
+        delete p.slides[0].slideId;
+      });
+      expect(() => renderVisualPlan(plan as any)).toThrow(VisualPlanValidationError);
+    });
+
+    it("parseVisualPlan 済みの正常な Plan は問題なく描画できる（検証は冪等）", async () => {
+      const plan = buildVisualPlan(await loadExample());
+      const validated = parseVisualPlan(JSON.parse(serializeVisualPlan(plan)));
+
+      const direct = await readPptx(await toPptxBuffer(renderVisualPlan(plan).pptx));
+      const viaParse = await readPptx(await toPptxBuffer(renderVisualPlan(validated).pptx));
+
+      expect(viaParse.slideXmls).toEqual(direct.slideXmls);
+      expect(renderVisualPlan(validated).issues).toEqual([]);
+    });
+
+    it("カスタム Registry を渡すとその Registry を基準に検証・描画される", async () => {
+      const registry = new PatternRegistry([messageOnlyPattern]);
+      const spec = {
+        title: "カスタム Registry",
+        slides: [
+          slide({
+            id: "slide-custom",
+            keyMessage: "message-only だけのレジストリでも描画できる",
+            evidence: [],
+          }),
+        ],
+      };
+      const plan = buildVisualPlan(spec, { registry });
+      expect(plan.slides[0]!.patternId).toBe("message-only");
+
+      const { pptx, issues } = renderVisualPlan(plan, { registry, includeTitleSlide: false });
+      expect(issues).toEqual([]);
+      const { slideXmls } = await readPptx(await toPptxBuffer(pptx));
+      expect(extractTexts(slideXmls[0]!).join("")).toContain(
+        "message-only だけのレジストリでも描画できる",
+      );
+    });
+
+    it("既定 Registry に無い Pattern の Plan は、そのカスタム Registry でのみ描画できる", async () => {
+      // 既定 Registry で作った Plan を message-only だけの Registry へ渡すと拒否される
+      const plan = buildVisualPlan(await loadExample());
+      const narrowRegistry = new PatternRegistry([messageOnlyPattern]);
+      expect(() => renderVisualPlan(plan, { registry: narrowRegistry })).toThrow(
+        /未登録の patternId/,
+      );
+    });
   });
 });
 

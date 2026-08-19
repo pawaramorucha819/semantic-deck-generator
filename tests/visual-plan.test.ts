@@ -122,6 +122,108 @@ describe("Visual Plan 生成", () => {
     expect(plan.slides[0]!.fallbackUsed).toBe(true);
   });
 
+  /**
+   * variant は buildBindings より前に確定されなければならない。
+   * 未実装 variant のまま bindings を作ると、Plan に記録された variantId と
+   * 実際に bindings を作った variant が食い違い、再生時に別の見た目になる。
+   */
+  describe("variant の確定順序", () => {
+    /** buildBindings に渡された variantId を bindings へ記録するテスト用 Pattern */
+    function variantRecordingPattern(proposedVariant: string): AnyVisualPattern {
+      return {
+        id: "variant-recorder",
+        version: "1.0.0",
+        description: "テスト用: buildBindings に渡された variant を記録する",
+        variants: ["standard"], // compact は未実装
+        compatibility: { logicalRelations: ["claim_evidence"] },
+        bindingsSchema: z.object({ builtForVariant: z.string() }).strict(),
+        match: () => ({
+          compatible: true,
+          score: 1,
+          reason: "テスト用に常に最高スコア",
+          variantId: proposedVariant,
+        }),
+        buildBindings: (_slide, variantId) => ({ builtForVariant: variantId }),
+        render: () => undefined,
+      };
+    }
+
+    function planWith(pattern: AnyVisualPattern) {
+      const registry = new PatternRegistry([pattern, messageOnlyPattern]);
+      return buildVisualPlan(
+        { title: "t", slides: [slide({ evidence: [textEvidence("e1", "根拠")] })] },
+        { registry },
+      );
+    }
+
+    it("未実装 variant が提案されても buildBindings には実装済み variant が渡る", () => {
+      const plan = planWith(variantRecordingPattern("compact"));
+      const planSlide = plan.slides[0]!;
+
+      expect(planSlide.patternId).toBe("variant-recorder");
+      expect(planSlide.variantId).toBe("standard");
+      // Plan の variantId と bindings 生成時の variant が一致している
+      expect(planSlide.bindings).toEqual({ builtForVariant: "standard" });
+    });
+
+    it("variant を補正した理由が notes に残る", () => {
+      const plan = planWith(variantRecordingPattern("compact"));
+      const notes = plan.slides[0]!.notes ?? [];
+      expect(notes.some((n) => n.includes("compact") && n.includes("standard"))).toBe(true);
+    });
+
+    it("実装済み variant が提案された場合は補正されず notes も出ない", () => {
+      const plan = planWith(variantRecordingPattern("standard"));
+      const planSlide = plan.slides[0]!;
+      expect(planSlide.variantId).toBe("standard");
+      expect(planSlide.bindings).toEqual({ builtForVariant: "standard" });
+      expect(planSlide.notes).toBeUndefined();
+    });
+
+    it("variant 補正後の Plan は parseVisualPlan / 描画を通過する（不整合が残らない）", () => {
+      const pattern = variantRecordingPattern("compact");
+      const registry = new PatternRegistry([pattern, messageOnlyPattern]);
+      const plan = planWith(pattern);
+      expect(() =>
+        parseVisualPlan(JSON.parse(serializeVisualPlan(plan)), { registry }),
+      ).not.toThrow();
+    });
+
+    it("fallback へ退避した場合も fallback Pattern の有効な variant で bindings を作る", () => {
+      const brokenWithBadVariant: AnyVisualPattern = {
+        id: "broken-variant",
+        version: "1.0.0",
+        description: "テスト用: variant も不正で bindings 生成も失敗する",
+        variants: ["standard"],
+        compatibility: { logicalRelations: ["claim_evidence"] },
+        bindingsSchema: z.any(),
+        match: () => ({
+          compatible: true,
+          score: 1,
+          reason: "テスト用",
+          variantId: "nonexistent",
+        }),
+        buildBindings: () => {
+          throw new Error("意図的な失敗");
+        },
+        render: () => undefined,
+      };
+
+      const registry = new PatternRegistry([brokenWithBadVariant, messageOnlyPattern]);
+      const plan = buildVisualPlan(
+        { title: "t", slides: [slide({ evidence: [textEvidence("e1", "根拠")] })] },
+        { registry },
+      );
+      const planSlide = plan.slides[0]!;
+
+      expect(planSlide.patternId).toBe("message-only");
+      expect(planSlide.fallbackUsed).toBe(true);
+      expect(messageOnlyPattern.variants).toContain(planSlide.variantId);
+      // fallback の bindings も契約に適合している
+      expect(() => messageOnlyPattern.bindingsSchema.parse(planSlide.bindings)).not.toThrow();
+    });
+  });
+
   it("出典・根拠が provenance として構造化されて残る（URL を失わない）", async () => {
     const plan = buildVisualPlan(await loadExample());
     const caseStudySlide = plan.slides.find((s) => s.slideId === "slide-004")!;

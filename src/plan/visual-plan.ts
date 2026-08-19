@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SourceSchema } from "../domain/schema.js";
 import type { PresentationSpec, SlideSpec, Source } from "../domain/types.js";
+import type { AnyVisualPattern } from "../patterns/pattern.js";
 import { defaultRegistry, PatternRegistry } from "../patterns/registry.js";
 import { selectPattern, type PatternEvaluation } from "../selector/selector.js";
 
@@ -106,6 +107,25 @@ function buildProvenance(slide: SlideSpec): SlideProvenance | undefined {
   };
 }
 
+/**
+ * Pattern が実際に実装している variant を確定する。
+ *
+ * buildBindings より **前** に呼ぶこと。未実装の variant のまま bindings を作ると、
+ * Plan に記録される variantId と bindings が食い違う（= 再生時に別の見た目になる）。
+ */
+function resolveVariant(
+  pattern: AnyVisualPattern,
+  requested: string,
+  notes: string[],
+): string {
+  if (pattern.variants.includes(requested)) return requested;
+  const fallbackVariant = pattern.variants[0] ?? "standard";
+  notes.push(
+    `Pattern '${pattern.id}' に未実装の variantId '${requested}' が指定されたため '${fallbackVariant}' を使用`,
+  );
+  return fallbackVariant;
+}
+
 function planSlide(
   slide: SlideSpec,
   slideNumber: number,
@@ -117,9 +137,13 @@ function planSlide(
   const notes: string[] = [];
 
   let patternId = selection.patternId;
-  let variantId = selection.variantId;
   let fallbackUsed = selection.fallbackUsed;
   let pattern = registry.get(patternId);
+
+  // variant を先に確定してから bindings を作る。
+  // これにより buildBindings には必ず実装済みの variant だけが渡り、
+  // Plan の variantId と bindings が常に一致する。
+  let variantId = resolveVariant(pattern, selection.variantId, notes);
   let bindings: unknown;
 
   try {
@@ -137,14 +161,10 @@ function planSlide(
     if (!fallback) throw error;
     pattern = fallback;
     patternId = fallback.id;
-    variantId = fallback.variants[0] ?? "standard";
     fallbackUsed = true;
+    // fallback 側でも先に variant を確定してから bindings を作る
+    variantId = resolveVariant(fallback, fallback.variants[0] ?? "standard", notes);
     bindings = pattern.bindingsSchema.parse(pattern.buildBindings(slide, variantId));
-  }
-
-  if (!pattern.variants.includes(variantId)) {
-    notes.push(`未実装の variantId '${variantId}' が指定されたため '${pattern.variants[0]}' を使用`);
-    variantId = pattern.variants[0] ?? "standard";
   }
 
   const provenance = buildProvenance(slide);
