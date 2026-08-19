@@ -204,13 +204,18 @@ export const threeReasonsPattern: VisualPattern<ThreeReasonsBindings> = {
     const badge = 0.42;
     const innerW = (cols[0]?.w ?? body.w) - pad * 2;
 
+    // 数値は heading より一段大きく見せるので、行の高さも実サイズから求める
+    const metricSize = Math.round(theme.fontSizes.heading * 1.3);
+    const metricHeightOf = (metric: string, widthIn: number): number =>
+      ctx.measureText(metric, { widthIn, fontSize: metricSize });
+
     // カード高さは中身から決める（本文領域いっぱいに間延びさせない）
     const neededHeights = b.reasons.map((reason) => {
       const labelH = Math.max(
         0.3,
         ctx.measureText(reason.label, { widthIn: innerW, role: "heading", lineHeight: 1.28 }),
       );
-      const metricH = reason.metric ? 0.36 + theme.spacing.xs : 0;
+      const metricH = reason.metric ? metricHeightOf(reason.metric, innerW) + theme.spacing.xs : 0;
       const descH = reason.description
         ? ctx.measureText(reason.description, {
             widthIn: innerW,
@@ -274,10 +279,14 @@ export const threeReasonsPattern: VisualPattern<ThreeReasonsBindings> = {
       rest = afterLabel;
 
       if (reason.metric) {
-        const [metricRow, afterMetric] = splitTop(rest, 0.36, theme.spacing.xs);
+        const [metricRow, afterMetric] = splitTop(
+          rest,
+          metricHeightOf(reason.metric, rest.w),
+          theme.spacing.xs,
+        );
         ctx.text(metricRow, reason.metric, {
           role: "heading",
-          fontSize: Math.round(theme.fontSizes.heading * 1.3),
+          fontSize: metricSize,
           font: "numeric",
           color: "primary",
           bold: true,

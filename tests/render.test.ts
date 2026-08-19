@@ -11,7 +11,15 @@ import { renderVisualPlan, toPptxBuffer } from "../src/render/renderer.js";
 import { validatePlacements } from "../src/render/validate.js";
 import type { Placement } from "../src/render/surface.js";
 import { midnightTheme } from "../src/theme/theme.js";
-import { countMatches, extractTexts, loadExample, readPptx, slide } from "./helpers.js";
+import {
+  countMatches,
+  extractTexts,
+  loadExample,
+  metricEvidence,
+  pointsContent,
+  readPptx,
+  slide,
+} from "./helpers.js";
 
 describe("PPTX 生成", () => {
   it("16:9 のスライドが表紙 + 本文ぶん生成される", async () => {
@@ -264,6 +272,29 @@ describe("レイアウト検査", () => {
       expect(report.placements.length).toBeGreaterThan(0);
       expect(report.issues.filter((i) => i.severity === "error")).toEqual([]);
     }
+  });
+
+  it("three-reasons の数値付きカードでも数値行がはみ出さない", () => {
+    // 数値は heading より一段大きく描かれるため、行の高さを固定値にすると必ずはみ出す
+    const s = slide({
+      keyMessage: "3 つの構造的な原因がある",
+      content: pointsContent(
+        { label: "定型的な指摘に人手を使っている", description: "規約・命名の指摘の割合", evidenceRefs: ["e1"] },
+        { label: "レビューが特定の担当者に集中している", description: "上位層が担当する割合", evidenceRefs: ["e2"] },
+        { label: "レビュー開始までの待ち時間が長い", description: "初回コメントまでの中央値", evidenceRefs: ["e3"] },
+      ),
+      evidence: [
+        metricEvidence("e1", "定型指摘の割合", 35, "%"),
+        metricEvidence("e2", "上位層が占める比率", 58, "%"),
+        metricEvidence("e3", "初回コメントまでの中央値", 18, "時間"),
+      ],
+    });
+
+    const plan = buildVisualPlan({ title: "metric cards", slides: [s] });
+    expect(plan.slides[0]!.patternId).toBe("three-reasons");
+
+    const { issues } = renderVisualPlan(plan, { includeTitleSlide: false });
+    expect(issues).toEqual([]);
   });
 
   it("content レイヤの重なりを検出する", () => {
