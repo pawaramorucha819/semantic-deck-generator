@@ -1,0 +1,217 @@
+{
+  "title": "開発部門におけるAIコードレビュー支援ツール導入提案",
+  "subtitle": "2プロジェクト・3か月間の試験導入について",
+  "slides": [
+    {
+      "id": "slide-001",
+      "keyMessage": "レビュー工数は2年間で約38%増加し、開発スピードのボトルネックになりつつある",
+      "supportingMessage": "レビュー工数は2024年度の4,800時間から2026年度の6,600時間へ増加している",
+      "slideRole": "problem",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-101",
+          "type": "comparison",
+          "statement": "レビュー工数は2024年度の4,800時間から2026年度の6,600時間へ増加している",
+          "data": {
+            "unit": "時間",
+            "items": [
+              { "label": "2024年度", "value": 4800 },
+              { "label": "2025年度", "value": 5600 },
+              { "label": "2026年度", "value": 6600 }
+            ]
+          },
+          "sourceIds": ["source-101"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-101",
+          "title": "開発部レビュー工数集計",
+          "date": "2024-2026"
+        }
+      ]
+    },
+    {
+      "id": "slide-002",
+      "keyMessage": "レビュー負荷の増加には3つの構造的な原因がある",
+      "supportingMessage": "定型的な指摘への人手、シニアへの偏り、着手までの待ち時間に負荷が集中している",
+      "slideRole": "analysis",
+      "logicalRelation": "cause_effect",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "定型的な指摘にも人手を使っている",
+            "description": "コーディング規約・命名・単純なチェック漏れの指摘が占める割合",
+            "evidenceRefs": ["evidence-201"]
+          },
+          {
+            "label": "シニアエンジニアに負荷が集中している",
+            "description": "上位20%のエンジニアが担当するレビューの割合",
+            "evidenceRefs": ["evidence-202"]
+          },
+          {
+            "label": "レビュー開始までの待ち時間が長い",
+            "description": "Pull Request作成から最初のレビューコメントまでの中央値",
+            "evidenceRefs": ["evidence-203"]
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "evidence-201",
+          "type": "metric",
+          "statement": "レビューコメントの約35%が、コーディング規約・命名・単純なチェック漏れに関する指摘である",
+          "data": {
+            "label": "定型的な指摘の割合",
+            "value": 35,
+            "unit": "%"
+          },
+          "sourceIds": ["source-201"]
+        },
+        {
+          "id": "evidence-202",
+          "type": "metric",
+          "statement": "上位20%のエンジニアが全レビューの58%を担当している",
+          "data": {
+            "label": "上位20%のエンジニアが占めるレビュー比率",
+            "value": 58,
+            "unit": "%"
+          },
+          "sourceIds": ["source-201"]
+        },
+        {
+          "id": "evidence-203",
+          "type": "metric",
+          "statement": "Pull Request作成から最初のレビューコメントまでの中央値は18時間である",
+          "data": {
+            "label": "初回レビューコメントまでの中央値",
+            "value": 18,
+            "unit": "時間"
+          },
+          "sourceIds": ["source-201"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-201",
+          "title": "開発プロセス分析",
+          "date": "2026年度"
+        }
+      ]
+    },
+    {
+      "id": "slide-003",
+      "keyMessage": "AIに一次レビューを任せ、人間は判断価値の高いレビューに集中する",
+      "supportingMessage": "設計・セキュリティ・業務ロジックなど、人間が判断すべき領域へレビュー時間を振り向ける",
+      "slideRole": "solution",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "label": "PR作成",
+            "description": "開発者がPull Requestを作成する"
+          },
+          {
+            "label": "AI一次レビュー",
+            "description": "コーディング規約・単純なバグ候補・チェック漏れをAIが指摘する"
+          },
+          {
+            "label": "確認・修正",
+            "description": "開発者がAIの指摘を確認し修正する"
+          },
+          {
+            "label": "人間の最終レビュー",
+            "description": "設計・セキュリティ・業務ロジックを人間がレビューする"
+          }
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "slide-004",
+      "keyMessage": "4週間のPoCでレビューリードタイムを18時間から11時間へ短縮できた",
+      "supportingMessage": "同一チームでPull Request 60件を対象に実施し、レビューリードタイムの中央値が約39%短縮した",
+      "slideRole": "evidence",
+      "logicalRelation": "before_after",
+      "evidence": [
+        {
+          "id": "evidence-401",
+          "type": "caseStudy",
+          "statement": "4週間のPoCにより、レビューリードタイムの中央値が18時間から11時間へ短縮された",
+          "data": {
+            "before": 18,
+            "after": 11,
+            "unit": "時間",
+            "beforeLabel": "導入前",
+            "afterLabel": "PoC（4週間）",
+            "changeLabel": "-39%"
+          },
+          "sourceIds": ["source-401"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-401",
+          "title": "AIコードレビューPoC結果",
+          "date": "2026-07"
+        }
+      ]
+    },
+    {
+      "id": "slide-005",
+      "keyMessage": "本格導入により年間約1,920時間を価値の高い業務へ振り向けられる",
+      "supportingMessage": "年間Pull Request 2,400件に対し、1件あたり0.8時間の削減を見込んだ試算",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-501",
+          "type": "metric",
+          "statement": "年間Pull Request 2,400件に対し1件あたり0.8時間を削減すると、年間1,920時間の削減が見込まれる",
+          "data": {
+            "label": "年間削減見込み",
+            "value": 1920,
+            "unit": "時間",
+            "direction": "decrease",
+            "period": "2,400件 × 0.8時間/件"
+          },
+          "sourceIds": ["source-501"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-501",
+          "title": "2025年度 Gitリポジトリ集計およびPoC結果からの試算"
+        }
+      ]
+    },
+    {
+      "id": "slide-006",
+      "keyMessage": "全社導入の前に、まず2プロジェクト・3か月間の試験導入から始めるべきである",
+      "supportingMessage": "試験導入の結果を3つの観点で評価したうえで、本格導入の可否を判断する",
+      "slideRole": "decision",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "レビューリードタイム",
+            "description": "レビューリードタイムを25%以上短縮できるか"
+          },
+          {
+            "label": "品質",
+            "description": "本番流出不具合を悪化させないか"
+          },
+          {
+            "label": "開発者満足度",
+            "description": "開発者満足度3.5/5以上を達成できるか"
+          }
+        ]
+      },
+      "evidence": []
+    }
+  ]
+}
