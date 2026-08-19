@@ -157,8 +157,8 @@ export const defaultTheme: PresentationTheme = {
   fontSizes: {
     keyMessage: 22,
     heading: 15,
-    body: 12,
-    caption: 9,
+    body: 13,
+    caption: 10,
     display: 48,
   },
   spacing: {
@@ -195,8 +195,8 @@ export const midnightTheme: PresentationTheme = {
   fontSizes: {
     keyMessage: 22,
     heading: 15,
-    body: 12,
-    caption: 9,
+    body: 13,
+    caption: 10,
     display: 46,
   },
   spacing: { xs: 0.06, sm: 0.12, md: 0.22, lg: 0.36, xl: 0.56 },

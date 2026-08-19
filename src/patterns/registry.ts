@@ -1,3 +1,4 @@
+import { LOGICAL_RELATIONS } from "../domain/types.js";
 import { beforeAfterPattern } from "./before-after/index.js";
 import { bigNumberPattern } from "./big-number/index.js";
 import { chartWithMessagePattern } from "./chart-with-message/index.js";
@@ -29,6 +30,22 @@ export class PatternRegistry {
     for (const pattern of patterns) {
       if (this.byId.has(pattern.id)) {
         throw new Error(`Pattern id が重複しています: ${pattern.id}`);
+      }
+      if (pattern.fallback) {
+        // fallback は「常に描画できる緊急表現」なので、自分を失格させうる条件を持てない
+        if (pattern.constraints) {
+          throw new Error(
+            `fallback Pattern '${pattern.id}' は constraints を持てません（どんなスライドでも描画できる必要があります）`,
+          );
+        }
+        const missing = LOGICAL_RELATIONS.filter(
+          (r) => !pattern.compatibility.logicalRelations.includes(r),
+        );
+        if (missing.length > 0) {
+          throw new Error(
+            `fallback Pattern '${pattern.id}' は全 logicalRelation に対応する必要があります (不足: ${missing.join(", ")})`,
+          );
+        }
       }
       this.byId.set(pattern.id, pattern);
     }

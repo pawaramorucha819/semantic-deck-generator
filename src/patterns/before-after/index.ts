@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { SlideSpec } from "../../domain/types.js";
 import type { ColorToken, RenderContext } from "../../render/context.js";
 import { columnsWeighted, splitTop, type Rect } from "../../render/geometry.js";
@@ -34,6 +35,32 @@ export interface BeforeAfterBindings {
   sourceText?: string;
 }
 
+const ValuePairSchema = z
+  .object({
+    label: z.string().min(1),
+    value: z.union([z.string().min(1), z.number().finite()]),
+  })
+  .strict();
+
+export const BeforeAfterBindingsSchema: z.ZodType<BeforeAfterBindings> = z
+  .object({
+    eyebrow: z.string().min(1).optional(),
+    headline: z.string().min(1),
+    subline: z.string().min(1).optional(),
+    before: ValuePairSchema,
+    after: ValuePairSchema,
+    change: z
+      .object({
+        label: z.string().min(1).optional(),
+        value: z.union([z.string().min(1), z.number().finite()]),
+      })
+      .strict()
+      .optional(),
+    unit: z.string().min(1).optional(),
+    sourceText: z.string().min(1).optional(),
+  })
+  .strict();
+
 /**
  * BeforeAfter — 2 つの状態の変化を左右対比で見せる。
  *
@@ -56,6 +83,8 @@ export const beforeAfterPattern: VisualPattern<BeforeAfterBindings> = {
     maxEvidence: 4,
     maxKeyMessageLength: 70,
   },
+
+  bindingsSchema: BeforeAfterBindingsSchema,
 
   match(slide: SlideSpec): MatchResult {
     const facts = extractBeforeAfter(slide);
@@ -168,11 +197,16 @@ export const beforeAfterPattern: VisualPattern<BeforeAfterBindings> = {
 
     if (b.change) {
       const changeText = String(b.change.value);
-      const h = 0.34;
+      const changeSize = Math.round(theme.fontSizes.heading * 1.25);
+      const h = ctx.measureText(changeText, {
+        widthIn: arrowCol.w,
+        fontSize: changeSize,
+        lineHeight: 1.3,
+      });
       const y = arrowY - h - theme.spacing.sm;
       ctx.text({ x: arrowCol.x, y, w: arrowCol.w, h }, changeText, {
         role: "heading",
-        fontSize: Math.round(theme.fontSizes.heading * 1.25),
+        fontSize: changeSize,
         font: "numeric",
         color: "accent",
         bold: true,

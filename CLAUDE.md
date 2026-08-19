@@ -36,21 +36,37 @@ presentation.json ──▶ Visual Pattern Selector ──▶ Visual Plan ──
 ## 設計上、絶対に壊してはいけない不変条件
 
 判断に迷ったら「**意味 → 表現 → 描画**」の責務が混ざっていないかを基準にしてください。
+アーキテクチャの実態は Remotion に近い: **Pattern = 意味変換 + レイアウト Component**、
+**Visual Plan = Pattern 呼び出し + 検証済み props (+ version / theme 契約)**、
+**Renderer = 描画バックエンド**。最終座標は Pattern の `render()` が決め、
+配置結果が必要なら Visual Plan ではなく Render Report を使います。
 
 1. **`presentation.json` に描画情報を入れない**
    座標・色・フォントサイズ・グラフ種別・`patternId` などは書けません。
    Zod スキーマが全て `.strict()` なので、混入すると検証エラーになります。
-2. **`render()` に `SlideSpec` を渡さない**
+2. **evidence を「根拠」以外に使わない**
+   工程・アクション・並列項目など「見せる対象」は `content`（sequence / points）に書きます。
+   `Evidence = 主張を裏付ける事実` という原則を Pattern の都合で崩さないでください。
+3. **`render()` に `SlideSpec` を渡さない**
    必ず `SlideSpec → buildBindings() → Bindings → render()` の順を通します。
    `render()` のシグネチャに `SlideSpec` を足さないでください。
-3. **Pattern の中で色やフォントをハードコードしない**
+4. **Bindings は `bindingsSchema` で実行時検証される**
+   全 Pattern が Zod スキーマを持ち、生成時（buildVisualPlan）と再生時
+   （renderVisualPlan / parseVisualPlan）の両方で検証されます。
+   bindings の互換性を壊したら Pattern の `version` を上げてください
+   （version 不一致の Visual Plan は黙って再生されず、例外になります）。
+5. **Pattern の中で色やフォントをハードコードしない**
    `RenderContext` は Theme のトークン名（`"primary"` など）しか受け付けません。
    相対的な強弱が必要なら `ctx.tint(token, amount)` を使います。
-4. **Pattern から PptxGenJS を直接呼ばない**
+6. **Pattern から PptxGenJS を直接呼ばない**
    描画は必ず `RenderContext`（`text` / `shape` / `chart`）経由で行います。
-   配置矩形の記録＝レイアウト検査がこれに依存しています。
-5. **Selector に LLM を持ち込まない（V1 スコープ）**
-   選択は決定論的スコアリングのみ。同じ入力からは常に同じ Pattern が選ばれます。
+   配置矩形の記録＝レイアウト検査（はみ出し・重なり・実効フォントサイズ）がこれに依存しています。
+7. **Selector に LLM を持ち込まない（V1 スコープ）**
+   選択は決定論的スコアリングのみ。`match()` のスコアは共通ルーブリック
+   （src/patterns/pattern.ts 参照）準拠の 0〜1 で、範囲外は実行時エラーになります。
+8. **fallback（message-only）の契約を守る**
+   fallback は constraints を持てず、全 logicalRelation 対応が必須です
+   （PatternRegistry が登録時に強制）。どんな入力でも必ず描画できる緊急表現です。
 
 ## よく使うコマンド
 
@@ -79,8 +95,10 @@ src/cli/        CLI エントリポイント
 ## Pattern を追加するとき
 
 1. `src/patterns/<pattern-id>/index.ts` に `VisualPattern<TBindings>` を実装
+   （`bindingsSchema` 必須。「見せる対象」は `content` から、「根拠」は `evidence` から読む）
 2. `src/patterns/registry.ts` の `builtinPatterns` に 1 行追加
-3. テストを `tests/` に追加（compatibility / constraints / match / buildBindings）
+3. テストを `tests/` に追加（compatibility / constraints / match / buildBindings +
+   競合しうる既存 Pattern との pairwise 選択テスト）
 4. サンプルを再生成し、**実際に PPTX を開いて目視確認する**
 
 Selector / Renderer / CLI の変更は不要です。

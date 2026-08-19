@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { PatternRegistry } from "../src/patterns/registry.js";
 import type { AnyVisualPattern } from "../src/patterns/pattern.js";
 import { messageOnlyPattern } from "../src/patterns/message-only/index.js";
 import {
   buildVisualPlan,
+  parseVisualPlan,
   serializeVisualPlan,
   VISUAL_PLAN_SCHEMA_VERSION,
+  VisualPlanValidationError,
 } from "../src/plan/visual-plan.js";
 import { loadExample, slide, textEvidence } from "./helpers.js";
 
@@ -77,6 +80,7 @@ describe("Visual Plan 生成", () => {
       description: "テスト用: 常に buildBindings が失敗する",
       variants: ["standard"],
       compatibility: { logicalRelations: ["claim_evidence"] },
+      bindingsSchema: z.any(),
       match: () => ({ compatible: true, score: 1, reason: "テスト用に常に最高スコア" }),
       buildBindings: () => {
         throw new Error("意図的な失敗");
@@ -93,5 +97,85 @@ describe("Visual Plan 生成", () => {
     expect(plan.slides[0]!.patternId).toBe("message-only");
     expect(plan.slides[0]!.fallbackUsed).toBe(true);
     expect(plan.slides[0]!.notes?.[0]).toContain("意図的な失敗");
+  });
+
+  it("bindingsSchema に違反する bindings を作る Pattern も fallback へ退避する", () => {
+    const lyingPattern: AnyVisualPattern = {
+      id: "lying",
+      version: "0.0.1",
+      description: "テスト用: schema と実装がずれている",
+      variants: ["standard"],
+      compatibility: { logicalRelations: ["claim_evidence"] },
+      bindingsSchema: z.object({ headline: z.string() }).strict(),
+      match: () => ({ compatible: true, score: 1, reason: "テスト用に常に最高スコア" }),
+      buildBindings: () => ({ totallyWrongShape: true }),
+      render: () => undefined,
+    };
+
+    const registry = new PatternRegistry([lyingPattern, messageOnlyPattern]);
+    const plan = buildVisualPlan(
+      { title: "t", slides: [slide({ evidence: [textEvidence("e1", "根拠")] })] },
+      { registry },
+    );
+
+    expect(plan.slides[0]!.patternId).toBe("message-only");
+    expect(plan.slides[0]!.fallbackUsed).toBe(true);
+  });
+
+  it("出典・根拠が provenance として構造化されて残る（URL を失わない）", async () => {
+    const plan = buildVisualPlan(await loadExample());
+    const caseStudySlide = plan.slides.find((s) => s.slideId === "slide-004")!;
+
+    expect(caseStudySlide.provenance).toBeDefined();
+    expect(caseStudySlide.provenance!.sources[0]).toMatchObject({
+      id: "source-401",
+      url: "https://example.com/case/a-company",
+      accessedAt: "2025-02-10",
+    });
+    expect(caseStudySlide.provenance!.evidence[0]).toMatchObject({
+      id: "evidence-401",
+      type: "caseStudy",
+      sourceIds: ["source-401"],
+    });
+  });
+});
+
+describe("parseVisualPlan（保存済み Plan の再生契約）", () => {
+  it("serializeVisualPlan した Plan をそのまま再検証できる", async () => {
+    const plan = buildVisualPlan(await loadExample());
+    const parsed = parseVisualPlan(JSON.parse(serializeVisualPlan(plan)));
+    expect(parsed.slides.map((s) => s.patternId)).toEqual(plan.slides.map((s) => s.patternId));
+  });
+
+  it("schemaVersion が違う Plan を拒否する", async () => {
+    const plan = JSON.parse(serializeVisualPlan(buildVisualPlan(await loadExample())));
+    plan.schemaVersion = "0.9";
+    expect(() => parseVisualPlan(plan)).toThrow(VisualPlanValidationError);
+    expect(() => parseVisualPlan(plan)).toThrow(/schemaVersion/);
+  });
+
+  it("patternVersion が現在の実装と一致しない Plan を拒否する", async () => {
+    const plan = JSON.parse(serializeVisualPlan(buildVisualPlan(await loadExample())));
+    plan.slides[0].patternVersion = "0.0.1";
+    expect(() => parseVisualPlan(plan)).toThrow(/バージョンが不一致/);
+  });
+
+  it("未登録の patternId を持つ Plan を拒否する", async () => {
+    const plan = JSON.parse(serializeVisualPlan(buildVisualPlan(await loadExample())));
+    plan.slides[0].patternId = "nonexistent-pattern";
+    expect(() => parseVisualPlan(plan)).toThrow(/未登録の patternId/);
+  });
+
+  it("改竄された bindings を拒否する（黙って違う出力にならない）", async () => {
+    const plan = JSON.parse(serializeVisualPlan(buildVisualPlan(await loadExample())));
+    const target = plan.slides.find((s: { patternId: string }) => s.patternId === "before-after");
+    target.bindings.before = { label: "", value: null };
+    expect(() => parseVisualPlan(plan)).toThrow(/契約に違反/);
+  });
+
+  it("未実装の variantId を持つ Plan を拒否する", async () => {
+    const plan = JSON.parse(serializeVisualPlan(buildVisualPlan(await loadExample())));
+    plan.slides[0].variantId = "compact";
+    expect(() => parseVisualPlan(plan)).toThrow(/variant/);
   });
 });

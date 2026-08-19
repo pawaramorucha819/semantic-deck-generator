@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { SlideSpec } from "../../domain/types.js";
 import type { RenderContext } from "../../render/context.js";
 import { splitBottom, splitTop, type Rect } from "../../render/geometry.js";
@@ -8,20 +9,33 @@ export interface MessageOnlyBindings {
   eyebrow?: string;
   headline: string;
   subline?: string;
-  /** 補足として並べる短い一文（最大 2 件） */
+  /** 補足として並べる短い一文（最大 3 件） */
   points?: string[];
   sourceText?: string;
 }
+
+export const MessageOnlyBindingsSchema: z.ZodType<MessageOnlyBindings> = z
+  .object({
+    eyebrow: z.string().min(1).optional(),
+    headline: z.string().min(1),
+    subline: z.string().min(1).optional(),
+    points: z.array(z.string().min(1)).min(1).max(3).optional(),
+    sourceText: z.string().min(1).optional(),
+  })
+  .strict();
 
 const STRONG_ROLES = new Set(["recommendation", "decision", "summary", "insight", "context"]);
 
 /**
  * MessageOnly — KeyMessage を最大の主役として見せる。
- * 全 logicalRelation に対応する fallback Pattern でもある。
+ *
+ * 全 logicalRelation に対応する fallback Pattern。
+ * fallback 契約により constraints を持たず、どんなに長い keyMessage でも
+ * render() 側がフォントサイズを段階的に下げて必ず収める。
  */
 export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
   id: "message-only",
-  version: "1.0.0",
+  version: "1.1.0",
   description: "KeyMessage を大きく主役として見せる。適合する Pattern がない場合の受け皿。",
   variants: ["standard"],
   fallback: true,
@@ -42,20 +56,21 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
     ],
   },
 
-  constraints: {
-    maxKeyMessageLength: 90,
-  },
+  bindingsSchema: MessageOnlyBindingsSchema,
 
   match(slide: SlideSpec): MatchResult {
     let score = 0.3;
     const reasons: string[] = [];
 
-    if (slide.evidence.length === 0) {
+    if (slide.evidence.length === 0 && !slide.content) {
       score += 0.28;
-      reasons.push("図示すべき evidence が存在しない");
-    } else if (slide.evidence.length === 1) {
+      reasons.push("図示すべき evidence / content が存在しない");
+    } else if (slide.evidence.length <= 1 && !slide.content) {
       score += 0.16;
       reasons.push("evidence が 1 件のみで構造化の余地が小さい");
+    } else if (slide.content?.kind === "points" && slide.content.items.length === 1) {
+      score += 0.24;
+      reasons.push("補足 1 件のみでメッセージを主役にできる");
     }
 
     if (STRONG_ROLES.has(slide.slideRole)) {
@@ -78,10 +93,25 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
   },
 
   buildBindings(slide: SlideSpec): MessageOnlyBindings {
-    const points = slide.evidence
-      .slice(0, 2)
-      .map((e) => truncate(evidenceDetail(e), 60))
-      .filter((p) => p.length > 0);
+    // 補足行: content があれば content を、無ければ evidence の要約を使う
+    const contentItems =
+      slide.content?.kind === "points"
+        ? slide.content.items
+        : slide.content?.kind === "sequence"
+          ? slide.content.steps
+          : [];
+
+    const points =
+      contentItems.length > 0
+        ? contentItems
+            .slice(0, 3)
+            .map((item) =>
+              item.description ? `${item.label}：${item.description}` : item.label,
+            )
+        : slide.evidence
+            .slice(0, 2)
+            .map((e) => truncate(evidenceDetail(e), 60))
+            .filter((p) => p.length > 0);
 
     return {
       eyebrow: roleLabel(slide.slideRole),
@@ -141,13 +171,6 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
     // 主役メッセージは端まで伸ばさず、読みやすい幅で折り返す
     const textW = Math.min(body.w - barWidth - theme.spacing.lg, 7.7);
 
-    const headlineSize = Math.round(theme.fontSizes.keyMessage * 1.45);
-    const headlineH = ctx.measureText(b.headline, {
-      widthIn: textW,
-      fontSize: headlineSize,
-      lineHeight: 1.26,
-    });
-
     const sublineSize = theme.fontSizes.heading;
     const sublineH = b.subline
       ? ctx.measureText(b.subline, { widthIn: textW, fontSize: sublineSize, lineHeight: 1.4 })
@@ -163,8 +186,28 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
     const pointsTotal =
       pointHeights.reduce((a, h) => a + h, 0) +
       Math.max(0, pointHeights.length - 1) * theme.spacing.sm;
+    const fixedH = gapAfterHeadline + sublineH + gapBeforePoints + pointsTotal;
 
-    const totalH = headlineH + gapAfterHeadline + sublineH + gapBeforePoints + pointsTotal;
+    // fallback 契約: どんなに長い keyMessage でも必ず収める。
+    // 見出しサイズを段階的に下げ、本文領域に収まる最大サイズを選ぶ。
+    const maxSize = Math.round(theme.fontSizes.keyMessage * 1.45);
+    const minSize = theme.fontSizes.heading;
+    let headlineSize = maxSize;
+    let headlineH = ctx.measureText(b.headline, {
+      widthIn: textW,
+      fontSize: headlineSize,
+      lineHeight: 1.26,
+    });
+    while (headlineH + fixedH > body.h && headlineSize - 2 >= minSize) {
+      headlineSize -= 2;
+      headlineH = ctx.measureText(b.headline, {
+        widthIn: textW,
+        fontSize: headlineSize,
+        lineHeight: 1.26,
+      });
+    }
+
+    const totalH = headlineH + fixedH;
     const startY = Math.max(body.y, body.y + (body.h - totalH) / 2);
 
     ctx.shape("rect", { x: body.x, y: startY, w: barWidth, h: Math.min(totalH, body.h) }, {

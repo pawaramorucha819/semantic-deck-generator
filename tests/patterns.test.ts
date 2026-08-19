@@ -9,16 +9,18 @@ import { processPattern } from "../src/patterns/process/index.js";
 import { PatternRegistry, builtinPatterns } from "../src/patterns/registry.js";
 import type { ThreeReasonsBindings } from "../src/patterns/three-reasons/index.js";
 import { threeReasonsPattern } from "../src/patterns/three-reasons/index.js";
-import { metricEvidence, slide, textEvidence } from "./helpers.js";
+import { metricEvidence, pointsContent, sequenceContent, slide, textEvidence } from "./helpers.js";
 
 describe("Pattern レジストリ", () => {
-  it("全 Pattern が必須メタデータを持つ", () => {
+  it("全 Pattern が必須メタデータと bindingsSchema を持つ", () => {
     for (const pattern of builtinPatterns) {
       expect(pattern.id).toMatch(/^[a-z0-9-]+$/);
       expect(pattern.version).toMatch(/^\d+\.\d+\.\d+$/);
       expect(pattern.variants.length).toBeGreaterThan(0);
       expect(pattern.variants).toContain("standard");
       expect(pattern.compatibility.logicalRelations.length).toBeGreaterThan(0);
+      expect(pattern.bindingsSchema).toBeDefined();
+      expect(typeof pattern.bindingsSchema.safeParse).toBe("function");
     }
   });
 
@@ -30,6 +32,19 @@ describe("Pattern レジストリ", () => {
 
   it("fallback が 1 つも無いレジストリを拒否する", () => {
     expect(() => new PatternRegistry([beforeAfterPattern])).toThrow(/fallback/);
+  });
+
+  it("fallback Pattern が constraints を持っていたら登録を拒否する", () => {
+    const broken = { ...messageOnlyPattern, constraints: { maxKeyMessageLength: 50 } };
+    expect(() => new PatternRegistry([broken])).toThrow(/constraints を持てません/);
+  });
+
+  it("fallback Pattern が全 logicalRelation に対応していなければ登録を拒否する", () => {
+    const broken = {
+      ...messageOnlyPattern,
+      compatibility: { logicalRelations: ["claim_evidence" as const] },
+    };
+    expect(() => new PatternRegistry([broken])).toThrow(/全 logicalRelation/);
   });
 });
 
@@ -47,19 +62,20 @@ describe("Pattern compatibility", () => {
 });
 
 describe("Pattern constraints", () => {
-  it("three-reasons は evidence 2 件未満を拒否する", () => {
-    const violations = checkConstraints(
-      slide({ evidence: [textEvidence("e1", "根拠1")] }),
-      threeReasonsPattern.constraints,
-    );
-    expect(violations).toHaveLength(1);
-    expect(violations[0]!.constraint).toBe("minEvidence");
+  it("before-after は evidence 0 件を拒否する", () => {
+    const violations = checkConstraints(slide({ evidence: [] }), beforeAfterPattern.constraints);
+    expect(violations.map((v) => v.constraint)).toContain("minEvidence");
   });
 
-  it("three-reasons は evidence 5 件を拒否する", () => {
+  it("three-reasons は並列素材が 1 件だけなら match で不適合になる", () => {
+    const result = threeReasonsPattern.match(slide({ evidence: [textEvidence("e1", "根拠1")] }));
+    expect(result.compatible).toBe(false);
+  });
+
+  it("three-reasons は evidence 5 件を match で不適合にする", () => {
     const evidence = Array.from({ length: 5 }, (_, i) => textEvidence(`e${i}`, `根拠${i}`));
-    const violations = checkConstraints(slide({ evidence }), threeReasonsPattern.constraints);
-    expect(violations.map((v) => v.constraint)).toContain("maxEvidence");
+    const result = threeReasonsPattern.match(slide({ evidence }));
+    expect(result.compatible).toBe(false);
   });
 
   it("keyMessage が長すぎる場合を拒否する", () => {
@@ -198,6 +214,28 @@ describe("ThreeReasons", () => {
     expect(bindings.reasons[2]!.metric).toBe("30%");
     expect(bindings.reasons[0]!.metric).toBeUndefined();
   });
+
+  it("content.points があれば evidence より優先して並列カードにする", () => {
+    const withPoints = slide({
+      content: pointsContent(
+        { label: "論点A", description: "Aの説明" },
+        { label: "論点B", description: "Bの説明", evidenceRefs: ["e1"] },
+        { label: "論点C" },
+      ),
+      evidence: [metricEvidence("e1", "削減率", 30, "%")],
+    });
+    const match = threeReasonsPattern.match(withPoints);
+    expect(match.compatible).toBe(true);
+
+    const bindings = threeReasonsPattern.buildBindings(
+      withPoints,
+      "standard",
+    ) as ThreeReasonsBindings;
+    expect(bindings.reasons.map((r) => r.label)).toEqual(["論点A", "論点B", "論点C"]);
+    // evidenceRefs で参照された metric が数値として載る
+    expect(bindings.reasons[1]!.metric).toBe("30%");
+    expect(bindings.reasons[2]!.description).toBeUndefined();
+  });
 });
 
 describe("Process", () => {
@@ -205,20 +243,44 @@ describe("Process", () => {
     keyMessage: "4 工程で自動化する",
     slideRole: "solution",
     logicalRelation: "process",
-    evidence: [
-      textEvidence("e1", "入荷登録", "入荷時にスキャンする"),
-      textEvidence("e2", "在庫照合", "自動照合する"),
-      textEvidence("e3", "発注判定", "発注点を判定する"),
-    ],
+    content: sequenceContent(
+      { label: "入荷登録", description: "入荷時にスキャンする" },
+      { label: "在庫照合", description: "自動照合する" },
+      { label: "発注判定", description: "発注点を判定する" },
+    ),
+    evidence: [],
   });
 
-  it("process 関係で高スコアになる", () => {
+  it("content.sequence があるとき高スコアになる", () => {
     const result = processPattern.match(s);
     expect(result.compatible).toBe(true);
     expect(result.score).toBeGreaterThan(0.9);
   });
 
-  it("buildBindings が evidence の並び順をそのまま工程順にする", () => {
+  it("content.sequence が無ければ evidence があっても不適合（工程は evidence に書かない）", () => {
+    const withEvidenceOnly = slide({
+      logicalRelation: "process",
+      evidence: [
+        textEvidence("e1", "入荷登録"),
+        textEvidence("e2", "在庫照合"),
+        textEvidence("e3", "発注判定"),
+      ],
+    });
+    const result = processPattern.match(withEvidenceOnly);
+    expect(result.compatible).toBe(false);
+    expect(result.reason).toContain("sequence");
+  });
+
+  it("6 工程以上は不適合になる", () => {
+    const tooMany = slide({
+      logicalRelation: "process",
+      content: sequenceContent("a", "b", "c", "d", "e", "f"),
+      evidence: [],
+    });
+    expect(processPattern.match(tooMany).compatible).toBe(false);
+  });
+
+  it("buildBindings が steps の並び順をそのまま工程順にする", () => {
     const bindings = processPattern.buildBindings(s, "standard") as ProcessBindings;
     expect(bindings.steps.map((step) => step.label)).toEqual([
       "入荷登録",

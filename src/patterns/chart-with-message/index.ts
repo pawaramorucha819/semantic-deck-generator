@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { SlideSpec } from "../../domain/types.js";
 import type { RenderContext } from "../../render/context.js";
 import { columnsWeighted, type Rect } from "../../render/geometry.js";
@@ -29,6 +30,47 @@ export interface ChartWithMessageBindings {
   sourceText?: string;
 }
 
+export const ChartWithMessageBindingsSchema: z.ZodType<ChartWithMessageBindings> = z
+  .object({
+    eyebrow: z.string().min(1).optional(),
+    headline: z.string().min(1),
+    subline: z.string().min(1).optional(),
+    chart: z
+      .object({
+        kind: z.literal("bar"),
+        direction: z.enum(["col", "bar"]),
+        categories: z.array(z.string().min(1)).min(2).max(12),
+        series: z
+          .array(
+            z
+              .object({
+                name: z.string().min(1),
+                values: z.array(z.number().finite()),
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(4),
+        unit: z.string().min(1).optional(),
+      })
+      .strict()
+      .superRefine((chart, ctx) => {
+        chart.series.forEach((series, i) => {
+          if (series.values.length !== chart.categories.length) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["series", i, "values"],
+              message: `values の件数 (${series.values.length}) が categories の件数 (${chart.categories.length}) と一致しません`,
+            });
+          }
+        });
+      }),
+    readingText: z.string().min(1).optional(),
+    changeText: z.string().min(1).optional(),
+    sourceText: z.string().min(1).optional(),
+  })
+  .strict();
+
 /**
  * ChartWithMessage — 同じ軸に並んだ複数の値を、PowerPoint ネイティブの
  * （＝編集可能な）グラフとして描き、右側に読み取り方を添える。
@@ -54,6 +96,8 @@ export const chartWithMessagePattern: VisualPattern<ChartWithMessageBindings> = 
     minEvidence: 1,
     maxKeyMessageLength: 70,
   },
+
+  bindingsSchema: ChartWithMessageBindingsSchema,
 
   match(slide: SlideSpec): MatchResult {
     const facts = extractChartSeries(slide);

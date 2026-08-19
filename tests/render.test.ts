@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildVisualPlan, serializeVisualPlan } from "../src/plan/visual-plan.js";
+import { buildVisualPlan, parseVisualPlan, serializeVisualPlan } from "../src/plan/visual-plan.js";
 import { renderVisualPlan, toPptxBuffer } from "../src/render/renderer.js";
 import { validatePlacements } from "../src/render/validate.js";
 import type { Placement } from "../src/render/surface.js";
@@ -61,6 +61,32 @@ describe("PPTX 生成", () => {
     expect(slideXmls).toHaveLength(6);
   });
 
+  it("plan.themeId だけで Theme が解決される（オプション無しの再生で色が変わらない）", async () => {
+    const plan = buildVisualPlan(await loadExample(), { themeId: "midnight" });
+    // options.theme を渡さずに描画しても plan.themeId (midnight) が使われる
+    const { pptx } = renderVisualPlan(plan);
+    const { slideXmls } = await readPptx(await toPptxBuffer(pptx));
+    expect(slideXmls[1]).toContain("5AA9F0"); // midnight primary
+    expect(slideXmls[1]).not.toContain("0B4F8A"); // default primary は現れない
+  });
+
+  it("完全な出典（URL・取得日）がスピーカーノートに格納される", async () => {
+    const plan = buildVisualPlan(await loadExample());
+    const { pptx } = renderVisualPlan(plan);
+    const { zip, files } = await readPptx(await toPptxBuffer(pptx));
+
+    const notesFiles = files.filter((f) => /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(f));
+    expect(notesFiles.length).toBeGreaterThan(0);
+
+    const allNotes = (
+      await Promise.all(notesFiles.map((f) => zip.file(f)!.async("string")))
+    ).join("\n");
+    // フッターでは失われる URL / 取得日 / 参照箇所がノートには残る
+    expect(allNotes).toContain("https://example.com/case/a-company");
+    expect(allNotes).toContain("取得日: 2025-02-10");
+    expect(allNotes).toContain("p.12 表2-4");
+  });
+
   it("Theme を差し替えても Pattern を変更せずに配色が変わる", async () => {
     const plan = buildVisualPlan(await loadExample());
     const light = renderVisualPlan(plan);
@@ -107,11 +133,26 @@ describe("PPTX 生成", () => {
 
   it("Renderer は Visual Plan の JSON だけで描画できる（SlideSpec に依存しない）", async () => {
     const plan = buildVisualPlan(await loadExample());
-    const roundTripped = JSON.parse(serializeVisualPlan(plan));
+    // 保存 → 再読込 → parseVisualPlan による検証 → 描画、という再生経路
+    const roundTripped = parseVisualPlan(JSON.parse(serializeVisualPlan(plan)));
 
     const fromObject = await readPptx(await toPptxBuffer(renderVisualPlan(plan).pptx));
     const fromJson = await readPptx(await toPptxBuffer(renderVisualPlan(roundTripped).pptx));
     expect(fromJson.slideXmls).toEqual(fromObject.slideXmls);
+  });
+
+  it("patternVersion が一致しない Plan の描画は拒否される", async () => {
+    const plan = buildVisualPlan(await loadExample());
+    const tampered = JSON.parse(serializeVisualPlan(plan));
+    tampered.slides[0].patternVersion = "0.0.1";
+    expect(() => renderVisualPlan(tampered)).toThrow(/バージョンが不一致/);
+  });
+
+  it("bindings が契約違反の Plan の描画は拒否される", async () => {
+    const plan = buildVisualPlan(await loadExample());
+    const tampered = JSON.parse(serializeVisualPlan(plan));
+    tampered.slides[0].bindings = { garbage: true };
+    expect(() => renderVisualPlan(tampered)).toThrow();
   });
 });
 

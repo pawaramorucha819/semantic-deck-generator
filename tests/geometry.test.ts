@@ -7,6 +7,7 @@ import {
   estimateTextHeight,
   inset,
   intersects,
+  LINE_PITCH_FACTOR,
   measureEm,
   splitBottom,
   splitTop,
@@ -57,11 +58,16 @@ describe("geometry", () => {
   });
 
   it("行数とテキスト高さを概算できる", () => {
+    // widthIn=2in / 12pt → 名目 12em/行。安全係数 1.08 で実効約 11.1em/行。
     const opts = { widthIn: 2, fontSize: 12 };
-    expect(estimateLineCount("あ".repeat(12), opts)).toBe(1);
-    expect(estimateLineCount("あ".repeat(24), opts)).toBe(2);
+    expect(estimateLineCount("あ".repeat(11), opts)).toBe(1);
+    expect(estimateLineCount("あ".repeat(12), opts)).toBe(2); // 12*1.08 = 12.96em > 12em
+    expect(estimateLineCount("あ".repeat(23), opts)).toBe(3); // 名目では 2 行だが安全係数で 3 行
     expect(estimateLineCount("a\nb", opts)).toBe(2);
-    expect(estimateTextHeight("あ".repeat(12), opts)).toBeCloseTo((12 * 1.32) / 72, 3);
+    expect(estimateTextHeight("あ".repeat(11), opts)).toBeCloseTo(
+      (12 * 1.32 * LINE_PITCH_FACTOR) / 72,
+      3,
+    );
   });
 });
 

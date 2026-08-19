@@ -74,9 +74,33 @@ describe("presentation.json Schema validation", () => {
     it("未定義の sourceId 参照を拒否する", () => {
       const spec = baseSpec();
       (spec.slides as any[])[0].evidence = [
-        { id: "e1", type: "text", statement: "事実", sourceId: "missing-source" },
+        { id: "e1", type: "text", statement: "事実", sourceIds: ["missing-source"] },
       ];
       expect(() => parsePresentation(spec)).toThrow(/未定義の sourceId/);
+    });
+
+    it("content の evidenceRefs が未定義の evidence を参照していたら拒否する", () => {
+      const spec = baseSpec();
+      (spec.slides as any[])[0].content = {
+        kind: "points",
+        items: [{ label: "論点A", evidenceRefs: ["missing-evidence"] }],
+      };
+      expect(() => parsePresentation(spec)).toThrow(/未定義の evidence/);
+    });
+
+    it("sequence の step が 1 件なら拒否する", () => {
+      const spec = baseSpec();
+      (spec.slides as any[])[0].content = {
+        kind: "sequence",
+        steps: [{ label: "工程1" }],
+      };
+      expect(() => parsePresentation(spec)).toThrow(PresentationValidationError);
+    });
+
+    it("未知の content kind を拒否する", () => {
+      const spec = baseSpec();
+      (spec.slides as any[])[0].content = { kind: "table", rows: [] };
+      expect(() => parsePresentation(spec)).toThrow(PresentationValidationError);
     });
 
     it("evidence.id の重複を拒否する", () => {

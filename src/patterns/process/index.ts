@@ -1,14 +1,10 @@
-import type { SlideSpec } from "../../domain/types.js";
+import { z } from "zod";
+import type { SequenceContent, SlideSpec } from "../../domain/types.js";
 import type { RenderContext, TextRun } from "../../render/context.js";
 import { columns, inset, splitTop, type Rect } from "../../render/geometry.js";
 import type { MatchResult, VisualPattern } from "../pattern.js";
 import { centerBlockY, drawFooter, drawHeader } from "../shared/layout.js";
-import {
-  buildSourceText,
-  evidenceDetail,
-  evidenceLabel,
-  roleLabel,
-} from "../shared/semantics.js";
+import { buildSourceText, roleLabel, truncate } from "../shared/semantics.js";
 
 export interface ProcessStepBinding {
   index: number;
@@ -26,16 +22,44 @@ export interface ProcessBindings {
   sourceText?: string;
 }
 
+export const ProcessBindingsSchema: z.ZodType<ProcessBindings> = z
+  .object({
+    eyebrow: z.string().min(1).optional(),
+    headline: z.string().min(1),
+    subline: z.string().min(1).optional(),
+    steps: z
+      .array(
+        z
+          .object({
+            index: z.number().int().positive(),
+            label: z.string().min(1),
+            description: z.string().min(1).optional(),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(5),
+    stepPrefix: z.string(),
+    sourceText: z.string().min(1).optional(),
+  })
+  .strict();
+
+const MAX_STEPS = 5;
+
+function sequenceOf(slide: SlideSpec): SequenceContent | undefined {
+  return slide.content?.kind === "sequence" ? slide.content : undefined;
+}
+
 /**
  * Process — 工程・順序を左から右への矢印で表現する。
  *
- * 「evidence の配列順が意味を持つ」のは logicalRelation が process / timeline の
- * ときだけ、という前提に立っている。この前提が Pattern 適用条件そのもの。
+ * 工程は `content.sequence`（見せる対象の情報構造）から読む。
+ * evidence は「根拠」であり、工程の格納場所として使ってはいけない。
  */
 export const processPattern: VisualPattern<ProcessBindings> = {
   id: "process",
-  version: "1.0.0",
-  description: "工程・順序を左から右へのシェブロンで表現する。",
+  version: "1.1.0",
+  description: "content.sequence の工程を左から右へのシェブロンで表現する。",
   variants: ["standard"],
 
   compatibility: {
@@ -43,13 +67,30 @@ export const processPattern: VisualPattern<ProcessBindings> = {
   },
 
   constraints: {
-    minEvidence: 2,
-    maxEvidence: 5,
     maxKeyMessageLength: 70,
   },
 
+  bindingsSchema: ProcessBindingsSchema,
+
   match(slide: SlideSpec): MatchResult {
-    const count = slide.evidence.length;
+    const sequence = sequenceOf(slide);
+    if (!sequence) {
+      return {
+        compatible: false,
+        score: 0,
+        reason: "工程を表す content (kind=sequence) が定義されていない",
+      };
+    }
+
+    const count = sequence.steps.length;
+    if (count > MAX_STEPS) {
+      return {
+        compatible: false,
+        score: 0,
+        reason: `${count} 工程は横一列に収まらない（最大 ${MAX_STEPS} 工程）`,
+      };
+    }
+
     const reasons: string[] = [];
     let score = 0.6;
 
@@ -66,7 +107,7 @@ export const processPattern: VisualPattern<ProcessBindings> = {
       reasons.push(`${count} 工程で横一列に収まる`);
     }
 
-    const longest = Math.max(...slide.evidence.map((e) => evidenceLabel(e, 20).length));
+    const longest = Math.max(...sequence.steps.map((s) => s.label.length));
     if (longest > 16) {
       score -= 0.08;
       reasons.push("工程名が長くシェブロン内が窮屈になる可能性");
@@ -81,20 +122,22 @@ export const processPattern: VisualPattern<ProcessBindings> = {
   },
 
   buildBindings(slide: SlideSpec): ProcessBindings {
+    const sequence = sequenceOf(slide);
+    if (!sequence) {
+      throw new Error(
+        `[process] buildBindings: content.sequence がありません (slide=${slide.id})`,
+      );
+    }
     return {
       eyebrow: roleLabel(slide.slideRole),
       headline: slide.keyMessage,
       subline: slide.supportingMessage,
       stepPrefix: slide.logicalRelation === "timeline" ? "" : "STEP",
-      steps: slide.evidence.map((e, i) => {
-        const label = evidenceLabel(e, 14);
-        const description = evidenceDetail(e);
-        return {
-          index: i + 1,
-          label,
-          description: description === label ? undefined : description,
-        };
-      }),
+      steps: sequence.steps.map((step, i) => ({
+        index: i + 1,
+        label: truncate(step.label, 14),
+        description: step.description,
+      })),
       sourceText: buildSourceText(slide),
     };
   },

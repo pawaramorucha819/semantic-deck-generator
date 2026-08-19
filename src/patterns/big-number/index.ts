@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { SlideSpec } from "../../domain/types.js";
 import type { RenderContext } from "../../render/context.js";
 import { columnsWeighted, splitBottom, splitTop, type Rect } from "../../render/geometry.js";
@@ -24,6 +25,19 @@ export interface BigNumberBindings {
   note?: string;
   sourceText?: string;
 }
+
+export const BigNumberBindingsSchema: z.ZodType<BigNumberBindings> = z
+  .object({
+    eyebrow: z.string().min(1).optional(),
+    headline: z.string().min(1),
+    subline: z.string().min(1).optional(),
+    value: z.string().min(1),
+    caption: z.string().min(1).optional(),
+    period: z.string().min(1).optional(),
+    note: z.string().min(1).optional(),
+    sourceText: z.string().min(1).optional(),
+  })
+  .strict();
 
 /**
  * BigNumber — 1 つの数字だけでスライドが成立するケース。
@@ -52,6 +66,8 @@ export const bigNumberPattern: VisualPattern<BigNumberBindings> = {
     maxKeyMessageLength: 70,
     requiresAnyEvidenceType: ["metric"],
   },
+
+  bindingsSchema: BigNumberBindingsSchema,
 
   match(slide: SlideSpec): MatchResult {
     const metric = extractHeadlineMetric(slide);

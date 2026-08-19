@@ -122,6 +122,13 @@ export function evaluatePattern(pattern: AnyVisualPattern, slide: SlideSpec): Pa
     };
   }
 
+  // スコア契約の実行時検証: Pattern 作者が範囲外の値で選択を支配できないようにする
+  if (!Number.isFinite(match.score) || match.score < 0 || match.score > 1) {
+    throw new Error(
+      `Pattern '${pattern.id}' の match() が範囲外のスコアを返しました: ${match.score}（0〜1 の共通ルーブリックに従う契約です）`,
+    );
+  }
+
   const score = MATCH_WEIGHT * match.score + COMPATIBILITY_WEIGHT * compat.score;
   return {
     ...base,

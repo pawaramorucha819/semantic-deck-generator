@@ -52,14 +52,18 @@ export interface Source {
   publisher?: string;
   /** ISO 8601 (YYYY-MM-DD 等) を推奨。表示形式は Renderer 側の責務。 */
   date?: string;
+  /** 参照箇所（ページ・章・図表番号など）。例: "p.12", "第3章" */
+  locator?: string;
+  /** URL を取得した日付（ISO 8601 推奨） */
+  accessedAt?: string;
 }
 
 interface EvidenceBase {
   id: string;
   /** その Evidence が主張している内容を 1 文で表したもの */
   statement: string;
-  /** `SlideSpec.sources[].id` への参照 */
-  sourceId?: string;
+  /** `SlideSpec.sources[].id` への参照（複数可） */
+  sourceIds?: string[];
 }
 
 /** 単一の定量値（例: 在庫管理コストが前年比 18% 増加した） */
@@ -117,6 +121,42 @@ export interface ComparisonEvidence extends EvidenceBase {
 
 export type Evidence = MetricEvidence | CaseStudyEvidence | TextEvidence | ComparisonEvidence;
 
+/**
+ * SemanticContent — スライドで「見せる対象」となる情報構造。
+ *
+ * Evidence（根拠 = 主張を裏付ける事実）とは別物です。
+ * 工程・アクション・並列項目のような「主張の中身そのもの」はここに書き、
+ * それを裏付ける事実がある場合は `evidenceRefs` で `evidence[]` を参照します。
+ *
+ * 種類を追加する場合は (1) ここに interface を足し (2) union に加え
+ * (3) schema.ts の SemanticContentSchema に 1 バリアント足します。
+ */
+export const SEMANTIC_CONTENT_KINDS = ["sequence", "points"] as const;
+export type SemanticContentKind = (typeof SEMANTIC_CONTENT_KINDS)[number];
+
+export interface ContentItem {
+  /** 短い見出し語 */
+  label: string;
+  /** 説明文（任意） */
+  description?: string;
+  /** この項目を裏付ける `evidence[].id` への参照 */
+  evidenceRefs?: string[];
+}
+
+/** 順序が意味を持つ列（工程・時系列） */
+export interface SequenceContent {
+  kind: "sequence";
+  steps: ContentItem[];
+}
+
+/** 順序が意味を持たない並列項目（論点・理由・アクション） */
+export interface PointsContent {
+  kind: "points";
+  items: ContentItem[];
+}
+
+export type SemanticContent = SequenceContent | PointsContent;
+
 export interface SlideSpec {
   id: string;
   /** そのスライドで最も伝えたい 1 文 */
@@ -125,6 +165,9 @@ export interface SlideSpec {
   supportingMessage?: string;
   slideRole: SlideRole;
   logicalRelation: LogicalRelation;
+  /** 見せる対象となる情報構造（工程・並列項目など）。根拠ではない。 */
+  content?: SemanticContent;
+  /** 主張を裏付ける根拠。スライドに載せる情報の容器ではない。 */
   evidence: Evidence[];
   sources?: Source[];
 }

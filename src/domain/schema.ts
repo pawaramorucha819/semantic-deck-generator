@@ -25,13 +25,15 @@ export const SourceSchema = z
     url: z.string().url("source.url は URL 形式である必要があります").optional(),
     publisher: z.string().trim().min(1).max(200).optional(),
     date: z.string().trim().min(1).max(40).optional(),
+    locator: z.string().trim().min(1).max(200).optional(),
+    accessedAt: z.string().trim().min(1).max(40).optional(),
   })
   .strict();
 
 const evidenceBase = {
   id: nonEmpty("evidence.id", 120),
   statement: nonEmpty("evidence.statement", 400),
-  sourceId: z.string().trim().min(1).max(120).optional(),
+  sourceIds: z.array(z.string().trim().min(1).max(120)).min(1).max(8).optional(),
 };
 
 export const MetricEvidenceSchema = z
@@ -114,6 +116,35 @@ export const EvidenceSchema = z.discriminatedUnion("type", [
   ComparisonEvidenceSchema,
 ]);
 
+const ContentItemSchema = z
+  .object({
+    label: nonEmpty("content item の label", 120),
+    description: z.string().trim().min(1).max(400).optional(),
+    evidenceRefs: z.array(z.string().trim().min(1).max(120)).min(1).max(8).optional(),
+  })
+  .strict();
+
+export const SemanticContentSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("sequence"),
+      steps: z
+        .array(ContentItemSchema)
+        .min(2, "sequence には 2 件以上の step が必要です")
+        .max(6, "sequence の step は 6 件までです"),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("points"),
+      items: z
+        .array(ContentItemSchema)
+        .min(1, "points には 1 件以上の item が必要です")
+        .max(6, "points の item は 6 件までです"),
+    })
+    .strict(),
+]);
+
 export const SlideSpecSchema = z
   .object({
     id: nonEmpty("slide.id", 120),
@@ -121,6 +152,7 @@ export const SlideSpecSchema = z
     supportingMessage: z.string().trim().min(1).max(400).optional(),
     slideRole: z.enum(SLIDE_ROLES),
     logicalRelation: z.enum(LOGICAL_RELATIONS),
+    content: SemanticContentSchema.optional(),
     evidence: z.array(EvidenceSchema).max(12, "evidence は 12 件までです"),
     sources: z.array(SourceSchema).max(12).optional(),
   })
@@ -138,16 +170,35 @@ export const SlideSpecSchema = z
       evidenceIds.add(e.id);
     });
 
-    const sourceIds = new Set((slide.sources ?? []).map((s) => s.id));
+    const sourceIdSet = new Set((slide.sources ?? []).map((s) => s.id));
     slide.evidence.forEach((e, i) => {
-      if (e.sourceId && !sourceIds.has(e.sourceId)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["evidence", i, "sourceId"],
-          message: `未定義の sourceId を参照しています: ${e.sourceId}`,
-        });
+      for (const ref of e.sourceIds ?? []) {
+        if (!sourceIdSet.has(ref)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["evidence", i, "sourceIds"],
+            message: `未定義の sourceId を参照しています: ${ref}`,
+          });
+        }
       }
     });
+
+    // content の evidenceRefs は evidence[].id を参照していなければならない
+    if (slide.content) {
+      const items = slide.content.kind === "sequence" ? slide.content.steps : slide.content.items;
+      const itemsKey = slide.content.kind === "sequence" ? "steps" : "items";
+      items.forEach((item, i) => {
+        for (const ref of item.evidenceRefs ?? []) {
+          if (!evidenceIds.has(ref)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["content", itemsKey, i, "evidenceRefs"],
+              message: `未定義の evidence を参照しています: ${ref}`,
+            });
+          }
+        }
+      });
+    }
   });
 
 export const PresentationSpecSchema = z

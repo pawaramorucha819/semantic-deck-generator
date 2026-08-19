@@ -1,11 +1,24 @@
+import type { z } from "zod";
 import type { EvidenceType, LogicalRelation, SlideRole, SlideSpec } from "../domain/types.js";
 import type { RenderContext } from "../render/context.js";
 
-/** `match()` の結果 */
+/**
+ * `match()` の結果。
+ *
+ * score は Pattern 間で比較されるため、次の共通ルーブリックに従うこと
+ * （範囲外の値は Selector が実行時に拒否する）:
+ *
+ *   0.90 - 1.00  意味構造がこの Pattern の理想形（専用の logicalRelation + 完全なデータ）
+ *   0.70 - 0.90  適用可能で有力（構造は合うがデータが理想形ではない）
+ *   0.40 - 0.70  適用は可能だが、より適切な表現が他にありうる
+ *   0.00 - 0.40  ほぼ fallback 向け（意味を図解できない）
+ *
+ * 独自の初期点・加点体系を発明せず、このアンカーに沿って設計すること。
+ */
 export interface MatchResult {
   /** false の場合、この Pattern はこのスライドに適用不可 */
   compatible: boolean;
-  /** 0.0 - 1.0。意味構造とのフィット度。 */
+  /** 0.0 - 1.0。意味構造とのフィット度（上記ルーブリック準拠、実行時検証あり）。 */
   score: number;
   /** なぜその判断になったのか（Visual Plan にそのまま出力される） */
   reason: string;
@@ -42,12 +55,25 @@ export interface VisualPattern<TBindings = unknown> {
   readonly variants: readonly string[];
   /**
    * true の場合、他に適合する Pattern がないときの受け皿として使われる。
-   * fallback Pattern は必ず 1 つ以上必要。
+   *
+   * fallback Pattern の契約（PatternRegistry が登録時に強制する）:
+   *  - constraints を持ってはならない（どんなスライドでも必ず描画できること）
+   *  - 全 logicalRelation に対応していること
+   *  - match() が compatible: false を返してはならない
    */
   readonly fallback?: boolean;
 
   readonly compatibility: PatternCompatibility;
   readonly constraints?: PatternConstraints;
+
+  /**
+   * この Pattern の Bindings のランタイムスキーマ。
+   *
+   * レジストリ格納時に型情報（TBindings）は消えるため、これが実行時の契約になる。
+   * buildVisualPlan は生成した Bindings をこのスキーマで検証し、
+   * Renderer / parseVisualPlan は保存済み Visual Plan の再生時にこれで検証する。
+   */
+  readonly bindingsSchema: z.ZodType<TBindings>;
 
   /** 意味構造とのフィット度を判定する。座標計算はここでは行わない。 */
   match(slide: SlideSpec): MatchResult;
@@ -62,7 +88,10 @@ export interface VisualPattern<TBindings = unknown> {
   render(bindings: TBindings, context: RenderContext): void;
 }
 
-/** 型を失わずに Pattern をレジストリへ格納するための消去型 */
+/**
+ * 型を失わずに Pattern をレジストリへ格納するための消去型。
+ * 静的型は消えるが、`bindingsSchema` による実行時検証が契約を守る。
+ */
 export type AnyVisualPattern = VisualPattern<any>;
 
 export interface ConstraintViolation {

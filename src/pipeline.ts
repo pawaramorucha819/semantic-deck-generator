@@ -8,7 +8,14 @@ import {
   serializeVisualPlan,
   type VisualPlan,
 } from "./plan/visual-plan.js";
-import { renderVisualPlan, writePptxFile, type SlideRenderReport } from "./render/renderer.js";
+import {
+  buildRenderReport,
+  renderVisualPlan,
+  serializeRenderReport,
+  writePptxFile,
+  type RenderReport,
+  type SlideRenderReport,
+} from "./render/renderer.js";
 import type { LayoutIssue } from "./render/validate.js";
 import { getTheme, type PresentationTheme } from "./theme/theme.js";
 
@@ -38,6 +45,7 @@ export interface GenerateResult {
   plan: VisualPlan;
   reports: SlideRenderReport[];
   issues: LayoutIssue[];
+  renderReport: RenderReport;
   pptxBuffer: Buffer;
 }
 
@@ -45,6 +53,8 @@ export interface GenerateFilesResult extends GenerateResult {
   inputPath: string;
   pptxPath: string;
   planPath: string;
+  /** --report 指定時のみ */
+  reportPath?: string;
 }
 
 function themeOf(options: GenerateOptions): PresentationTheme {
@@ -63,18 +73,21 @@ export async function generate(
     includeCandidates: options.includeCandidates,
     minimumScore: options.minimumScore,
   });
-  const { pptx, reports, issues } = renderVisualPlan(plan, {
+  const result = renderVisualPlan(plan, {
     theme,
     registry: options.registry,
     includeTitleSlide: options.includeTitleSlide,
   });
-  const pptxBuffer = (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
-  return { spec, plan, reports, issues, pptxBuffer };
+  const renderReport = buildRenderReport(plan, result);
+  const pptxBuffer = (await result.pptx.write({ outputType: "nodebuffer" })) as Buffer;
+  return { spec, plan, reports: result.reports, issues: result.issues, renderReport, pptxBuffer };
 }
 
 export interface GenerateFromFileOptions extends GenerateOptions {
   /** 出力先ディレクトリ（既定: 入力ファイルと同階層の generated/） */
   outDir?: string;
+  /** Render Report（配置結果 + 検査結果）も書き出すか */
+  writeReport?: boolean;
 }
 
 /** presentation.json ファイルから .pptx と .visual-plan.json を出力する */
@@ -106,7 +119,13 @@ export async function generateFromFile(
   await writeFile(pptxPath, result.pptxBuffer);
   await writeFile(planPath, serializeVisualPlan(result.plan), "utf8");
 
-  return { ...result, inputPath: absoluteInput, pptxPath, planPath };
+  let reportPath: string | undefined;
+  if (options.writeReport) {
+    reportPath = join(outDir, `${stem}.render-report.json`);
+    await writeFile(reportPath, serializeRenderReport(result.renderReport), "utf8");
+  }
+
+  return { ...result, inputPath: absoluteInput, pptxPath, planPath, reportPath };
 }
 
 export { writePptxFile };

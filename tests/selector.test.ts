@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { beforeAfterPattern } from "../src/patterns/before-after/index.js";
 import { messageOnlyPattern } from "../src/patterns/message-only/index.js";
 import { processPattern } from "../src/patterns/process/index.js";
 import { PatternRegistry } from "../src/patterns/registry.js";
 import { evaluatePattern, selectPattern } from "../src/selector/selector.js";
-import { loadExample, metricEvidence, slide, textEvidence } from "./helpers.js";
+import {
+  loadExample,
+  metricEvidence,
+  sequenceContent,
+  slide,
+  textEvidence,
+} from "./helpers.js";
 
 describe("Visual Pattern Selector", () => {
   it("サンプル資料では 6 枚すべてに異なる Pattern が選ばれる", async () => {
@@ -50,8 +57,8 @@ describe("Visual Pattern Selector", () => {
 
   it("constraints 違反は constraints 段階で落ちる", () => {
     const evaluation = evaluatePattern(
-      processPattern,
-      slide({ logicalRelation: "process", evidence: [textEvidence("e1", "唯一の工程")] }),
+      beforeAfterPattern,
+      slide({ logicalRelation: "before_after", evidence: [] }),
     );
     expect(evaluation.compatible).toBe(false);
     expect(evaluation.rejectedAt).toBe("constraints");
@@ -95,7 +102,8 @@ describe("Visual Pattern Selector", () => {
   it("minimumScore を下回る候補は fallback へ回す", () => {
     const s = slide({
       logicalRelation: "process",
-      evidence: [textEvidence("e1", "工程1"), textEvidence("e2", "工程2")],
+      content: sequenceContent("工程1", "工程2"),
+      evidence: [],
     });
     const strict = selectPattern(s, { minimumScore: 0.999 });
     expect(strict.fallbackUsed).toBe(true);
@@ -109,6 +117,48 @@ describe("Visual Pattern Selector", () => {
     );
     expect(selection.patternId).toBe("message-only");
     expect(selection.fallbackUsed).toBe(false);
+  });
+
+  describe("代表的な競合スライドでの pairwise 選択", () => {
+    it("before/after を持つ caseStudy では before-after が three-reasons に勝つ", () => {
+      const s = slide({
+        logicalRelation: "before_after",
+        evidence: [
+          {
+            id: "e1",
+            type: "caseStudy",
+            statement: "導入後に30%削減された",
+            data: { before: 100, after: 70 },
+          },
+          textEvidence("e2", "補足の事実A"),
+          textEvidence("e3", "補足の事実B"),
+        ],
+      });
+      expect(selectPattern(s).patternId).toBe("before-after");
+    });
+
+    it("単一 metric では big-number が chart-with-message に勝つ", () => {
+      const s = slide({ evidence: [metricEvidence("e1", "回収期間", 1.7, "年")] });
+      expect(selectPattern(s).patternId).toBe("big-number");
+    });
+
+    it("3 件の並列 text evidence では three-reasons が message-only に勝つ", () => {
+      const s = slide({
+        evidence: [
+          textEvidence("e1", "理由A"),
+          textEvidence("e2", "理由B"),
+          textEvidence("e3", "理由C"),
+        ],
+      });
+      expect(selectPattern(s).patternId).toBe("three-reasons");
+    });
+
+    it("evidence も content も無いスライドでは message-only が正当に選ばれる", () => {
+      const s = slide({ slideRole: "summary", evidence: [] });
+      const selection = selectPattern(s);
+      expect(selection.patternId).toBe("message-only");
+      expect(selection.fallbackUsed).toBe(false);
+    });
   });
 
   it("evidenceTypes が合わないと compatibilityScore が下がる", () => {

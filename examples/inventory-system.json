@@ -22,7 +22,7 @@
               { "label": "2024年度", "value": 4800 }
             ]
           },
-          "sourceId": "source-001"
+          "sourceIds": ["source-001"]
         }
       ],
       "sources": [
@@ -30,7 +30,8 @@
           "id": "source-001",
           "title": "原価管理レポート 2024年度",
           "publisher": "経理部",
-          "date": "2025-01"
+          "date": "2025-01",
+          "locator": "p.12 表2-4"
         }
       ]
     },
@@ -46,21 +47,21 @@
           "type": "text",
           "statement": "拠点ごとに月40時間の棚卸作業が発生し、担当者の残業時間の主要因となっている",
           "data": { "label": "月40時間の棚卸" },
-          "sourceId": "source-201"
+          "sourceIds": ["source-201"]
         },
         {
           "id": "evidence-202",
           "type": "text",
           "statement": "受発注システムと在庫台帳が連携しておらず、同じ数量を2回入力している",
           "data": { "label": "数量の二重入力" },
-          "sourceId": "source-201"
+          "sourceIds": ["source-201"]
         },
         {
           "id": "evidence-203",
           "type": "text",
           "statement": "在庫状況の反映が日次バッチのため、欠品の発見が最短でも翌営業日になる",
           "data": { "label": "欠品発見の遅れ" },
-          "sourceId": "source-201"
+          "sourceIds": ["source-201"]
         }
       ],
       "sources": [
@@ -78,32 +79,28 @@
       "supportingMessage": "入荷登録から発注までの4工程を連続処理し、手作業を介さずに在庫情報を最新化する",
       "slideRole": "solution",
       "logicalRelation": "process",
-      "evidence": [
-        {
-          "id": "evidence-301",
-          "type": "text",
-          "statement": "入荷時にハンディ端末でスキャンし、在庫数を即時に更新する",
-          "data": { "label": "入荷登録" }
-        },
-        {
-          "id": "evidence-302",
-          "type": "text",
-          "statement": "受発注システムと在庫台帳を自動照合し、差異のある品目だけを通知する",
-          "data": { "label": "在庫照合" }
-        },
-        {
-          "id": "evidence-303",
-          "type": "text",
-          "statement": "品目ごとの発注点を自動判定し、補充が必要な品目を抽出する",
-          "data": { "label": "発注点判定" }
-        },
-        {
-          "id": "evidence-304",
-          "type": "text",
-          "statement": "発注データを自動生成し、実績を分析用データとして蓄積する",
-          "data": { "label": "発注・記録" }
-        }
-      ]
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "label": "入荷登録",
+            "description": "入荷時にハンディ端末でスキャンし、在庫数を即時に更新する"
+          },
+          {
+            "label": "在庫照合",
+            "description": "受発注システムと在庫台帳を自動照合し、差異のある品目だけを通知する"
+          },
+          {
+            "label": "発注点判定",
+            "description": "品目ごとの発注点を自動判定し、補充が必要な品目を抽出する"
+          },
+          {
+            "label": "発注・記録",
+            "description": "発注データを自動生成し、実績を分析用データとして蓄積する"
+          }
+        ]
+      },
+      "evidence": []
     },
     {
       "id": "slide-004",
@@ -125,7 +122,7 @@
             "afterLabel": "導入12か月後",
             "changeLabel": "-30%"
           },
-          "sourceId": "source-401"
+          "sourceIds": ["source-401"]
         }
       ],
       "sources": [
@@ -133,7 +130,8 @@
           "id": "source-401",
           "title": "A社 在庫管理システム導入事例",
           "url": "https://example.com/case/a-company",
-          "date": "2024-11"
+          "date": "2024-11",
+          "accessedAt": "2025-02-10"
         }
       ]
     },
@@ -154,7 +152,7 @@
             "unit": "年",
             "period": "初期投資2,400万円 / 年間削減額1,440万円"
           },
-          "sourceId": "source-501"
+          "sourceIds": ["source-501"]
         }
       ],
       "sources": [
@@ -172,14 +170,16 @@
       "supportingMessage": "2025年度上期に要件定義を開始し、下期の本稼働を目指す",
       "slideRole": "recommendation",
       "logicalRelation": "claim_evidence",
-      "evidence": [
-        {
-          "id": "evidence-601",
-          "type": "text",
-          "statement": "2025年4月に要件定義へ着手し、10月の本稼働を目標とする",
-          "data": { "label": "次のアクション" }
-        }
-      ]
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "次のアクション",
+            "description": "2025年4月に要件定義へ着手し、10月の本稼働を目標とする"
+          }
+        ]
+      },
+      "evidence": []
     }
   ]
 }

@@ -3,7 +3,12 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import JSZip from "jszip";
 import { parsePresentation } from "../src/domain/schema.js";
-import type { PresentationSpec, SlideSpec } from "../src/domain/types.js";
+import type {
+  ContentItem,
+  PresentationSpec,
+  SemanticContent,
+  SlideSpec,
+} from "../src/domain/types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const projectRoot = join(here, "..");
@@ -44,6 +49,24 @@ export function metricEvidence(id: string, label: string, value: number, unit = 
     type: "metric" as const,
     statement: `${label}は${value}${unit}である`,
     data: { label, value, unit },
+  };
+}
+
+/** content (kind=sequence) を組み立てる */
+export function sequenceContent(
+  ...steps: Array<string | ContentItem>
+): SemanticContent {
+  return {
+    kind: "sequence",
+    steps: steps.map((s) => (typeof s === "string" ? { label: s } : s)),
+  };
+}
+
+/** content (kind=points) を組み立てる */
+export function pointsContent(...items: Array<string | ContentItem>): SemanticContent {
+  return {
+    kind: "points",
+    items: items.map((s) => (typeof s === "string" ? { label: s } : s)),
   };
 }
 

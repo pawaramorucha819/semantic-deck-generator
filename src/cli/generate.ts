@@ -11,6 +11,7 @@ interface CliArgs {
   themeId?: string;
   noTitleSlide: boolean;
   noCandidates: boolean;
+  report: boolean;
   quiet: boolean;
   strict: boolean;
   help: boolean;
@@ -20,6 +21,7 @@ function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     noTitleSlide: false,
     noCandidates: false,
+    report: false,
     quiet: false,
     strict: false,
     help: false,
@@ -43,6 +45,9 @@ function parseArgs(argv: string[]): CliArgs {
         break;
       case "--no-candidates":
         args.noCandidates = true;
+        break;
+      case "--report":
+        args.report = true;
         break;
       case "--quiet":
         args.quiet = true;
@@ -70,6 +75,7 @@ Options
   --theme <id>        テーマ (${Object.keys(builtinThemes).join(" | ")})
   --no-title-slide    表紙スライドを付けない
   --no-candidates     Visual Plan に Pattern 候補一覧を含めない
+  --report            Render Report (配置結果 + 検査結果) も書き出す
   --strict            レイアウト警告が 1 件でもあれば終了コード 1
   --quiet             ログを最小限にする
   -h, --help          このヘルプ
@@ -96,6 +102,7 @@ async function main(): Promise<number> {
     themeId: args.themeId,
     includeTitleSlide: !args.noTitleSlide,
     includeCandidates: !args.noCandidates,
+    writeReport: args.report,
   });
 
   const cwd = process.cwd();
@@ -132,6 +139,7 @@ async function main(): Promise<number> {
 
   console.log(`生成: ${rel(result.pptxPath)} (${(result.pptxBuffer.length / 1024).toFixed(1)} KB)`);
   console.log(`生成: ${rel(result.planPath)}`);
+  if (result.reportPath) console.log(`生成: ${rel(result.reportPath)}`);
 
   if (errors.length > 0) return 1;
   if (args.strict && warnings.length > 0) return 1;

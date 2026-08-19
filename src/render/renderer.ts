@@ -4,8 +4,13 @@ import PptxGenJS from "pptxgenjs";
 import type { PresentationSpec } from "../domain/types.js";
 import type { PatternRegistry } from "../patterns/registry.js";
 import { defaultRegistry } from "../patterns/registry.js";
-import { buildVisualPlan, type BuildVisualPlanOptions, type VisualPlan } from "../plan/visual-plan.js";
-import { defaultTheme, normalizeHex, resolveTheme, type PresentationTheme } from "../theme/theme.js";
+import {
+  buildVisualPlan,
+  type BuildVisualPlanOptions,
+  type SlideProvenance,
+  type VisualPlan,
+} from "../plan/visual-plan.js";
+import { getTheme, normalizeHex, resolveTheme, type PresentationTheme } from "../theme/theme.js";
 import { rect, type Rect } from "./geometry.js";
 import { SlideSurface, type Placement } from "./surface.js";
 import { validatePlacements, type LayoutIssue } from "./validate.js";
@@ -39,14 +44,22 @@ export interface RenderResult {
 }
 
 /**
- * Visual Plan → PPTX。
+ * Visual Plan → PPTX（描画バックエンド）。
  *
  * ここは完全に決定論的。Renderer は bindings しか見ないので、
  * 同じ Visual Plan からは常に同じスライド構造が出力される。
+ *
+ * 再生の契約:
+ *  - Theme は既定で `plan.themeId` から解決される（options.theme で上書き可）。
+ *    ビルトイン以外のテーマで生成した Plan は、同じテーマを options.theme で
+ *    再度渡さない限り再生できない（未知の themeId は例外になる）。
+ *  - 各スライドの patternVersion が現在の Pattern 実装と一致しない場合は例外。
+ *  - bindings は描画前に Pattern の bindingsSchema で検証される。
+ *  「黙って違う出力になる」ことはない。
  */
 export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}): RenderResult {
   const registry = options.registry ?? defaultRegistry;
-  const theme = resolveTheme(options.theme ?? defaultTheme);
+  const theme = resolveTheme(options.theme ?? getTheme(plan.themeId));
   const includeTitleSlide = options.includeTitleSlide ?? true;
   const showSlideNumbers = options.showSlideNumbers ?? true;
 
@@ -91,6 +104,17 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
 
   for (const planSlide of plan.slides) {
     const pattern = registry.get(planSlide.patternId);
+
+    // Pattern バージョン契約: 実装が変わった Plan を黙って再生しない
+    if (pattern.version !== planSlide.patternVersion) {
+      throw new Error(
+        `slide ${planSlide.slideId}: Pattern '${planSlide.patternId}' のバージョンが不一致です (plan=${planSlide.patternVersion}, 実装=${pattern.version})。presentation.json から再生成してください`,
+      );
+    }
+
+    // Bindings 契約: 描画直前に必ず bindingsSchema を通す
+    const bindings = pattern.bindingsSchema.parse(planSlide.bindings);
+
     const slide = pptx.addSlide();
     slide.background = { color: normalizeHex(theme.colors.background) };
 
@@ -104,11 +128,16 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
       total,
     );
 
-    pattern.render(planSlide.bindings, surface);
+    pattern.render(bindings, surface);
 
     if (showSlideNumbers) {
       drawSlideNumberChrome(slide, theme, planSlide.slideNumber, total);
     }
+
+    // 完全な出典（URL・参照箇所込み）はスピーカーノートへ格納する。
+    // フッターの短い出典行と役割を分ける（表示用 / 検証用）。
+    const notesText = buildNotesText(planSlide.provenance);
+    if (notesText) slide.addNotes(notesText);
 
     reports.push({
       slideId: planSlide.slideId,
@@ -153,6 +182,67 @@ export async function writePptxFile(pptx: PptxGenJS, filePath: string): Promise<
 
 export async function toPptxBuffer(pptx: PptxGenJS): Promise<Buffer> {
   return (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
+}
+
+/**
+ * スピーカーノート用の完全な出典テキストを組み立てる。
+ * フッターの表示用出典（bindings.sourceText）と違い、URL・参照箇所・取得日を落とさない。
+ */
+function buildNotesText(provenance: SlideProvenance | undefined): string | undefined {
+  if (!provenance) return undefined;
+  const lines: string[] = [];
+
+  if (provenance.sources.length > 0) {
+    lines.push("出典:");
+    for (const s of provenance.sources) {
+      const bits = [s.title];
+      if (s.publisher) bits.push(s.publisher);
+      if (s.date) bits.push(s.date);
+      if (s.locator) bits.push(`参照箇所: ${s.locator}`);
+      if (s.url) bits.push(s.url);
+      if (s.accessedAt) bits.push(`取得日: ${s.accessedAt}`);
+      lines.push(`- [${s.id}] ${bits.join(" | ")}`);
+    }
+  }
+
+  if (provenance.evidence.length > 0) {
+    if (lines.length > 0) lines.push("");
+    lines.push("根拠:");
+    for (const e of provenance.evidence) {
+      const ref = e.sourceIds?.length ? ` (出典: ${e.sourceIds.join(", ")})` : "";
+      lines.push(`- [${e.id}] ${e.statement}${ref}`);
+    }
+  }
+
+  return lines.length > 0 ? lines.join("\n") : undefined;
+}
+
+/**
+ * Render Report — 配置結果（矩形・検査結果）の機械可読な記録。
+ *
+ * Visual Plan は「Pattern 呼び出し + 検証済み props」であり最終座標を持たない。
+ * 最終的なレイアウトの検証・AI Visual Review にはこちらを使う。
+ */
+export interface RenderReport {
+  schemaVersion: "1.0";
+  title: string;
+  themeId: string;
+  slides: SlideRenderReport[];
+  issues: LayoutIssue[];
+}
+
+export function buildRenderReport(plan: VisualPlan, result: RenderResult): RenderReport {
+  return {
+    schemaVersion: "1.0",
+    title: plan.title,
+    themeId: plan.themeId,
+    slides: result.reports,
+    issues: result.issues,
+  };
+}
+
+export function serializeRenderReport(report: RenderReport): string {
+  return `${JSON.stringify(report, null, 2)}\n`;
 }
 
 function renderTitleSlide(ctx: SlideSurface, plan: VisualPlan): void {

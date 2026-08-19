@@ -150,8 +150,21 @@ export interface TextMetricOptions {
 }
 
 /**
+ * 実フォントの字幅ゆらぎを吸収する安全係数。
+ * PowerPoint (Yu Gothic) の実測折り返しは名目字幅より約 8% 手前で発生する。
+ */
+export const WIDTH_SAFETY_FACTOR = 1.08;
+
+/**
+ * 日本語フォントの内部レディング補正。
+ * Yu Gothic 等は行送りが fontSize × lineSpacingMultiple より約 7% 大きく描画される。
+ */
+export const LINE_PITCH_FACTOR = 1.07;
+
+/**
  * テキストの折り返し行数を概算する。
- * 正確な PowerPoint のレイアウト計算ではなく、はみ出し検出のための近似。
+ * 正確な PowerPoint のレイアウト計算ではなく、レイアウト設計とはみ出し検出のための
+ * 保守的な近似（過小評価してあふれるより、過大評価して余白が出る方を選ぶ）。
  */
 export function estimateLineCount(text: string, opts: TextMetricOptions): number {
   const usableWidthPt = opts.widthIn * POINTS_PER_INCH - (opts.horizontalPaddingPt ?? 0);
@@ -159,7 +172,7 @@ export function estimateLineCount(text: string, opts: TextMetricOptions): number
   const emPerLine = usableWidthPt / opts.fontSize;
   let lines = 0;
   for (const paragraph of text.split("\n")) {
-    const em = measureEm(paragraph);
+    const em = measureEm(paragraph) * WIDTH_SAFETY_FACTOR;
     lines += Math.max(1, Math.ceil(em / Math.max(emPerLine, 0.001)));
   }
   return Math.max(1, lines);
@@ -169,7 +182,7 @@ export function estimateLineCount(text: string, opts: TextMetricOptions): number
 export function estimateTextHeight(text: string, opts: TextMetricOptions): number {
   const lines = estimateLineCount(text, opts);
   const lineHeight = opts.lineHeight ?? 1.32;
-  const contentPt = lines * opts.fontSize * lineHeight;
+  const contentPt = lines * opts.fontSize * lineHeight * LINE_PITCH_FACTOR;
   return (contentPt + (opts.verticalPaddingPt ?? 0)) / POINTS_PER_INCH;
 }
 
