@@ -1,0 +1,11 @@
+# リポジトリ内では LF に正規化する（クロスプラットフォームでの差分ノイズを防ぐ）
+* text=auto eol=lf
+
+# Windows 専用スクリプトは CRLF のまま扱う
+*.ps1 text eol=crlf
+
+# バイナリ
+*.pptx binary
+*.png  binary
+*.jpg  binary
+*.ico  binary

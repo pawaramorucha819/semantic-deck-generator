@@ -1,0 +1,185 @@
+{
+  "title": "在庫管理システム導入提案",
+  "subtitle": "手作業による在庫管理からの脱却と投資回収の見通し",
+  "author": "経営企画部",
+  "slides": [
+    {
+      "id": "slide-001",
+      "keyMessage": "在庫管理コストの増加が経営課題となっている",
+      "supportingMessage": "在庫管理に要するコストは過去3年間で年平均12%増加しており、営業利益率を押し下げる要因となっている",
+      "slideRole": "problem",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-001",
+          "type": "comparison",
+          "statement": "在庫管理関連コストは2022年度の3,800万円から2024年度は4,800万円へ増加している",
+          "data": {
+            "unit": "万円",
+            "items": [
+              { "label": "2022年度", "value": 3800 },
+              { "label": "2023年度", "value": 4250 },
+              { "label": "2024年度", "value": 4800 }
+            ]
+          },
+          "sourceId": "source-001"
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-001",
+          "title": "原価管理レポート 2024年度",
+          "publisher": "経理部",
+          "date": "2025-01"
+        }
+      ]
+    },
+    {
+      "id": "slide-002",
+      "keyMessage": "現行業務では手作業の在庫管理がボトルネックになっている",
+      "supportingMessage": "5拠点へのヒアリングの結果、在庫管理業務の遅延と誤りは3つの手作業に集中していることが分かった",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-201",
+          "type": "text",
+          "statement": "拠点ごとに月40時間の棚卸作業が発生し、担当者の残業時間の主要因となっている",
+          "data": { "label": "月40時間の棚卸" },
+          "sourceId": "source-201"
+        },
+        {
+          "id": "evidence-202",
+          "type": "text",
+          "statement": "受発注システムと在庫台帳が連携しておらず、同じ数量を2回入力している",
+          "data": { "label": "数量の二重入力" },
+          "sourceId": "source-201"
+        },
+        {
+          "id": "evidence-203",
+          "type": "text",
+          "statement": "在庫状況の反映が日次バッチのため、欠品の発見が最短でも翌営業日になる",
+          "data": { "label": "欠品発見の遅れ" },
+          "sourceId": "source-201"
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-201",
+          "title": "現場業務ヒアリング（5拠点）",
+          "publisher": "経営企画部",
+          "date": "2025-01"
+        }
+      ]
+    },
+    {
+      "id": "slide-003",
+      "keyMessage": "在庫管理システムにより主要業務を自動化できる",
+      "supportingMessage": "入荷登録から発注までの4工程を連続処理し、手作業を介さずに在庫情報を最新化する",
+      "slideRole": "solution",
+      "logicalRelation": "process",
+      "evidence": [
+        {
+          "id": "evidence-301",
+          "type": "text",
+          "statement": "入荷時にハンディ端末でスキャンし、在庫数を即時に更新する",
+          "data": { "label": "入荷登録" }
+        },
+        {
+          "id": "evidence-302",
+          "type": "text",
+          "statement": "受発注システムと在庫台帳を自動照合し、差異のある品目だけを通知する",
+          "data": { "label": "在庫照合" }
+        },
+        {
+          "id": "evidence-303",
+          "type": "text",
+          "statement": "品目ごとの発注点を自動判定し、補充が必要な品目を抽出する",
+          "data": { "label": "発注点判定" }
+        },
+        {
+          "id": "evidence-304",
+          "type": "text",
+          "statement": "発注データを自動生成し、実績を分析用データとして蓄積する",
+          "data": { "label": "発注・記録" }
+        }
+      ]
+    },
+    {
+      "id": "slide-004",
+      "keyMessage": "A社では導入後に在庫管理コストを30%削減している",
+      "supportingMessage": "同業種・同規模のA社では、導入から12か月で在庫管理コストが年4,800万円から3,360万円へ低下した",
+      "slideRole": "evidence",
+      "logicalRelation": "before_after",
+      "evidence": [
+        {
+          "id": "evidence-401",
+          "type": "caseStudy",
+          "statement": "A社では在庫管理システム導入後に在庫管理コストが30%削減された",
+          "data": {
+            "organization": "A社",
+            "before": 4800,
+            "after": 3360,
+            "unit": "万円",
+            "beforeLabel": "導入前",
+            "afterLabel": "導入12か月後",
+            "changeLabel": "-30%"
+          },
+          "sourceId": "source-401"
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-401",
+          "title": "A社 在庫管理システム導入事例",
+          "url": "https://example.com/case/a-company",
+          "date": "2024-11"
+        }
+      ]
+    },
+    {
+      "id": "slide-005",
+      "keyMessage": "導入コストを考慮しても2年以内に投資回収が期待できる",
+      "supportingMessage": "3年目以降は年間1,440万円が純粋な改善効果として残るため、投資判断としての妥当性は高い",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-501",
+          "type": "metric",
+          "statement": "初期投資2,400万円を年間削減額1,440万円で回収するため、投資回収期間は約1.7年となる",
+          "data": {
+            "label": "投資回収期間",
+            "value": 1.7,
+            "unit": "年",
+            "period": "初期投資2,400万円 / 年間削減額1,440万円"
+          },
+          "sourceId": "source-501"
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-501",
+          "title": "在庫管理システム導入 投資試算",
+          "publisher": "経営企画部",
+          "date": "2025-02"
+        }
+      ]
+    },
+    {
+      "id": "slide-006",
+      "keyMessage": "したがって在庫管理システムを導入するべきである",
+      "supportingMessage": "2025年度上期に要件定義を開始し、下期の本稼働を目指す",
+      "slideRole": "recommendation",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-601",
+          "type": "text",
+          "statement": "2025年4月に要件定義へ着手し、10月の本稼働を目標とする",
+          "data": { "label": "次のアクション" }
+        }
+      ]
+    }
+  ]
+}
