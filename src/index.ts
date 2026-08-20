@@ -10,3 +10,4 @@ export * from "./selector/index.js";
 export * from "./plan/index.js";
 export * from "./render/index.js";
 export * from "./pipeline.js";
+export * from "./api.js";
