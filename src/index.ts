@@ -2,6 +2,7 @@ export * from "./domain/index.js";
 export * from "./theme/index.js";
 export * from "./templates/index.js";
 export * from "./pptx/index.js";
+export * from "./knowledge/index.js";
 export * from "./patterns/index.js";
 export * from "./selector/index.js";
 export * from "./plan/index.js";
