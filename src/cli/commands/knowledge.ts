@@ -2,6 +2,7 @@ import { readdir, stat } from "node:fs/promises";
 import { basename, extname, join, relative, resolve } from "node:path";
 import { LOGICAL_RELATIONS, SLIDE_ROLES } from "../../domain/types.js";
 import type { LogicalRelation, SlideRole } from "../../domain/types.js";
+import { createSafeDeckId, isValidDeckId } from "../../knowledge/deck-id.js";
 import { ingestDeckFromPptx } from "../../knowledge/ingest/ingest.js";
 import { JsonKnowledgeStore } from "../../knowledge/store/json-store.js";
 import type { KnowledgeQuery } from "../../knowledge/retrieval/retrieval.js";
@@ -55,10 +56,17 @@ async function collectPptxFiles(target: string): Promise<string[]> {
     .sort();
 }
 
+/**
+ * 取り込むファイルの deckId を決める。
+ *
+ * 日本語のファイル名（例: 経営会議_生成AI戦略.pptx）でも必ず有効な ID になるよう、
+ * 自動生成は `createSafeDeckId` に一本化する。--deck-id の明示指定はそのまま使い、
+ * 不正な場合は黙って書き換えず呼び出し側でエラーにする。
+ */
 function deckIdFor(file: string, explicit: string | undefined, multiple: boolean): string {
   if (explicit && !multiple) return explicit;
-  const stem = basename(file, extname(file)).replace(/[^a-zA-Z0-9-_.]/g, "-");
-  return explicit ? `${explicit}-${stem}` : stem;
+  const stem = basename(file, extname(file));
+  return createSafeDeckId(explicit ? `${explicit}-${stem}` : stem);
 }
 
 export async function runKnowledge(argv: readonly string[]): Promise<number> {
@@ -89,6 +97,15 @@ export async function runKnowledge(argv: readonly string[]): Promise<number> {
       return args.positional.length === 0 ? 1 : 0;
     }
 
+    const explicitDeckId = stringFlag(args, "deck-id");
+    if (explicitDeckId && !isValidDeckId(explicitDeckId)) {
+      throw new CliArgumentError(
+        `--deck-id が不正です: ${explicitDeckId}\n` +
+          `  英数字と - _ . のみ使用でき、先頭は英数字である必要があります` +
+          `（例: ${createSafeDeckId(explicitDeckId)}）`,
+      );
+    }
+
     const store = new JsonKnowledgeStore(resolve(stringFlag(args, "store") ?? "knowledge"));
     const files = (await Promise.all(args.positional.map(collectPptxFiles))).flat();
     if (files.length === 0) {
@@ -99,7 +116,7 @@ export async function runKnowledge(argv: readonly string[]): Promise<number> {
     let total = 0;
     for (const file of files) {
       const result = await ingestDeckFromPptx(file, {
-        deckId: deckIdFor(file, stringFlag(args, "deck-id"), files.length > 1),
+        deckId: deckIdFor(file, explicitDeckId, files.length > 1),
         metadata: {
           ...(stringFlag(args, "organization")
             ? { organization: stringFlag(args, "organization")! }

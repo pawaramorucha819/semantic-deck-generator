@@ -1,3 +1,4 @@
+export * from "./deck-id.js";
 export * from "./schema.js";
 export * from "./retrieval/retrieval.js";
 export * from "./store/store.js";

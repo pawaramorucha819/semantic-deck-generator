@@ -1,8 +1,15 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import PptxGenJS from "pptxgenjs";
 import { afterAll, describe, expect, it } from "vitest";
+import { main } from "../src/cli/main.js";
+import {
+  createSafeDeckId,
+  DECK_ID_PATTERN,
+  isValidDeckId,
+  MAX_DECK_ID_LENGTH,
+} from "../src/knowledge/deck-id.js";
 import {
   extractKeywords,
   ingestDeckFromGeneration,
@@ -337,5 +344,137 @@ describe("決定論的 Retrieval（AI 無しで動く）", () => {
     const tokens = tokenize("在庫 cost 12%");
     expect(tokens).toContain("cost");
     expect(tokens.some((t) => t.length === 2 && /[一-龯ぁ-ヿ]/.test(t))).toBe(true);
+  });
+});
+
+describe("deckId の安全な生成（日本語のファイル名・資料名）", () => {
+  const valid = (id: string): boolean => DECK_ID_PATTERN.test(id);
+
+  it("ASCII のファイル名はそのまま残る（既存の挙動を維持）", () => {
+    expect(createSafeDeckId("FY2026-strategy")).toBe("FY2026-strategy");
+    expect(createSafeDeckId("inventory-system")).toBe("inventory-system");
+    expect(createSafeDeckId("deck_2025.v2")).toBe("deck_2025.v2");
+  });
+
+  it("日本語だけの入力でも必ず有効な ID になる", () => {
+    const id = createSafeDeckId("経営会議");
+    expect(valid(id)).toBe(true);
+    expect(id.startsWith("deck-")).toBe(true);
+    expect(id.length).toBeGreaterThan("deck-".length);
+  });
+
+  it("日本語 + ASCII 混在では ASCII 部分を残しつつ衝突を避ける", () => {
+    const id = createSafeDeckId("経営会議_生成AI戦略");
+    expect(valid(id)).toBe(true);
+    expect(id).toContain("AI");
+    // 情報が落ちているので決定論的ハッシュが付く
+    expect(id).toMatch(/-[0-9a-f]{8}$/);
+  });
+
+  it("先頭が - / _ / . にならない", () => {
+    for (const input of ["_private", "-leading", "...dots", "戦略AI", "  空白 "]) {
+      const id = createSafeDeckId(input);
+      expect(valid(id)).toBe(true);
+      expect(id[0]).toMatch(/[a-zA-Z0-9]/);
+    }
+  });
+
+  it("記号だけ・空文字でも空にならない", () => {
+    for (const input of ["---", "___", "...", "！？＃", "", "   "]) {
+      const id = createSafeDeckId(input);
+      expect(valid(id)).toBe(true);
+      expect(id.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("長すぎる入力でも最大長を守る", () => {
+    expect(createSafeDeckId("a".repeat(500)).length).toBeLessThanOrEqual(MAX_DECK_ID_LENGTH);
+    const japanese = createSafeDeckId("経営".repeat(300));
+    expect(japanese.length).toBeLessThanOrEqual(MAX_DECK_ID_LENGTH);
+    expect(valid(japanese)).toBe(true);
+
+    const mixed = createSafeDeckId(`${"strategy-".repeat(40)}戦略`);
+    expect(mixed.length).toBeLessThanOrEqual(MAX_DECK_ID_LENGTH);
+    expect(valid(mixed)).toBe(true);
+  });
+
+  it("同じ入力からは必ず同じ ID になる（決定論的）", () => {
+    for (const input of ["経営会議_生成AI戦略", "FY2026-strategy", "決算説明会"]) {
+      expect(createSafeDeckId(input)).toBe(createSafeDeckId(input));
+    }
+  });
+
+  it("異なる日本語資料名は異なる ID になる（衝突しにくい）", () => {
+    const ids = [
+      createSafeDeckId("AI戦略_日本版"),
+      createSafeDeckId("AI戦略_米国版"),
+      createSafeDeckId("AI戦略_欧州版"),
+      createSafeDeckId("経営会議"),
+      createSafeDeckId("決算説明会"),
+    ];
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("全角英数字は半角へ寄せる", () => {
+    expect(createSafeDeckId("ＦＹ２０２６")).toBe("FY2026");
+  });
+
+  it("生成した ID は DeckKnowledgeEntrySchema を通る", () => {
+    for (const input of ["経営会議_生成AI戦略", "決算説明会", "---", "ＦＹ２０２６", ""]) {
+      const deckId = createSafeDeckId(input);
+      const parsed = parseKnowledgeEntry(
+        entry({ deckId, slideId: `${deckId}#1`, source: { file: "f.pptx", slideNumber: 1 } }),
+      );
+      expect(parsed.deckId).toBe(deckId);
+    }
+  });
+
+  it("生成した ID で JSON ストアへ保存できる", async () => {
+    const dir = await makeTempDir();
+    const store = new JsonKnowledgeStore(dir);
+    const deckId = createSafeDeckId("経営会議_生成AI戦略");
+    await store.add([entry({ deckId, slideId: `${deckId}#1` })]);
+    expect(await store.stats()).toEqual({ decks: 1, slides: 1 });
+  });
+
+  it("isValidDeckId は不正な ID を弾く", () => {
+    expect(isValidDeckId("FY2026")).toBe(true);
+    expect(isValidDeckId("-leading")).toBe(false);
+    expect(isValidDeckId("経営会議")).toBe(false);
+    expect(isValidDeckId("")).toBe(false);
+    expect(isValidDeckId("a".repeat(121))).toBe(false);
+  });
+
+  it("日本語ファイル名の PPTX を CLI から取り込める", async () => {
+    const dir = await makeTempDir();
+    const store = join(dir, "knowledge");
+    const file = join(dir, "経営会議_生成AI戦略.pptx");
+    await writeFile(file, await buildPastDeck());
+
+    const logs: string[] = [];
+    const original = console.log;
+    console.log = (...args: unknown[]) => logs.push(args.join(" "));
+    let code: number;
+    try {
+      code = await main(["knowledge", "ingest", file, "--store", store]);
+    } finally {
+      console.log = original;
+    }
+
+    expect(code).toBe(0);
+    const entries = await new JsonKnowledgeStore(store).all();
+    expect(entries).toHaveLength(2);
+    expect(entries[0]!.deckId).toBe(createSafeDeckId("経営会議_生成AI戦略"));
+    expect(DECK_ID_PATTERN.test(entries[0]!.deckId)).toBe(true);
+  });
+
+  it("不正な --deck-id は黙って書き換えず、修正案を添えて拒否する", async () => {
+    const dir = await makeTempDir();
+    const file = join(dir, "deck.pptx");
+    await writeFile(file, await buildPastDeck());
+
+    await expect(
+      main(["knowledge", "ingest", file, "--store", join(dir, "knowledge"), "--deck-id", "経営会議"]),
+    ).rejects.toThrow(/--deck-id が不正です/);
   });
 });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { LOGICAL_RELATIONS, SLIDE_ROLES } from "../domain/types.js";
 import type { LogicalRelation, SlideRole } from "../domain/types.js";
+import { DECK_ID_PATTERN } from "./deck-id.js";
 
 /**
  * Deck Knowledge Base — 過去資料を「1 スライド 1 エントリ」で蓄積する。
@@ -73,7 +74,7 @@ export const DeckKnowledgeEntrySchema = z
     deckId: z
       .string()
       .trim()
-      .regex(/^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,119}$/, "deckId は英数字と - _ . のみ使用できます"),
+      .regex(DECK_ID_PATTERN, "deckId は英数字と - _ . のみ使用でき、先頭は英数字である必要があります"),
     slideId: shortText(200),
     metadata: z
       .object({

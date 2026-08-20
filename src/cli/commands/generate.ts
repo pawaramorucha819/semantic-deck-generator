@@ -6,6 +6,7 @@ import {
   type GenerationContext,
 } from "../../config/context.js";
 import { GENERATION_CONFIG_SCHEMA_VERSION } from "../../config/schema.js";
+import { createSafeDeckId } from "../../knowledge/deck-id.js";
 import { ingestDeckFromGeneration } from "../../knowledge/ingest/ingest.js";
 import { generateFromFile, type GenerateFilesResult } from "../../pipeline.js";
 import type { LayoutIssue } from "../../render/validate.js";
@@ -120,7 +121,8 @@ async function recordKnowledge(
   const store = context.knowledgeStores[record.storeIndex ?? 0];
   if (!store) return;
 
-  const deckId = record.deckId ?? result.plan.title.replace(/[^a-zA-Z0-9-_.]/g, "-").slice(0, 100);
+  // 資料タイトルは日本語であることが普通なので、必ず安全な ID へ変換する
+  const deckId = record.deckId ?? createSafeDeckId(result.plan.title);
   const ingest = ingestDeckFromGeneration(result.spec, result.plan, {
     deckId,
     metadata: {

@@ -5,6 +5,7 @@ import {
   type KnowledgeQuery,
   type KnowledgeSearchResult,
 } from "../retrieval/retrieval.js";
+import { isValidDeckId } from "../deck-id.js";
 import {
   DeckKnowledgeFileSchema,
   KNOWLEDGE_SCHEMA_VERSION,
@@ -27,8 +28,6 @@ import type { DeckKnowledgeStore } from "./store.js";
  * 外部 Vector DB は必須にしない（要件 19）。
  */
 
-const DECK_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-_.]{0,119}$/;
-
 export class JsonKnowledgeStore implements DeckKnowledgeStore {
   readonly id: string;
   private readonly rootDir: string;
@@ -40,8 +39,11 @@ export class JsonKnowledgeStore implements DeckKnowledgeStore {
   }
 
   private deckFile(deckId: string): string {
-    if (!DECK_ID_PATTERN.test(deckId)) {
-      throw new KnowledgeValidationError(`deckId が不正です: ${deckId}`, []);
+    if (!isValidDeckId(deckId)) {
+      throw new KnowledgeValidationError(
+        `deckId が不正です: ${deckId}（createSafeDeckId() で安全な ID を作れます）`,
+        [],
+      );
     }
     return join(this.rootDir, "decks", `${deckId}.json`);
   }
