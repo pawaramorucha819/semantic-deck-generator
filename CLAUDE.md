@@ -71,7 +71,7 @@ generation.config ─┘   決定論的       manual/assist/auto   表現の確�
    fallback は constraints を持てず、全 logicalRelation 対応が必須です
    （PatternRegistry が登録時に強制）。どんな入力でも必ず描画できる緊急表現です。
 
-### AI（V1 の「Selector に LLM を持ち込まない」の置き換え）
+### AI と Human Override（V1 の「Selector に LLM を持ち込まない」の置き換え）
 
 8. **AI は決定論的 Selector を置き換えない**
    - compatibility / constraints による候補生成と検証は **deterministic layer の責務**
@@ -80,12 +80,33 @@ generation.config ─┘   決定論的       manual/assist/auto   表現の確�
    - **Renderer は AI を知らない**（`src/render/` から `src/ai/` を import してはいけない）
 
    具体的に守ること:
-   - `PatternAdvisor` に渡す候補は `compatible: true` のものだけ
+   - `PatternAdvisor` に渡す候補は「決定論的 Selector が採用してよいと判断したもの」だけ
+     （compatibility / constraints / match / **minimumScore** をすべて通過したもの）
    - 候補集合に無い patternId、未実装 variant は棄却する（`status: "rejected"`）
    - AI が使えない・失敗した場合も生成は止めない（決定論的勝者へ戻る）
    - AI 出力は必ず Zod で検証する。検証を飛ばす実装は禁止
    - `--ai-mode off` は「AI を使わない」であって「使ったふりをする」ではない。
      Provider が必要なモードで未設定なら **明確なエラー**にする（silent fallback 禁止）
+
+8-b. **AI も Human Override も、同じ安全ゲートを突破できない**
+
+   Human Override は「AI recommendation より優先される」が、
+   「安全性検証を免除される」という意味ではありません。
+
+   ```text
+   Deterministic Selector / AI Recommendation / Human Override
+     → すべて checkSelectable()（= evaluatePattern + minimumScore + variant 実装）を通る
+   ```
+
+   - 適合性判定を各所で再実装しないこと。`src/selector/selector.ts` の
+     `evaluatePattern()` / `meetsSelectionGate()` / `checkSelectable()` に寄せる
+   - compatibility / constraints / **match()** / **minimumScore** / variant のいずれかを
+     満たさない指定は、AI なら `status: "rejected"`、人間なら `SelectionPolicyError` で拒否する
+   - 「人間が指定したのだから通す」「AI の推薦だから検証を省く」はどちらも禁止
+   - Advisor 側の絞り込みだけに依存せず、**採用直前に Selection Policy で必ず再検証**する
+     （Advisor 実装を差し替えてもゲートが効く状態を保つ）
+   - `minimumScore` を満たす Pattern が無い場合の fallback は決定論的 Selector の責務。
+     AI が低スコア Pattern を押し込んで fallback 判定を迂回できてはいけない
 
 9. **AI Provider をベンダーロックインさせない**
    具体 SDK は `src/ai/` の Adapter の中だけ。`domain` / `patterns` / `render` /
@@ -146,6 +167,15 @@ generation.config ─┘   決定論的       manual/assist/auto   表現の確�
 20. **Store は差し替え可能に保つ**
     `DeckKnowledgeStore` インターフェース経由でのみ使い、
     Selector や AI 層が特定のストア実装に依存しないようにしてください。
+
+20-b. **deckId の自動生成は `createSafeDeckId()` に一本化する**
+    企業利用では「経営会議_生成AI戦略.pptx」のような日本語のファイル名・資料名が普通です。
+    `replace(/[^a-zA-Z0-9-_.]/g, "-")` のような ASCII 前提の変換を各所へ書かないでください
+    （先頭が `-` になる / ほぼ全部 `-` になる / 別資料が同じ ID に潰れる）。
+    `src/knowledge/deck-id.ts` の `createSafeDeckId()` は
+    「必ず有効・空にならない・決定論的（timestamp / random を使わない）」を保証します。
+    利用者が明示指定した deckId は黙って書き換えず、`isValidDeckId()` で検証して
+    修正案付きのエラーにしてください。
 
 ### Decision Trace / 説明可能性
 

@@ -12,9 +12,8 @@ import type {
   SelectedBy,
   SelectionMode,
 } from "../plan/decision-trace.js";
-import { checkConstraints } from "../patterns/pattern.js";
 import { defaultRegistry, type PatternRegistry } from "../patterns/registry.js";
-import { evaluatePattern, selectPattern, type PatternEvaluation } from "./selector.js";
+import { checkSelectable, selectPattern, type PatternEvaluation } from "./selector.js";
 
 /**
  * Selection Policy — 「誰が最終的に Pattern を決めるか」を扱う層。
@@ -26,8 +25,11 @@ import { evaluatePattern, selectPattern, type PatternEvaluation } from "./select
  *            人間が override すれば人間が勝つ。
  *   auto   : AI の推薦を、既存の検証をすべて通ったうえで自動採用する。
  *
- * どのモードでも、AI が compatibility / constraints / bindings のゲートを
- * 突破することはできない。AI が選べるのは *決定論的に安全と分かっている候補集合の中だけ*。
+ * **AI も人間も、安全ゲートは突破できない。**
+ * compatibility / constraints / match / minimumScore / variant 実装の確認は
+ * `checkSelectable()`（決定論的 Selector と同じ判定）に一本化されており、
+ * AI 推薦も human override も必ずここを通る。
+ * 違うのは「誰が決めるか」だけで、「何が許されるか」は全員同じ。
  */
 
 export class SelectionPolicyError extends Error {
@@ -86,11 +88,17 @@ function knowledgeQueryFor(
   };
 }
 
-/** 人間の指定を検証する。通らなければ黙って無視せず必ず例外にする。 */
+/**
+ * 人間の指定を検証する。通らなければ黙って無視せず必ず例外にする。
+ *
+ * Human Override は「AI より優先される」が「安全性検証を免除される」わけではない。
+ * 決定論的 Selector や AI 推薦とまったく同じ `checkSelectable()` を通す。
+ */
 function validateOverride(
   slide: SlideSpec,
   override: HumanOverride,
   registry: PatternRegistry,
+  minimumScore: number,
 ): { patternId: string; variantId: string } {
   if (!registry.has(override.patternId)) {
     throw new SelectionPolicyError(
@@ -99,27 +107,17 @@ function validateOverride(
   }
   const pattern = registry.get(override.patternId);
 
-  if (!pattern.compatibility.logicalRelations.includes(slide.logicalRelation)) {
+  const selectable = checkSelectable(pattern, slide, {
+    minimumScore,
+    ...(override.variantId ? { variantId: override.variantId } : {}),
+  });
+  if (!selectable.ok) {
     throw new SelectionPolicyError(
-      `slide ${slide.id}: Pattern '${pattern.id}' は logicalRelation=${slide.logicalRelation} に対応していません`,
-    );
-  }
-  const violations = checkConstraints(slide, pattern.constraints);
-  if (violations.length > 0) {
-    throw new SelectionPolicyError(
-      `slide ${slide.id}: Pattern '${pattern.id}' の constraints を満たしません: ${violations
-        .map((v) => v.message)
-        .join(" / ")}`,
+      `slide ${slide.id}: Pattern '${pattern.id}' は指定できません: ${selectable.reason}`,
     );
   }
 
-  const variantId = override.variantId ?? pattern.variants[0] ?? "standard";
-  if (!pattern.variants.includes(variantId)) {
-    throw new SelectionPolicyError(
-      `slide ${slide.id}: Pattern '${pattern.id}' に variant '${variantId}' は実装されていません`,
-    );
-  }
-  return { patternId: pattern.id, variantId };
+  return { patternId: pattern.id, variantId: selectable.variantId };
 }
 
 /** 1 スライドの Pattern を決める（決定論的選択 → Knowledge → AI → 最終決定） */
@@ -128,12 +126,11 @@ export async function decideSlidePattern(
   options: SelectionPolicyOptions,
 ): Promise<SlideSelectionOutcome> {
   const registry = options.registry ?? defaultRegistry;
+  // 最低採用品質。決定論的選択・AI 候補・human override のすべてに同じ値を適用する。
+  const minimumScore = options.minimumScore ?? 0;
 
   // 1) 決定論的選択（ここが常に土台。AI の有無にかかわらず必ず走る）
-  const deterministic = selectPattern(slide, {
-    registry,
-    ...(options.minimumScore !== undefined ? { minimumScore: options.minimumScore } : {}),
-  });
+  const deterministic = selectPattern(slide, { registry, minimumScore });
 
   // 2) Knowledge Retrieval（AI を使わなくても人間の参考になる）
   let references: KnowledgeSearchResult[] = [];
@@ -154,10 +151,16 @@ export async function decideSlidePattern(
   if (shouldAdvise && options.advisor) {
     const advice = await options.advisor.advise({
       slide,
-      candidates: toAdvisableCandidates(deterministic.candidates, (patternId) => {
-        const pattern = registry.get(patternId);
-        return { description: pattern.description, variants: pattern.variants };
-      }),
+      // minimumScore を満たさない Pattern は AI にも見せない
+      // （見せてしまうと AI 経由で最低採用品質を迂回できてしまう）
+      candidates: toAdvisableCandidates(
+        deterministic.candidates,
+        (patternId) => {
+          const pattern = registry.get(patternId);
+          return { description: pattern.description, variants: pattern.variants };
+        },
+        { minimumScore },
+      ),
       references,
     });
 
@@ -181,21 +184,29 @@ export async function decideSlidePattern(
     };
 
     if (advice.status === "advisory" && advice.recommendation) {
-      const pattern = registry.get(advice.recommendation.recommendedPatternId);
-      const variantId =
-        advice.recommendation.recommendedVariantId ?? pattern.variants[0] ?? "standard";
+      const recommendedId = advice.recommendation.recommendedPatternId;
 
-      // 二重の安全確認: Advisor が候補集合を検証済みでも、ここで再評価する
-      const evaluation = evaluatePattern(pattern, slide);
-      if (!evaluation.compatible) {
+      // 二重の安全確認: Advisor 側で候補を絞っていても、採用前にここで必ず再検証する
+      // （Advisor 実装を差し替えてもこのゲートは効く）。
+      if (!registry.has(recommendedId)) {
         ai.status = "rejected";
-        ai.rejectionReason = `再検証で不適合と判定されました: ${evaluation.reason}`;
-      } else if (!pattern.variants.includes(variantId)) {
-        ai.status = "rejected";
-        ai.rejectionReason = `未実装の variant です: ${variantId}`;
-      } else if (options.mode === "auto") {
-        aiSelection = { patternId: pattern.id, variantId };
-        ai.status = "accepted";
+        ai.rejectionReason = `未登録の patternId です: ${recommendedId}`;
+      } else {
+        const pattern = registry.get(recommendedId);
+        const selectable = checkSelectable(pattern, slide, {
+          minimumScore,
+          ...(advice.recommendation.recommendedVariantId
+            ? { variantId: advice.recommendation.recommendedVariantId }
+            : {}),
+        });
+
+        if (!selectable.ok) {
+          ai.status = "rejected";
+          ai.rejectionReason = `再検証で棄却されました: ${selectable.reason}`;
+        } else if (options.mode === "auto") {
+          aiSelection = { patternId: pattern.id, variantId: selectable.variantId };
+          ai.status = "accepted";
+        }
       }
     }
   }
@@ -207,7 +218,7 @@ export async function decideSlidePattern(
   let reason = deterministic.reason;
 
   if (override) {
-    selected = validateOverride(slide, override, registry);
+    selected = validateOverride(slide, override, registry, minimumScore);
     selectedBy = "human";
     reason = override.reason ?? `人間が Pattern '${selected.patternId}' を明示指定`;
     if (ai?.status === "accepted") ai.status = "advisory";

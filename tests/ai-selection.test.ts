@@ -22,8 +22,10 @@ import { PresentationValidationError } from "../src/domain/schema.js";
 import { InMemoryKnowledgeStore } from "../src/knowledge/store/store.js";
 import { DeterministicRetriever } from "../src/knowledge/retrieval/retrieval.js";
 import { KNOWLEDGE_SCHEMA_VERSION, type DeckKnowledgeEntry } from "../src/knowledge/schema.js";
+import { beforeAfterPattern } from "../src/patterns/before-after/index.js";
 import { compileDeclarativePattern } from "../src/patterns/declarative/compile.js";
 import { messageOnlyPattern } from "../src/patterns/message-only/index.js";
+import type { AnyVisualPattern } from "../src/patterns/pattern.js";
 import { PatternRegistry, defaultRegistry } from "../src/patterns/registry.js";
 import { buildAdvisorReport } from "../src/plan/advisor-report.js";
 import { buildVisualPlanWithPolicy } from "../src/plan/visual-plan.js";
@@ -32,7 +34,12 @@ import {
   decideSlidePattern,
   SelectionPolicyError,
 } from "../src/selector/selection-policy.js";
-import { selectPattern } from "../src/selector/selector.js";
+import {
+  checkSelectable,
+  evaluatePattern,
+  meetsSelectionGate,
+  selectPattern,
+} from "../src/selector/selector.js";
 import { loadExample, metricEvidence, pointsContent, slide, textEvidence } from "./helpers.js";
 
 function threeItemSlide() {
@@ -598,5 +605,304 @@ describe("Structure Advisor", () => {
     const result = await new StructureAdvisor(provider).advise({ request: "x", references });
     expect(result.spec.title).toBe("参照 1 件");
     expect(result.referenceSlides).toEqual(["fy2025-strategy#18"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 安全ゲート: AI も人間も同じ境界を通る
+// ---------------------------------------------------------------------------
+
+/** 常に一定の match スコアを返すテスト用 Pattern */
+function fixedScorePattern(
+  id: string,
+  matchScore: number,
+  overrides: Partial<AnyVisualPattern> = {},
+): AnyVisualPattern {
+  return {
+    id,
+    version: "1.0.0",
+    description: `テスト用 (match=${matchScore})`,
+    variants: ["standard"],
+    compatibility: { logicalRelations: ["claim_evidence"] },
+    bindingsSchema: z.object({ headline: z.string() }).strict(),
+    match: () => ({ compatible: true, score: matchScore, reason: `固定スコア ${matchScore}` }),
+    buildBindings: (slide) => ({ headline: slide.keyMessage }),
+    render: () => undefined,
+    ...overrides,
+  };
+}
+
+/** 候補集合の検証を無視して低スコア Pattern を押し込んでくる Advisor */
+function rogueAdvisor(patternId: string): PatternAdvisor {
+  return {
+    providerId: "rogue",
+    available: true,
+    advise: () =>
+      Promise.resolve({
+        provider: "rogue",
+        status: "advisory" as const,
+        recommendation: {
+          recommendedPatternId: patternId,
+          confidence: 1,
+          reason: "候補集合を無視して推薦する",
+        },
+      }),
+  } as unknown as PatternAdvisor;
+}
+
+describe("Human Override も安全ゲートを突破できない", () => {
+  /** logicalRelation は合うが match() が不適合を返すスライド（before-after の典型） */
+  function matchFailsSlide() {
+    return slide({
+      id: "slide-match-fails",
+      logicalRelation: "before_after",
+      evidence: [textEvidence("e1", "定性的な変化"), textEvidence("e2", "別の変化")],
+    });
+  }
+
+  it("match() が compatible: false を返す Pattern の指定は拒否される", async () => {
+    const target = matchFailsSlide();
+    // 前提: compatibility と constraints は通るが match で落ちる
+    const evaluation = evaluatePattern(beforeAfterPattern, target);
+    expect(evaluation.rejectedAt).toBe("match");
+
+    await expect(
+      decideSlidePattern(target, {
+        mode: "manual",
+        overrides: { "slide-match-fails": { patternId: "before-after" } },
+      }),
+    ).rejects.toThrow(SelectionPolicyError);
+    await expect(
+      decideSlidePattern(target, {
+        mode: "manual",
+        overrides: { "slide-match-fails": { patternId: "before-after" } },
+      }),
+    ).rejects.toThrow(/match 段階/);
+  });
+
+  it("compatibility 違反は引き続き拒否される", async () => {
+    await expect(
+      decideSlidePattern(threeItemSlide(), {
+        mode: "manual",
+        overrides: { "slide-ai": { patternId: "process" } },
+      }),
+    ).rejects.toThrow(/compatibility 段階/);
+  });
+
+  it("constraints 違反は引き続き拒否される", async () => {
+    const target = slide({ id: "slide-no-evidence", logicalRelation: "before_after", evidence: [] });
+    await expect(
+      decideSlidePattern(target, {
+        mode: "manual",
+        overrides: { "slide-no-evidence": { patternId: "before-after" } },
+      }),
+    ).rejects.toThrow(/constraints 段階/);
+  });
+
+  it("未実装 variant は引き続き拒否される", async () => {
+    await expect(
+      decideSlidePattern(threeItemSlide(), {
+        mode: "manual",
+        overrides: { "slide-ai": { patternId: "three-reasons", variantId: "compact" } },
+      }),
+    ).rejects.toThrow(/variant 'compact' は実装されていません/);
+  });
+
+  it("minimumScore を下回る Pattern の指定も拒否される", async () => {
+    const registry = new PatternRegistry([
+      fixedScorePattern("high-score", 1),
+      fixedScorePattern("low-score", 0.2),
+      messageOnlyPattern,
+    ]);
+    await expect(
+      decideSlidePattern(threeItemSlide(), {
+        mode: "manual",
+        registry,
+        minimumScore: 0.8,
+        overrides: { "slide-ai": { patternId: "low-score" } },
+      }),
+    ).rejects.toThrow(/minimumScore/);
+  });
+
+  it("正常な human override は AI より優先される（既存仕様は維持）", async () => {
+    const outcome = await decideSlidePattern(threeItemSlide(), {
+      mode: "auto",
+      advisor: new PatternAdvisor(recommender("message-only")),
+      overrides: { "slide-ai": { patternId: "three-reasons", reason: "レビューで指定" } },
+    });
+    expect(outcome.decisionTrace.decision.selectedBy).toBe("human");
+    expect(outcome.patternId).toBe("three-reasons");
+    expect(outcome.variantId).toBe("standard");
+    expect(outcome.decisionTrace.ai?.status).toBe("advisory");
+  });
+
+  it("deterministic / AI / human の適合性判定の境界が揃っている", async () => {
+    const target = matchFailsSlide();
+
+    // 1) deterministic: 候補としては残るが勝者にはならない
+    const deterministic = selectPattern(target);
+    expect(deterministic.patternId).not.toBe("before-after");
+    expect(
+      deterministic.candidates.find((c) => c.patternId === "before-after")?.compatible,
+    ).toBe(false);
+
+    // 2) AI: 候補集合に入らないため推薦しても棄却される
+    const provider = recommender("before-after");
+    const aiOutcome = await decideSlidePattern(target, {
+      mode: "auto",
+      advisor: new PatternAdvisor(provider),
+    });
+    const sent = provider.calls[0]!.input as { candidates: Array<{ patternId: string }> };
+    expect(sent.candidates.map((c) => c.patternId)).not.toContain("before-after");
+    expect(aiOutcome.decisionTrace.ai?.status).toBe("rejected");
+    expect(aiOutcome.patternId).not.toBe("before-after");
+
+    // 3) human: 例外になる
+    await expect(
+      decideSlidePattern(target, {
+        mode: "manual",
+        overrides: { [target.id]: { patternId: "before-after" } },
+      }),
+    ).rejects.toThrow(SelectionPolicyError);
+  });
+
+  it("checkSelectable は 3 経路が共有する 1 つのゲート", () => {
+    const ok = checkSelectable(messageOnlyPattern, threeItemSlide());
+    expect(ok.ok).toBe(true);
+
+    const failed = checkSelectable(beforeAfterPattern, matchFailsSlide());
+    expect(failed.ok).toBe(false);
+    if (!failed.ok) expect(failed.reason).toContain("match 段階");
+
+    const belowScore = checkSelectable(messageOnlyPattern, threeItemSlide(), {
+      minimumScore: 0.99,
+    });
+    expect(belowScore.ok).toBe(false);
+    if (!belowScore.ok) expect(belowScore.reason).toContain("minimumScore");
+
+    const badVariant = checkSelectable(messageOnlyPattern, threeItemSlide(), {
+      variantId: "compact",
+    });
+    expect(badVariant.ok).toBe(false);
+  });
+});
+
+describe("minimumScore は AI 候補にも適用される", () => {
+  const MINIMUM = 0.8;
+
+  function scoredRegistry() {
+    return new PatternRegistry([
+      fixedScorePattern("high-score", 1), // 最終スコア 1.00
+      fixedScorePattern("low-score", 0.2), // 最終スコア 0.44
+      messageOnlyPattern,
+    ]);
+  }
+
+  it("前提: 2 つの Pattern は compatible だがスコアが違う", () => {
+    const registry = scoredRegistry();
+    const { candidates } = selectPattern(threeItemSlide(), { registry });
+    const high = candidates.find((c) => c.patternId === "high-score")!;
+    const low = candidates.find((c) => c.patternId === "low-score")!;
+    expect(high.compatible && low.compatible).toBe(true);
+    expect(high.score).toBeGreaterThan(MINIMUM);
+    expect(low.score).toBeLessThan(MINIMUM);
+    expect(meetsSelectionGate(low, MINIMUM)).toBe(false);
+  });
+
+  it("minimumScore 未満の Pattern は AI へ渡らない", async () => {
+    const provider = recommender("high-score");
+    await decideSlidePattern(threeItemSlide(), {
+      mode: "auto",
+      registry: scoredRegistry(),
+      minimumScore: MINIMUM,
+      advisor: new PatternAdvisor(provider),
+    });
+
+    const sent = provider.calls[0]!.input as { candidates: Array<{ patternId: string }> };
+    const ids = sent.candidates.map((c) => c.patternId);
+    expect(ids).toContain("high-score");
+    expect(ids).not.toContain("low-score");
+    expect(ids).not.toContain("message-only");
+  });
+
+  it("AI が minimumScore 未満の Pattern を返しても棄却される", async () => {
+    const outcome = await decideSlidePattern(threeItemSlide(), {
+      mode: "auto",
+      registry: scoredRegistry(),
+      minimumScore: MINIMUM,
+      advisor: new PatternAdvisor(recommender("low-score")),
+    });
+    expect(outcome.decisionTrace.ai?.status).toBe("rejected");
+    expect(outcome.patternId).toBe("high-score");
+    expect(outcome.decisionTrace.decision.selectedBy).toBe("deterministic");
+  });
+
+  it("Advisor の絞り込みを迂回しても Selection Policy が再検証して棄却する", async () => {
+    const outcome = await decideSlidePattern(threeItemSlide(), {
+      mode: "auto",
+      registry: scoredRegistry(),
+      minimumScore: MINIMUM,
+      advisor: rogueAdvisor("low-score"),
+    });
+    expect(outcome.decisionTrace.ai?.status).toBe("rejected");
+    expect(outcome.decisionTrace.ai?.rejectionReason).toContain("minimumScore");
+    expect(outcome.patternId).toBe("high-score");
+  });
+
+  it("AI は minimumScore 未満の Pattern で fallback 判定を迂回できない", async () => {
+    // minimumScore を満たす Pattern が 1 つも無い状況
+    const registry = new PatternRegistry([fixedScorePattern("low-score", 0.2), messageOnlyPattern]);
+    const outcome = await decideSlidePattern(threeItemSlide(), {
+      mode: "auto",
+      registry,
+      minimumScore: MINIMUM,
+      advisor: rogueAdvisor("low-score"),
+    });
+
+    // 決定論的 Selector は従来どおり fallback する
+    expect(outcome.decisionTrace.deterministic.fallbackUsed).toBe(true);
+    expect(outcome.patternId).toBe("message-only");
+    // AI が低スコア Pattern を押し込むことはできない
+    expect(outcome.decisionTrace.ai?.status).toBe("rejected");
+  });
+
+  it("minimumScore 未指定なら従来どおり低スコア Pattern も候補に入る", async () => {
+    const provider = recommender("low-score");
+    const outcome = await decideSlidePattern(threeItemSlide(), {
+      mode: "auto",
+      registry: scoredRegistry(),
+      advisor: new PatternAdvisor(provider),
+    });
+
+    const sent = provider.calls[0]!.input as { candidates: Array<{ patternId: string }> };
+    expect(sent.candidates.map((c) => c.patternId)).toContain("low-score");
+    expect(outcome.decisionTrace.ai?.status).toBe("accepted");
+    expect(outcome.patternId).toBe("low-score");
+  });
+
+  it("toAdvisableCandidates 自体も minimumScore で絞る", () => {
+    const registry = scoredRegistry();
+    const { candidates } = selectPattern(threeItemSlide(), { registry });
+    const describe_ = (id: string) => {
+      const pattern = registry.get(id);
+      return { description: pattern.description, variants: pattern.variants };
+    };
+
+    expect(toAdvisableCandidates(candidates, describe_).map((c) => c.patternId)).toContain(
+      "low-score",
+    );
+    expect(
+      toAdvisableCandidates(candidates, describe_, { minimumScore: MINIMUM }).map(
+        (c) => c.patternId,
+      ),
+    ).toEqual(["high-score"]);
+  });
+
+  it("minimumScore を使っても deterministic な選択結果は変わらない", () => {
+    const registry = scoredRegistry();
+    const withMinimum = selectPattern(threeItemSlide(), { registry, minimumScore: MINIMUM });
+    const without = selectPattern(threeItemSlide(), { registry });
+    expect(withMinimum.patternId).toBe(without.patternId);
+    expect(withMinimum.fallbackUsed).toBe(false);
   });
 });

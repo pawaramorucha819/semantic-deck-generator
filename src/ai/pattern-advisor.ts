@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { SlideSpec } from "../domain/types.js";
 import type { KnowledgeSearchResult } from "../knowledge/retrieval/retrieval.js";
 import type { AiAdviceStatus } from "../plan/decision-trace.js";
-import type { PatternEvaluation } from "../selector/selector.js";
+import { meetsSelectionGate, type PatternEvaluation } from "../selector/selector.js";
 import { AIUnavailableError, type AIProvider } from "./provider.js";
 
 /**
@@ -190,13 +190,28 @@ export class PatternAdvisor {
   }
 }
 
-/** 決定論的評価 → AI に見せる候補（compatible なものだけ） */
+export interface AdvisableCandidateOptions {
+  /**
+   * このスコアを下回る候補は AI へ渡さない。
+   * minimumScore は「最低採用品質」なので、AI が下回る Pattern を推薦できてしまうと
+   * 決定論的 Selector の契約が破れる。
+   */
+  minimumScore?: number;
+}
+
+/**
+ * 決定論的評価 → AI に見せる候補。
+ *
+ * 通すのは「決定論的 Selector が採用してよいと判断した Pattern」だけ
+ * （compatibility / constraints / match / minimumScore をすべて通過したもの）。
+ */
 export function toAdvisableCandidates(
   evaluations: readonly PatternEvaluation[],
   describe: (patternId: string) => { description: string; variants: readonly string[] },
+  options: AdvisableCandidateOptions = {},
 ): AdvisableCandidate[] {
   return evaluations
-    .filter((evaluation) => evaluation.compatible)
+    .filter((evaluation) => meetsSelectionGate(evaluation, options.minimumScore ?? 0))
     .map((evaluation) => {
       const info = describe(evaluation.patternId);
       return {

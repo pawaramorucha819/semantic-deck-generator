@@ -148,6 +148,71 @@ export interface SelectorOptions {
 }
 
 /**
+ * 「この Pattern を採用してよいか」の共通述語。
+ *
+ * 決定論的 Selector・AI 推薦・人間の override のすべてがこの 1 箇所を通ることで、
+ * 誰が選んでも同じ安全境界（compatibility → constraints → match → minimumScore）
+ * が適用される。
+ */
+export function meetsSelectionGate(evaluation: PatternEvaluation, minimumScore = 0): boolean {
+  return evaluation.compatible && evaluation.score >= minimumScore;
+}
+
+export type SelectableResult =
+  | { ok: true; evaluation: PatternEvaluation; variantId: string }
+  | { ok: false; evaluation: PatternEvaluation; reason: string };
+
+export interface SelectableOptions {
+  minimumScore?: number;
+  /** 明示された variant。省略時は Pattern 自身の提案を使う。 */
+  variantId?: string;
+}
+
+/**
+ * Pattern + variant が採用可能かをまとめて判定する。
+ *
+ * `evaluatePattern`（compatibility / constraints / match）に minimumScore と
+ * variant 実装の確認を足したもので、AI 推薦と人間の override の両方が通る門。
+ * 「AI だから通れない / 人間だから通れる」を作らないための共通化。
+ */
+export function checkSelectable(
+  pattern: AnyVisualPattern,
+  slide: SlideSpec,
+  options: SelectableOptions = {},
+): SelectableResult {
+  const minimumScore = options.minimumScore ?? 0;
+  const evaluation = evaluatePattern(pattern, slide);
+
+  if (!evaluation.compatible) {
+    const stage = evaluation.rejectedAt ? `${evaluation.rejectedAt} 段階` : "適合判定";
+    return {
+      ok: false,
+      evaluation,
+      reason: `このスライドに適合しません (${stage}): ${evaluation.reason}`,
+    };
+  }
+
+  if (evaluation.score < minimumScore) {
+    return {
+      ok: false,
+      evaluation,
+      reason: `スコア ${evaluation.score} が minimumScore ${minimumScore} を下回ります`,
+    };
+  }
+
+  const variantId = options.variantId ?? evaluation.variantId ?? pattern.variants[0] ?? "standard";
+  if (!pattern.variants.includes(variantId)) {
+    return {
+      ok: false,
+      evaluation,
+      reason: `variant '${variantId}' は実装されていません (実装済み: ${pattern.variants.join(", ")})`,
+    };
+  }
+
+  return { ok: true, evaluation, variantId };
+}
+
+/**
  * Visual Pattern Selector（決定論的スコアリング。ここに LLM は入らない）
  *
  *   compatibility → constraints → match() → スコアリング → 最高スコア
@@ -185,9 +250,7 @@ export function selectPattern(slide: SlideSpec, options: SelectorOptions = {}): 
   });
 
   const candidates = sorted.map((s) => s.evaluation);
-  const winner = sorted.find(
-    (s) => s.evaluation.compatible && s.evaluation.score >= minimumScore,
-  );
+  const winner = sorted.find((s) => meetsSelectionGate(s.evaluation, minimumScore));
 
   if (winner) {
     return {
