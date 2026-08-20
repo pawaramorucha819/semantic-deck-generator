@@ -1,22 +1,75 @@
-# Semantic Deck Generator (V1)
+# Semantic Deck Generator (V2)
 
 **論理が一目で伝わる PowerPoint を、意味構造から決定論的に生成する仕組み。**
+そして **企業内に蓄積された「資料の作り方」を、再利用可能な知識資産にするための基盤。**
 
 このシステムは「AI に PowerPoint を直接デザインさせる」ものでは**ありません**。
 意味（何を伝えるか）・表現（どう伝えるか）・描画（どう描くか）を明確に分離し、
 最後の描画だけを完全に決定論的なコードに任せます。
+AI は「安全と分かっている候補の中から推薦する」役割だけを担います。
 
 ```text
-presentation.json          意味・論理        WHAT / WHY / LOGIC
-        ↓
-Visual Pattern Selector    パターン選択
-        ↓
-Visual Plan                表現の確定        HOW TO COMMUNICATE
-        ↓
-PowerPoint Renderer        描画              HOW TO DRAW
-        ↓
-      .pptx
+                         ┌────────────────────────┐
+                         │ Presentation Template  │
+                         │ Master / Theme / Asset │
+                         └───────────┬────────────┘
+                                     │
+                                     ▼
+┌──────────────┐          ┌──────────────────────┐
+│ 過去の PPTX  │─────────▶│ Deck Knowledge Base  │
+└──────┬───────┘          └──────────┬───────────┘
+       │ Pattern Capture             │ Retrieval
+       ▼                             ▼
+┌───────────────────┐      ┌──────────────────────┐
+│ Company Patterns  │      │ AI Deck Advisor      │
+│ (Declarative)     │◀─────│ Pattern / Structure  │
+└────────┬──────────┘      └──────────┬───────────┘
+         │                            │
+         └──────────────┬─────────────┘
+                        ▼
+                Pattern Candidates
+                        │
+                        ▼
+           Deterministic Validation   ← compatibility / constraints / match
+                        │
+                        ▼
+            Selection Policy (manual / assist / auto)
+                        │
+                        ▼
+                   Visual Plan        ← 決定の記録（Decision Trace 付き）
+                        │
+                        ▼
+            Deterministic Renderer    ← ここに AI は一切いない
+                        │
+                        ▼
+                      PPTX
 ```
+
+---
+
+## 目次
+
+1. [目的](#1-目的)
+2. [設計思想](#2-設計思想--なぜ意味と表現を分離するのか)
+3. [presentation.json（意味・論理）](#3-presentationjson意味論理)
+4. [generation.config.json（生成方法）](#4-generationconfigjson生成方法)
+5. [Visual Pattern（Code / Declarative）](#5-visual-patterncode--declarative)
+6. [Pattern Capture（PowerPoint から Pattern を作る）](#6-pattern-capturepowerpoint-から-pattern-を作る)
+7. [Presentation Template（企業テンプレート）](#7-presentation-template企業テンプレート)
+8. [Selector と Selection Policy](#8-selector-と-selection-policy)
+9. [Deck Knowledge Base](#9-deck-knowledge-base)
+10. [AI Layer](#10-ai-layer)
+11. [Visual Plan / Decision Trace / Advisor Report](#11-visual-plan--decision-trace--advisor-report)
+12. [Renderer](#12-renderer描画バックエンド)
+13. [Theme](#13-theme)
+14. [CLI](#14-cli)
+15. [Pattern の追加方法](#15-pattern-の追加方法)
+16. [PPTX Import の対応範囲](#16-pptx-import-の対応範囲)
+17. [セキュリティモデル](#17-セキュリティモデル)
+18. [バージョニング](#18-バージョニング)
+19. [テスト](#19-テスト)
+20. [ディレクトリ構成](#20-ディレクトリ構成)
+21. [V2 のスコープと今後](#21-v2-のスコープと今後)
 
 ---
 
@@ -28,10 +81,36 @@ PowerPoint Renderer        描画              HOW TO DRAW
 - なぜそう言えるのか
 - その主張を **どう見せれば一目で伝わるのか**
 
-を決めることです。
+を決めることです。V1 はこの 3 つをレイヤーに分離し、「意味さえ正しく書ければ、
+見せ方と描画は自動的に決まる」状態を作りました。
 
-本システムはこの 3 つを別々のレイヤーに分離し、
-「意味さえ正しく書ければ、見せ方と描画は自動的に決まる」状態を目指します。
+V2 はここに **企業の文脈** を足します。
+
+| V2 で足したもの | 何のために |
+| --- | --- |
+| Presentation Template | 企業のブランド（ロゴ・配色・マスター）を Pattern から分離したまま適用する |
+| Declarative Pattern | TypeScript を書かずに企業標準の見せ方を追加する |
+| Pattern Capture | 人が PowerPoint で作った良いスライドを Pattern 化する |
+| Deck Knowledge Base | 過去資料を「1 スライド 1 エントリ」で蓄積・検索する |
+| AI Layer | 過去資料を踏まえて Pattern を推薦する（決定はさせない） |
+| Selection Policy | manual / assist / auto と人間の override |
+| Decision Trace | 「なぜその Pattern になったのか」を後から説明できるようにする |
+
+目指しているのは次の循環です。
+
+```text
+人間が良い資料を作る
+      ↓
+Template / VisualPattern / Knowledge として蓄積される
+      ↓
+AI が過去の知識を検索・推薦する
+      ↓
+人間または Selection Policy が判断する
+      ↓
+決定された Visual Plan を deterministic Renderer が正確に再現する
+      ↓
+また良い資料作成ノウハウが蓄積される
+```
 
 ## 2. 設計思想 — なぜ意味と表現を分離するのか
 
@@ -46,33 +125,38 @@ LLM に PPTX を直接書かせると、次の問題がまとめて発生しま�
 | テーマ変更に弱い | 色を変えるだけで全スライドを作り直すことになる |
 
 そこで責務を次のように切ります。
-このアーキテクチャは React / Remotion のモデルに近く、**Pattern が「意味変換 + レイアウトを持つ Component」**、
+アーキテクチャは React / Remotion のモデルに近く、**Pattern が「意味変換 + レイアウトを持つ Component」**、
 **Visual Plan が「Component 呼び出し + 検証済み props」**、**Renderer が「描画バックエンド」**です。
 
 | レイヤー | 担当 | 知っていること | 知らないこと |
 | --- | --- | --- | --- |
-| `presentation.json` | 意味・論理 | KeyMessage / Content / Evidence / 論理関係 | 座標・色・図の種類 |
-| Visual Pattern | 意味変換 + レイアウト Component | Bindings への変換と、Bindings からの配置計算 | 具体的な色・フォント名（トークンのみ） |
-| Visual Plan | Pattern 呼び出しの記録 | どの Pattern をどの props（Bindings）で呼ぶか + version / theme 契約 | 最終的な座標 |
-| Theme | 見た目 | 色・書体・余白・サイズ | レイアウト構造 |
-| Renderer | 描画バックエンド | RenderContext の提供・PPTX 変換・配置検査 | 元の意味・論理 |
-
-つまり**最終座標は Visual Plan ではなく Pattern の `render()` が決めます**。
-配置結果（矩形・検査結果）が必要な場合は Visual Plan ではなく **Render Report**（後述）を使ってください。
+| `presentation.json` | 意味・論理 | KeyMessage / Content / Evidence / 論理関係 | 座標・色・図の種類・Pattern |
+| `generation.config.json` | 生成方法 | Template / Pattern ソース / Knowledge / AI | 資料の中身 |
+| Theme | デザイントークン | 色・書体・サイズ・余白 | レイアウト構造 |
+| Template | 企業の紙面 | Slide Master・ロゴ・フッター・スライドサイズ | 情報をどう見せるか |
+| Visual Pattern | 意味 → 表現 | Bindings への変換と配置計算 | 具体的な色・フォント名（トークンのみ） |
+| Knowledge | 過去の事実 | 過去スライドの意味・使われた Pattern | これから作る資料 |
+| AI | 推薦 | 候補集合と過去事例 | 座標・最終決定権 |
+| Selector | 検証と決定 | ハードゲートと選択方式 | 描画 |
+| Visual Plan | 決定の記録 | どの Pattern をどの props で呼ぶか | 最終的な座標 |
+| Renderer | 描画 | RenderContext の提供・PPTX 変換・配置検査 | 元の意味・AI の存在 |
 
 **判断に迷ったときの基準:「意味 → 表現 → 描画」の責務が混ざっていないか。**
 
-具体的には、次の 3 つがスキーマ・型レベルで強制されています。
+次のことがスキーマ・型レベルで強制されています。
 
-1. `presentation.json` に `fontSize` / `color` / `x` / `patternId` を書くと**検証エラー**になる（Zod `.strict()`）
+1. `presentation.json` に `fontSize` / `color` / `x` / `patternId` を書くと**検証エラー**（Zod `.strict()`）
 2. Pattern の `render()` は `SlideSpec` を受け取れない（Bindings しか渡らない）
-3. Bindings は各 Pattern の `bindingsSchema`（Zod）で**生成時と再生時の両方**で実行時検証される
+3. Bindings は各 Pattern の `bindingsSchema` で**生成時と再生時の両方**で検証される
+4. Declarative Pattern から任意の JavaScript は実行できない（データしか書けない）
+5. AI は決定論的に生成された候補集合の外を選べない（候補外 ID は棄却される）
+6. Renderer は AI Provider を import していない（Visual Plan 確定後は完全に決定論的）
 
 ---
 
-## 3. presentation.json（中間表現 / IR）
+## 3. presentation.json（意味・論理）
 
-意味と論理だけを保持します。
+意味と論理だけを保持します。**V2 でもここは一切変わりません。**
 
 ### content と evidence の区別（重要）
 
@@ -95,61 +179,22 @@ LLM に PPTX を直接書かせると、次の問題がまとめて発生しま�
 }
 ```
 
-`content.kind` は V1.1 時点で `sequence`（順序あり）と `points`（並列）の 2 種。
+`content.kind` は `sequence`（順序あり）と `points`（並列）の 2 種。
 各項目は `evidenceRefs` で `evidence[].id` を参照でき（未定義参照は検証エラー）、
 「見せる項目」と「それを裏付ける根拠」を分離したまま接続できます。
-
-```json
-{
-  "title": "在庫管理システム導入提案",
-  "slides": [
-    {
-      "id": "slide-004",
-      "keyMessage": "A社では導入後に在庫管理コストを30%削減している",
-      "supportingMessage": "同業種・同規模のA社では、導入から12か月で年4,800万円から3,360万円へ低下した",
-      "slideRole": "evidence",
-      "logicalRelation": "before_after",
-      "evidence": [
-        {
-          "id": "evidence-401",
-          "type": "caseStudy",
-          "statement": "A社では在庫管理システム導入後に在庫管理コストが30%削減された",
-          "data": {
-            "organization": "A社",
-            "before": 4800,
-            "after": 3360,
-            "unit": "万円",
-            "beforeLabel": "導入前",
-            "afterLabel": "導入12か月後",
-            "changeLabel": "-30%"
-          },
-          "sourceIds": ["source-401"]
-        }
-      ],
-      "sources": [
-        {
-          "id": "source-401",
-          "title": "A社 在庫管理システム導入事例",
-          "url": "https://example.com/case/a-company",
-          "date": "2024-11",
-          "accessedAt": "2025-02-10"
-        }
-      ]
-    }
-  ]
-}
-```
 
 ### 書いてよいもの / 書いてはいけないもの
 
 | 書いてよい | 書いてはいけない |
 | --- | --- |
-| keyMessage / supportingMessage | フォントサイズ・色 |
-| slideRole（資料内での役割） | 座標・サイズ |
-| logicalRelation（スライド内の論理関係） | 棒グラフにするかどうか |
-| content（見せる情報構造: 工程・並列項目） | 左右レイアウト・矢印の位置 |
-| evidence（根拠とその数値） | patternId の直接指定 |
-| sources（出典・URL・参照箇所・取得日） | |
+| keyMessage / supportingMessage | フォントサイズ・色・座標 |
+| slideRole（資料内での役割） | 棒グラフにするかどうか |
+| logicalRelation（スライド内の論理関係） | patternId / variantId |
+| content（見せる情報構造） | templateId / masterId |
+| evidence（根拠とその数値） | AI recommendation / retrieval 結果 |
+| sources（出典・URL・参照箇所・取得日） | referenceDeckId |
+
+**生成方法に関する指定はすべて `generation.config.json` 側**に置きます。
 
 ### 型定義
 
@@ -177,17 +222,88 @@ type LogicalRelation =
 type EvidenceType = "metric" | "caseStudy" | "text" | "comparison";
 ```
 
-Evidence は `type` による discriminated union です。種別を追加するときは
-`src/domain/types.ts` に 1 つ interface を足し、`src/domain/schema.ts` の
-union に 1 バリアント足すだけで済みます。
+---
+
+## 4. generation.config.json（生成方法）
+
+「どう生成するか」は presentation.json ではなくこちらに書きます。
+
+```json
+{
+  "schemaVersion": "1.0",
+
+  "template": { "id": "acme", "dirs": ["./templates"] },
+  "theme": { "id": "midnight" },
+
+  "patterns": {
+    "builtin": true,
+    "sources": [{ "dir": "./patterns/company", "scope": "company" }],
+    "allowDraft": false
+  },
+
+  "knowledge": {
+    "stores": [{ "type": "json", "dir": "./knowledge" }],
+    "context": { "purpose": "投資判断", "audience": "経営会議" },
+    "limit": 3
+  },
+
+  "ai": {
+    "mode": "assist",
+    "provider": { "type": "anthropic", "model": "claude-opus-5", "effort": "medium" },
+    "patternSelection": true,
+    "structurePlanning": false
+  },
+
+  "selection": {
+    "overrides": { "slide-006": { "patternId": "three-reasons", "reason": "レビューで指定" } },
+    "sectionSlides": ["slide-003"],
+    "minimumScore": 0
+  },
+
+  "output": {
+    "dir": "./generated",
+    "titleSlide": true,
+    "renderReport": true,
+    "advisorReport": true
+  },
+
+  "recordKnowledge": { "deckId": "fy2025-expense", "purpose": "投資判断" }
+}
+```
+
+| セクション | 意味 |
+| --- | --- |
+| `template` | 企業テンプレートの ID と読み込み元 |
+| `theme` | Template の theme を上書きする（ビルトインテーマ ID） |
+| `patterns` | ビルトインの有無、外部 Pattern パッケージの読み込み元と scope |
+| `knowledge` | Knowledge ストアと、検索時の共通文脈 |
+| `ai` | `off` / `manual` / `assist` / `auto` と Provider |
+| `selection` | 人間による Pattern 指定、章扉スライド、最低スコア |
+| `output` | 出力先と、書き出す成果物 |
+| `recordKnowledge` | 生成結果を Knowledge へ自動登録する（知識が循環する） |
+
+すべて Zod で実行時検証されます。`ai.mode` が `assist` / `auto` なのに Provider が無い場合は
+**黙って AI 無しにはならず、明確なエラー**になります。
+
+`provider.type` は `none` / `anthropic` / `scripted` の 3 種。`scripted` は
+purpose ごとの応答を書いた JSON を読む決定論的 Provider で、API キー無しのデモや CI に使います
+（応答も本物と同じスキーマ検証を通ります）。
 
 ---
 
-## 4. Visual Pattern
+## 5. Visual Pattern（Code / Declarative）
 
 Visual Pattern は PowerPoint テンプレートではなく、
-**意味構造を視覚表現へ変換し、自身のレイアウトも担う再利用可能な Component** です
-（Remotion の Component に相当。座標計算は Pattern の `render()` の責務です）。
+**意味構造を視覚表現へ変換し、自身のレイアウトも担う再利用可能な Component** です。
+
+```text
+VisualPattern
+├─ Code Pattern        … TypeScript で実装（複雑なレイアウト計算ができる）
+└─ Declarative Pattern … JSON で宣言（TypeScript 不要・企業が持ち込める）
+```
+
+**両者はまったく同じ契約を満たします。** 実装手段が違うだけで、
+Selector から見ても Renderer から見ても区別はありません。
 
 ```ts
 interface VisualPattern<TBindings> {
@@ -197,19 +313,13 @@ interface VisualPattern<TBindings> {
   variants: readonly string[];
   fallback?: boolean;
 
-  compatibility: {
-    logicalRelations: LogicalRelation[];   // ゲート（外れたら不適合）
-    slideRoles?: SlideRole[];              // 減点要素
-    evidenceTypes?: EvidenceType[];        // 減点要素
-  };
+  compatibility: { logicalRelations: LogicalRelation[]; slideRoles?: SlideRole[]; evidenceTypes?: EvidenceType[] };
+  constraints?: PatternConstraints;
+  bindingsSchema: z.ZodType<TBindings>;   // 実行時の契約
 
-  constraints?: PatternConstraints;        // 定量的な使用条件（ハードゲート）
-
-  bindingsSchema: z.ZodType<TBindings>;    // Bindings の実行時契約（生成時・再生時に検証）
-
-  match(slide: SlideSpec): MatchResult;                    // 適合度判定
+  match(slide: SlideSpec): MatchResult;                    // 意味フィット度
   buildBindings(slide: SlideSpec, variantId: string): TBindings;  // 意味 → 表現
-  render(bindings: TBindings, context: RenderContext): void;      // レイアウト + 描画
+  render(bindings: TBindings, ctx: RenderContext): void;   // 表現 → 描画
 }
 ```
 
@@ -226,54 +336,265 @@ score は Pattern 間で比較されるため、共通ルーブリックに従�
 
 ### fallback の契約
 
-fallback（`message-only`）は「常に描画できる緊急表現」であり、通常の Pattern とは別の契約を持ちます。
+fallback（`message-only`）は「常に描画できる緊急表現」であり、別の契約を持ちます。
 **PatternRegistry が登録時に強制します。**
 
 - `constraints` を持ってはならない（自分を失格させる条件を持てない）
 - 全 `logicalRelation` に対応していなければならない
-- render() はどんな入力でも収める（`message-only` は見出しサイズを段階的に下げて対応）
+- render() はどんな入力でも収める（見出しサイズを段階的に下げて対応）
 
 ### SlideSpec を直接 render しない
 
 ```text
 ✗  SlideSpec ─────────────────────────────→ render()
-
 ✓  SlideSpec ─ buildBindings() ─ Bindings ─→ render()
 ```
 
 `render()` のシグネチャに `SlideSpec` は現れません。
 これにより「描画時に意味へ戻って判断する」ことが構造的に不可能になります。
-Bindings は React / Remotion における props に近い位置付けです。
 
-```ts
-interface BeforeAfterBindings {
-  eyebrow?: string;
-  headline: string;
-  subline?: string;
-  before: { label: string; value: string | number };
-  after: { label: string; value: string | number };
-  change?: { label?: string; value: string | number };
-  unit?: string;
-  sourceText?: string;
-}
-```
-
-### 実装済み Pattern（V1.1）
+### ビルトイン Pattern（Code）
 
 | Pattern | 使いどころ | 適用条件（要点） |
 | --- | --- | --- |
 | `message-only` | KeyMessage を主役に見せる。**fallback** | 常に適用可能 |
-| `before-after` | 導入前後・状態変化の対比 | before/after として読める 2 値が evidence から抽出できる |
+| `before-after` | 導入前後・状態変化の対比 | before/after として読める 2 値が抽出できる |
 | `three-reasons` | 主張を複数の並列項目で支える | `content.points` または evidence が 2〜4 件 |
 | `process` | 工程・順序 | `process` / `timeline` かつ `content.sequence` が 2〜5 工程 |
 | `big-number` | 1 つの数字で成立するスライド | metric evidence がちょうど 1 件 |
-| `chart-with-message` | 同一軸に並ぶ数値をネイティブグラフで | 数値系列が evidence から抽出できる |
+| `chart-with-message` | 同一軸に並ぶ数値をネイティブグラフで | 数値系列が抽出できる |
+
+### Declarative Pattern
+
+JSON だけで Pattern を定義できます。**任意のコードは書けません。**
+
+```jsonc
+{
+  "schemaVersion": "1.0",
+  "kind": "declarative",
+  "id": "acme-three-column",
+  "version": "1.0.0",
+  "description": "ACME 標準の 3 列カード",
+  "metadata": { "scope": "company", "status": "approved", "previewImage": "preview.png" },
+
+  "compatibility": { "logicalRelations": ["claim_evidence"], "slideRoles": ["analysis"] },
+  "constraints": { "maxKeyMessageLength": 70 },
+
+  // 意味 → bindings の抽出規則（source は列挙された語彙のみ）
+  "slots": [
+    { "id": "headline", "type": "text", "source": "keyMessage" },
+    { "id": "sourceText", "type": "text", "source": "sourceText", "optional": true },
+    { "id": "items", "type": "items", "source": "contentOrEvidence", "min": 3, "max": 3 }
+  ],
+
+  // match() のスコアリング（条件はホワイトリスト語彙のみ）
+  "match": {
+    "baseScore": 0.62,
+    "requireSlots": ["items"],
+    "rules": [{ "when": { "itemCount": { "eq": 3 } }, "score": 0.3, "reason": "3 件で 3 列に最適" }]
+  },
+
+  "layout": {
+    "header": { "headline": { "ref": "headline" } },
+    "footer": { "text": { "ref": "sourceText" } },
+    "body": {
+      "type": "columns",
+      "gap": "md",
+      "repeat": { "slot": "items" },
+      "item": {
+        "type": "card",
+        "fill": "surface",
+        "child": {
+          "type": "stack",
+          "gap": "sm",
+          "children": [
+            { "type": "text", "value": { "template": "0{{item.index}}" }, "style": { "role": "caption" } },
+            { "type": "text", "value": { "ref": "item.label" }, "style": { "role": "heading", "bold": true } },
+            { "type": "text", "value": { "ref": "item.description" }, "height": "fill",
+              "when": { "hasValue": "item.description" } }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+対応している要素:
+
+| 要素 | 説明 |
+| --- | --- |
+| `stack` | 縦積み（gap / padding / 子の高さ auto・fill・数値） |
+| `columns` | 横並び。`repeat` で items slot を繰り返せる |
+| `card` | 角丸カード（builtin Pattern と同じ `drawCard`） |
+| `text` | slot 参照・literal・`{{item.label}}` テンプレート |
+| `shape` | rect / roundRect / ellipse / line / 矢印など |
+| `image` | パッケージ同梱アセット（`assetId` 経由のみ） |
+| `spacer` | 余白 |
+| `absolute` | 取り込んだスライドの座標をそのまま使う（Pattern Capture 用） |
+
+`header` / `footer` は builtin Pattern と同じ共有部品を使うため、
+どの Pattern でも見出しが同じ位置に来ます。
+
+**Declarative Pattern も RenderContext を経由します。** したがって
+はみ出し・重なり・実効フォントサイズ検査、Theme トークン制約、Render Report への記録が
+コード Pattern とまったく同じように機能します。
+
+ロード時に拒否されるもの:
+
+- スキーマに無いキー（`script` / `expr` など）
+- 未知のカラートークン・テキストロール
+- 未定義の slot 参照（typo）
+- `repeat` の外での `item.*` 参照
+- `__proto__` 等を含む値パス
+- `metadata.status: "draft"`（人間レビュー前）
+
+### Pattern Registry の階層
+
+```text
+project (40) > user (30) > team (20) > company (10) > builtin (0)
+```
+
+scope の優先度が効くのは **スコア同点時のタイブレークだけ** です。
+compatibility / constraints / match のハードゲートは scope より常に優先されるため、
+「project scope だから意味的に不適合な Pattern が選ばれる」ことはありません。
 
 ---
 
-## 5. Visual Pattern Selector
+## 6. Pattern Capture（PowerPoint から Pattern を作る）
 
-V1 では **LLM を使いません**。決定論的なスコアリングだけで選びます。
+人が PowerPoint で作った良いスライドを Pattern 化します。
+
+```text
+PPTX → 要素抽出 → Slot 推定 → 下書き（pattern.json） → 人間レビュー → 登録
+```
+
+```bash
+npm run sdg -- pattern import sample.pptx --slide 3 --id company-three-column
+```
+
+出力:
+
+```text
+patterns/company/company-three-column/
+  pattern.json          status=draft（このままでは登録できない）
+  capture-report.json   要素の内訳・推定の根拠・非対応要素・レビュー項目
+  assets/image-1.png    取り込んだ画像
+```
+
+### Slot 推定
+
+「固定デザイン」と「毎回差し替わるコンテンツ」を分けます。既定は**決定論的なヒューリスティクス**で、
+幾何とフォントサイズだけを見ます。
+
+| 推定 | 根拠 |
+| --- | --- |
+| 見出し（keyMessage） | 上部で最大フォントのテキスト |
+| 役割ラベル（slideRoleLabel） | 見出しの上にある小さく短いテキスト |
+| 補足（supportingMessage） | 見出しのすぐ下の、やや小さいテキスト |
+| 出典（sourceText） | 下端の小さなテキスト |
+| 反復項目（items） | 同じ大きさの図形が横に 2 つ以上並んでいる領域 |
+| 固定デザイン | 上記以外（ロゴ・装飾・固定ラベル） |
+
+推定器は `SlotInferencer` インターフェースなので **AI 実装へ差し替えられます**。
+AI 由来でも同じ `SlotInferenceResult` スキーマで検証され、範囲外のインデックスは拒否されます。
+CLI から明示指定して上書きすることもできます。
+
+```bash
+npm run sdg -- pattern import sample.pptx --slide 3 --id x \
+  --headline-index 1 --source-index 12 --static 0,4
+```
+
+### 必ず人間のレビューを通る
+
+Capture の成果物は `metadata.status: "draft"` 固定です。
+PatternRegistry は draft を受け付けないので、**人がレビューして `approved` に変えるまで
+生成には使われません**。「AI が勝手に Pattern を増やす」ことはできません。
+
+取り込んだ色は必ず Theme トークンへ寄せられ（近似した場合は警告）、
+フォントサイズは Theme のロール + 倍率に変換されます。生の hex が Pattern に残ることはありません。
+
+---
+
+## 7. Presentation Template（企業テンプレート）
+
+### Theme との違い
+
+```text
+Theme    … 色・書体・サイズ・spacing などの *デザイントークン*
+Template … Theme + Slide Master（ロゴ・ヘッダー・フッター・機密表示・ページ番号）
+           + ブランドアセット + スライドサイズ
+Pattern  … 情報をどう見せるか
+```
+
+**Pattern の中に会社ロゴやフッターを書いてはいけません。** それは Template の責務です。
+逆に Template は「情報をどう見せるか」を知りません。
+
+### 構造
+
+```ts
+interface PresentationTemplate {
+  schemaVersion: string;
+  id: string;
+  version: string;
+  name: string;
+  theme: PresentationTheme;
+  slideSize?: { widthIn: number; heightIn: number };
+  masters: SlideMasterDefinition[];
+  defaultMasterId: string;
+  titleMasterId?: string;
+  sectionMasterId?: string;
+  assets?: TemplateAsset[];          // ロゴ等（ディレクトリ内の相対パスのみ）
+  metadata?: { organization?; department?; description?; confidentialityLabel? };
+  import?: { importedFrom?; unsupportedFeatures?; warnings? };
+}
+```
+
+Master は `title` / `section` / `content` の 3 ロール。各 Master は
+背景色・固定要素（rect / line / text / image）・本文領域の余白・ページ番号位置を持ちます。
+
+固定テキストでは `{{deckTitle}}` `{{deckSubtitle}}` `{{author}}` `{{organization}}`
+`{{department}}` `{{confidentiality}}` だけが展開されます（未知の変数は例外）。
+日付など可変値は決定論性のため展開できません。
+
+### PowerPoint の Slide Master として書き出される
+
+Template の Master は PptxGenJS の Slide Master として登録されるため、
+ロゴ・フッター・機密表示は **スライド本体ではなくマスター側**に入ります。
+PowerPoint 上で一括編集でき、ページ番号は本物のページ番号フィールドになります。
+
+```bash
+npm run sdg -- generate deck.json --template acme --template-dir ./templates
+```
+
+### 既存 PPTX からの Import
+
+```bash
+npm run sdg -- template import company-template.pptx --id corporate \
+  --organization "ACME 株式会社" --confidential "社外秘"
+```
+
+```text
+templates/corporate/
+  template.json
+  import-report.json    ← 取り込めなかった要素が必ず記録される
+  assets/*.png
+```
+
+取り込む範囲は [16. PPTX Import の対応範囲](#16-pptx-import-の対応範囲) を参照。
+**完全互換 Import は目指していません。** 取り込めなかったものは silent failure にせず、
+`unsupportedFeatures` / `warnings` に必ず残します。
+
+### Template を使わない場合
+
+`--template` を指定しなければ **V1 とまったく同じ紙面**（余白 + `n / total` のページ番号）で
+生成されます。Template 非使用時の出力が変わらないことはテストで固定されています。
+
+---
+
+## 8. Selector と Selection Policy
+
+### 決定論的 Selector（ここに LLM は入らない）
 
 ```text
 compatibility  →  constraints  →  match()  →  スコアリング  →  最高スコア
@@ -286,162 +607,311 @@ score = 0.7 * match().score + 0.3 * compatibilityScore
 
 - `compatibility.logicalRelations` に含まれない → その場で不適合（ハードゲート）
 - `constraints` 違反 → 不適合（理由付きで記録、ハードゲート）
-- `match()` が `compatible: false` → 不適合（例: before/after の値が取れない）
-- `match()` のスコアが 0〜1 の範囲外 → **実行時エラー**（Pattern 作者が範囲外の値で選択を支配できない）
-- 同点時は「fallback でない方」→「レジストリ登録順」で決まるため**常に同じ結果**
-
-出力例:
-
-```json
-{
-  "patternId": "before-after",
-  "variantId": "standard",
-  "score": 1.0,
-  "reason": "logicalRelation が before_after / caseStudy に before/after が定義されている / 変化量を提示できる"
-}
-```
+- `match()` が `compatible: false` → 不適合
+- `match()` のスコアが 0〜1 の範囲外 → **実行時エラー**
+- 同点時は「scope 優先度」→「fallback でない方」→「登録順」で決まるため**常に同じ結果**
 
 適合する Pattern が 1 つも無い場合は、無理に図解せず `message-only` へ fallback します。
 
+### Selection Policy
+
+| モード | AI | 採用されるもの |
+| --- | --- | --- |
+| `off` | 呼ばない | 決定論的勝者（Decision Trace も付かない = V1 と同一） |
+| `manual` | 呼ばない | 決定論的勝者。Knowledge は参考情報として Trace に記録 |
+| `assist` | 呼ぶ | **決定論的勝者**（AI 推薦は記録のみ。非対話 CLI の安全な既定） |
+| `auto` | 呼ぶ | 検証を通った AI 推薦 |
+
+**人間の override はどのモードでも最優先**です。ただし override も
+compatibility / constraints / variant 実装の検証を通ります。不適合な指定は
+黙って無視せず `SelectionPolicyError` になります。
+
+```text
+                    ┌── 決定論的 Selector ──┐
+SlideSpec ─────────▶│ compatibility          │──▶ 候補集合（安全と分かっているもの）
+                    │ constraints            │          │
+                    │ match()                │          ▼
+                    └────────────────────────┘   ┌─ AI Advisor ─┐
+                                                 │ 候補 + 過去例 │──▶ 推薦
+Knowledge ──────────────── 過去スライド ────────▶└──────────────┘     │
+                                                                      ▼
+                                              ┌── 再検証（候補内か / variant / 適合）──┐
+                                              └──────────────┬─────────────────────────┘
+                                                             ▼
+                                              human override > AI > deterministic
+```
+
 ---
 
-## 6. Visual Plan
+## 9. Deck Knowledge Base
 
-Pattern 決定後、`presentation.json` とは別に Visual Plan を生成します。
-Visual Plan は「**どの Pattern（とバージョン）を、どの検証済み props（Bindings）で、どの Theme の下で呼ぶか**」を
-確定させた記録であり、Renderer が読むのはこの JSON だけです。
-最終座標は含まれません（座標は Pattern の `render()` が Bindings から決定します）。
+過去資料を「1 スライド 1 エントリ」で蓄積します。
+
+```ts
+interface DeckKnowledgeEntry {
+  schemaVersion: string;
+  deckId: string;
+  slideId: string;                       // `<deckId>#<slideNumber>`
+  metadata: { title?; organization?; department?; purpose?; audience?; createdAt?; tags? };
+  semantic?: { keyMessage?; slideRole?; logicalRelation?; keywords? };
+  visual?: { patternId?; variantId?; templateId?; density?; elementCounts? };
+  content?: { text: string; bulletCount?: number };
+  source: { file: string; slideNumber: number; importedAt?; origin?: "pptx" | "generation" };
+}
+```
+
+### 取り込み
+
+```bash
+# 過去 PPTX から（意味は分からないので構造とテキストのみ）
+npm run sdg -- knowledge ingest ./past-decks --store ./knowledge \
+  --organization "ACME 株式会社" --purpose 投資判断 --audience 経営会議
+
+# 自分で生成したデッキから（意味も Pattern も分かる）
+#   generation.config.json の recordKnowledge を設定すると generate 時に自動登録される
+```
+
+`slideRole` / `logicalRelation` は PPTX からは決まらないため未設定になり、
+その旨が warning として報告されます（`annotations` で補えます）。
+一方 **自分の生成結果から取り込む経路** では意味も Pattern も揃うため、
+「作った資料がそのまま知識資産になる」循環が閉じます。
+
+### 保存形式
+
+```text
+knowledge/
+  index.json           デッキ一覧
+  decks/<deckId>.json  1 デッキ分のエントリ
+```
+
+Git で差分が読める形式です。**外部 Vector DB は必須ではありません。**
+`DeckKnowledgeStore` インターフェースを実装すれば PostgreSQL / pgvector /
+Elasticsearch などへ差し替えられ、Selector や AI 層は影響を受けません。
+
+### 検索（AI 不要）
+
+```bash
+npm run sdg -- knowledge search --store ./knowledge \
+  --role recommendation --relation claim_evidence --text "投資回収"
+```
+
+メタデータ一致（slideRole / logicalRelation / purpose / audience / patternId / organization）と
+テキスト重なり（日本語は文字バイグラム + IDF 風の重み）による**決定論的スコアリング**です。
+Embedding API が無くても動き、同じクエリからは常に同じ順序が返ります。
+将来 Embedding 検索へ差し替えるときは `KnowledgeRetriever` を実装します。
+
+---
+
+## 10. AI Layer
+
+### AI Provider
+
+```ts
+interface AIProvider {
+  readonly id: string;
+  readonly available: boolean;
+  generateStructured<T>(request: AIRequest<T>): Promise<T>;
+}
+```
+
+- ベンダー SDK は `src/ai/` の Adapter の中だけに閉じ込められています。
+  Domain / Pattern / Renderer から AI Provider を import してはいけません。
+- 出力は必ず Zod で検証されます。自由テキストをそのまま信用しません。
+- 同梱 Provider: `nullAIProvider`（常に明示エラー）/ `ScriptedAIProvider`（決定論的・テスト用）/
+  `AnthropicAIProvider`（公式 SDK を動的 import）。
+- `@anthropic-ai/sdk` は **optional peerDependency** です。コア生成には不要で、
+  未インストール・API キー未設定なら明確なエラーになります。
+
+### Pattern Advisor
+
+```text
+SlideSpec → 決定論的候補生成 → (候補 + 過去スライド) → AI → 推薦 → 検証 → Selection Policy
+```
+
+AI に渡すのは **compatibility / constraints / match をすべて通過した候補だけ**です。
+次の場合は推薦を棄却します（生成は止まらず、決定論的勝者が使われます）。
+
+- 候補集合に無い `patternId` を返した
+- 未実装の `variantId` を返した
+- 再検証で不適合と判定された
+- Provider が利用できない / 呼び出しに失敗した
+
+推薦の形（Zod で検証）:
 
 ```json
 {
-  "schemaVersion": "1.1",
-  "title": "在庫管理システム導入提案",
-  "themeId": "default",
+  "recommendedPatternId": "acme-three-column",
+  "recommendedVariantId": "standard",
+  "confidence": 0.87,
+  "reason": "経営会議向けの資料では 3 列カードの利用実績が多いため",
+  "referenceSlides": ["fy2024-cost-reduction#4", "fy2024-cost-reduction#12"]
+}
+```
+
+### Structure Advisor（上流の拡張ポイント）
+
+```text
+ユーザーの依頼 → 過去資料の検索 → AI → presentation.json 下書き → parsePresentation()
+```
+
+出力は **必ず既存の `parsePresentation()` を通ります**。AI 専用の Semantic Model を作って
+Renderer へ流すことはしません。AI が `patternId` や `color` を混ぜた場合、
+presentation.json のスキーマが `.strict()` なので検証で落ちます。
+
+### AI なしでも動く
+
+これは V2 の必須要件です。
+
+```text
+presentation.json → deterministic selector → Visual Plan → Renderer
+```
+
+API キーが無くても build / test / 通常生成はすべて動作します。
+`--ai-mode off` は「AI を使わない」であって「AI を使ったふりをする」ではありません。
+
+---
+
+## 11. Visual Plan / Decision Trace / Advisor Report
+
+### Visual Plan
+
+「**どの Pattern（とバージョン）を、どの検証済み props（Bindings）で、
+どの Theme / Template の下で呼ぶか**」を確定させた記録です。
+Renderer が読むのはこの JSON だけで、最終座標は含まれません。
+
+```json
+{
+  "schemaVersion": "2.0",
+  "title": "経費精算業務の自動化提案",
+  "themeId": "acme",
+  "templateId": "acme",
   "slides": [
     {
-      "slideId": "slide-004",
-      "slideNumber": 4,
-      "patternId": "before-after",
+      "slideId": "slide-002",
+      "slideNumber": 2,
+      "patternId": "acme-three-column",
       "patternVersion": "1.0.0",
       "variantId": "standard",
-      "score": 1,
-      "reason": "logicalRelation が before_after / caseStudy に before/after が定義されている / 変化量を提示できる",
+      "score": 0.944,
+      "reason": "...",
       "fallbackUsed": false,
-      "bindings": {
-        "eyebrow": "根拠",
-        "headline": "A社では導入後に在庫管理コストを30%削減している",
-        "subline": "同業種・同規模のA社では、導入から12か月で在庫管理コストが年4,800万円から3,360万円へ低下した",
-        "before": { "label": "導入前", "value": 4800 },
-        "after": { "label": "導入12か月後", "value": 3360 },
-        "change": { "label": "変化", "value": "-30%" },
-        "unit": "万円",
-        "sourceText": "出典: A社 在庫管理システム導入事例, 2024-11"
-      },
-      "provenance": {
-        "sources": [
-          {
-            "id": "source-401",
-            "title": "A社 在庫管理システム導入事例",
-            "url": "https://example.com/case/a-company",
-            "date": "2024-11",
-            "accessedAt": "2025-02-10"
-          }
-        ],
-        "evidence": [
-          {
-            "id": "evidence-401",
-            "type": "caseStudy",
-            "statement": "A社では在庫管理システム導入後に在庫管理コストが30%削減された",
-            "sourceIds": ["source-401"]
-          }
-        ]
-      },
-      "candidates": [ /* 全 Pattern の評価結果（スコア降順・デバッグ用） */ ]
+      "bindings": { "headline": "...", "items": [ ... ] },
+      "provenance": { "sources": [ ... ], "evidence": [ ... ] },
+      "decisionTrace": {
+        "deterministic": {
+          "recommendedPatternId": "three-reasons",
+          "recommendedVariantId": "standard",
+          "score": 1.0,
+          "fallbackUsed": false,
+          "candidatePatternIds": ["three-reasons", "acme-three-column", "message-only"]
+        },
+        "knowledge": { "referenceSlides": ["fy2024-cost-reduction#4"] },
+        "ai": {
+          "provider": "scripted:./ai-responses.json",
+          "status": "accepted",
+          "recommendedPatternId": "acme-three-column",
+          "confidence": 0.87,
+          "reason": "..."
+        },
+        "decision": {
+          "mode": "auto",
+          "selectedPatternId": "acme-three-column",
+          "selectedVariantId": "standard",
+          "selectedBy": "ai",
+          "reason": "..."
+        }
+      }
     }
   ]
 }
 ```
 
-- `candidates` には**落選した Pattern とその理由**も残るため、選択の妥当性を後から検証できます
-- `provenance` は出典・根拠の**構造化された記録**です。フッターの表示用出典と違い URL・参照箇所・取得日を失いません（→ スピーカーノートに完全な形で出力）
-- Visual Plan には座標・色・フォントは含まれません
-- `--no-candidates` で候補一覧を省略できます
-
 ### 保存・再生の契約（parseVisualPlan）
 
-保存した Visual Plan は `parseVisualPlan()` を通してから再生します。次を検証し、
-通らない Plan が「黙って違う出力」になることはありません（必ず例外になります）。
+保存済み Visual Plan を読み込むとき、次がすべて検証されます。
 
-1. 構造と `schemaVersion` の一致
-2. `patternId` が現在のレジストリに存在すること
-3. `patternVersion` が現在の Pattern 実装と一致すること（不一致は再生成を要求）
-4. `variantId` が実装済みであること
-5. `bindings` が各 Pattern の `bindingsSchema` に適合すること
+1. 構造
+2. `schemaVersion` が対応バージョン（`1.1` / `2.0`）か
+3. `patternId` が現在のレジストリに存在するか
+4. `patternVersion` が現在の実装と一致するか
+5. `variantId` が実装済みか
+6. `bindings` が Pattern の `bindingsSchema` に適合するか
 
-Theme は `plan.themeId` から自動解決されます（`--theme midnight` で生成した Plan は
-オプション無しで再生しても midnight 配色になります）。ビルトイン以外のカスタム Theme で
-生成した Plan は、同じ Theme オブジェクトを再度渡す必要があります。
+V1.1 の Plan は「V2 で追加されたフィールドがすべて任意」であることを根拠に受け入れ、
+`upgradedFrom: "1.1"` を残します。**黙って読み替えることはありません。**
+検証を通らない Plan は描画されず、必ず例外になります。
+
+### Advisor Report
+
+Visual Plan とは責務が違います。
+
+| 成果物 | 役割 |
+| --- | --- |
+| Visual Plan | 再生に必要な**決定の記録**。小さく保つ |
+| Advisor Report | 決定に至るまでの**探索の詳細**（全候補のスコアと落ちた理由、参照した過去スライドの一致理由、AI の応答） |
+
+```bash
+npm run sdg -- generate deck.json --config generation.config.json --advisor-report
+# → deck.advisor-report.json
+```
 
 ---
 
-## 7. Renderer（描画バックエンド）
+## 12. Renderer（描画バックエンド）
 
-- PptxGenJS / 16:9（10in × 5.625in）
-- テキスト・図形・グラフはすべて **PowerPoint 上で編集可能**（画像化しない）
-- Pattern は PptxGenJS を直接触らず、`RenderContext` 経由でのみ描画する
-- 描画前に patternVersion / bindings を検証する（契約違反の Plan は例外）
-- `provenance` をスピーカーノートへ完全な形（URL・参照箇所・取得日込み）で書き出す
-
-`RenderContext` は色を **Theme のトークン名**でしか受け付けないため、
-Pattern 実装に `#0B4F8A` のようなリテラルが紛れ込みません。
+Pattern は PptxGenJS を直接呼びません。`RenderContext` だけを使います。
 
 ```ts
-ctx.text(box, "導入前", { role: "heading", color: "mutedText", align: "center" });
-ctx.shape("roundRect", box, { fill: "surface", line: { color: "border" } });
-ctx.chart(box, { kind: "bar", categories, series, colors: ["primary"] });
+interface RenderContext {
+  readonly theme: ResolvedTheme;
+  readonly canvas: Rect;    // スライド全面
+  readonly frame: Rect;     // 本文領域（Template の Master が決める）
+  readonly variantId: string;
+
+  text(box, content, style?): void;
+  shape(kind, box, style?): void;
+  chart(box, spec): void;
+  image(box, spec): void;   // 登録済み assetId のみ（外部 URL 不可）
+  measureText(content, opts): number;
+  fontSizeOf(role): number;
+  tint(token, amount): ColorToken;
+}
 ```
 
-### レイアウト検査
+理由は 3 つです。
 
-`RenderContext` が配置した矩形をすべて記録しているため、生成と同時に検査できます。
+1. 描画バックエンドを差し替えられる
+2. 配置された矩形をすべて記録できる → はみ出し / 重なり検査が可能
+3. 色やフォントを *トークン* でしか指定できない → Theme 分離が構造的に守られる
+
+### レイアウト検査
 
 | 検査 | 深刻度 | 内容 |
 | --- | --- | --- |
 | `off-canvas` | error | 要素がスライド外へ出た |
-| `out-of-frame` | warning | 要素が安全領域（余白の内側）を超えた |
+| `out-of-frame` | warning | 要素が安全領域を超えた |
 | `overlap` | error | content レイヤ同士が重なった |
 | `text-overflow` | warning | テキストがボックスに収まらない可能性 |
-| `text-shrink-below-min` | warning | 自動縮小で実効フォントが下限（既定 9pt）を下回る = 「生成できたが読めない」 |
+| `text-shrink-below-min` | warning | 自動縮小で実効フォントが下限（既定 9pt）を下回る |
 
 カード背景など「重なるのが正しい」要素は `decoration` レイヤに置かれ、重なり検査の対象外です。
-テキスト計測は PowerPoint（Yu Gothic）の実測に合わせた保守的な近似です
-（過小評価してあふれるより、過大評価して余白が出る方を選ぶ）。
-
-### Render Report
-
-配置結果（全要素の矩形・検査結果）は **Render Report** として機械可読に出力できます。
-最終レイアウトの検証や将来の AI Visual Review には、Visual Plan ではなくこちらを渡してください。
-
-```bash
-npx tsx src/cli/generate.ts examples/inventory-system.json --report
-# → examples/generated/inventory-system.render-report.json
-```
 
 ### 決定論性の保証範囲
 
-同じ `presentation.json` からは常に同じ Visual Plan・同じスライド構造が生成されます。
+同じ Visual Plan からは常に同じスライド構造が生成されます。
+**Renderer は AI Provider を import していません。** Visual Plan が確定した時点で
+AI の関与は終わり、以降は完全に決定論的です。
+
 ただし .pptx ファイルの**バイト列**は完全一致しません。理由は次の 2 点だけです。
 
 | 差分 | 原因 |
 | --- | --- |
 | `docProps/core.xml` | PptxGenJS が生成時刻を埋め込む |
-| `ppt/charts/chartN.xml` の連番 | PptxGenJS がプロセス内でグラフに通し番号を振る（中身は同一） |
-
-`ppt/slides/slideN.xml` とグラフの中身はバイト単位で一致し、テストで検証しています。
+| `ppt/charts/chartN.xml` の連番 | PptxGenJS がプロセス内で通し番号を振る（中身は同一） |
 
 ---
 
-## 8. Theme
+## 13. Theme
 
 Pattern は**構造**を、Theme は**見た目**を担当します。
 
@@ -462,213 +932,231 @@ interface PresentationTheme {
 }
 ```
 
-`?` 付きの項目は `resolveTheme()` が自動で補完します（例: `surface` は `primary` の淡色から導出）。
+`?` 付きの項目は `resolveTheme()` が自動で補完します。
+ビルトインは `default` / `midnight`、Template 同梱の例として `corporate` / `acme` があります。
+
+Theme の解決順序:
+
+1. `--theme <id>`（明示指定）
+2. Template の theme
+3. ビルトイン `default`
 
 ---
 
-## 9. CLI
+## 14. CLI
 
 ```bash
-npm install
-
-# サンプルを生成
-npm run generate -- examples/inventory-system.json
-# または
-npm run example
+npm run sdg -- <command> [options]
 ```
 
-生成物:
-
-```text
-examples/generated/inventory-system.pptx
-examples/generated/inventory-system.visual-plan.json
-```
-
-### オプション
-
-| オプション | 内容 |
+| コマンド | 内容 |
 | --- | --- |
-| `--out-dir <dir>` | 出力先ディレクトリ（既定: 入力と同階層の `generated/`） |
-| `--theme <id>` | テーマ（`default` / `midnight`） |
-| `--no-title-slide` | 表紙を付けない |
-| `--no-candidates` | Visual Plan から候補一覧を省略 |
-| `--report` | Render Report（配置結果 + 検査結果）も書き出す |
-| `--strict` | レイアウト警告が 1 件でもあれば終了コード 1 |
-| `--quiet` | ログを最小限に |
+| `generate <presentation.json>` | PowerPoint を生成する |
+| `template import <file.pptx>` | 既存 PPTX から企業テンプレートを取り込む |
+| `template list` | テンプレート一覧 |
+| `pattern import <file.pptx>` | PPTX の 1 スライドから Pattern 下書きを作る |
+| `pattern list` | Pattern 一覧（code / declarative / scope / preview を表示） |
+| `knowledge ingest <path...>` | 過去資料を Knowledge へ蓄積する |
+| `knowledge search` | 過去スライドを検索する |
+| `knowledge stats` | 蓄積状況を表示する |
 
-実行例:
+```bash
+# 通常生成（V1 からの入口もそのまま動く）
+npm run generate -- examples/inventory-system.json
+npm run sdg -- generate examples/inventory-system.json
+
+# 企業テンプレートを指定
+npm run sdg -- generate deck.json --template acme --template-dir ./templates
+
+# Generation Config でまとめて指定
+npm run sdg -- generate deck.json --config generation.config.json
+
+# AI モードを切り替える
+npm run sdg -- generate deck.json --config generation.config.json --ai-mode off
+npm run sdg -- generate deck.json --config generation.config.json --ai-mode assist
+
+# 既存 PPTX を企業テンプレートとして取り込む
+npm run sdg -- template import company-template.pptx --id corporate
+
+# 良いスライドを Pattern 化する（出力は draft）
+npm run sdg -- pattern import sample.pptx --slide 3 --id company-three-column
+
+# 過去資料を蓄積して検索する
+npm run sdg -- knowledge ingest ./past-decks --store ./knowledge
+npm run sdg -- knowledge search --store ./knowledge --relation comparison --role recommendation
+
+# 企業向けサンプル一式（API キー不要）
+npm run example:enterprise
+```
+
+`generate` の主なオプション:
 
 ```text
-Pattern 選択結果
-   1. slide-001  →  chart-with-message/standard  score=0.96
-      理由: 3 系列で推移・比較を読み取れる / comparison evidence がそのまま系列になる
-   2. slide-002  →  three-reasons/standard  score=1.00
-   3. slide-003  →  process/standard  score=0.99
-   4. slide-004  →  before-after/standard  score=1.00
-   5. slide-005  →  big-number/standard  score=0.97
-   6. slide-006  →  message-only/standard  score=0.80
-
-レイアウト検査: 問題なし
+--config <file>       generation.config.json
+--out-dir <dir>       出力先
+--theme <id>          テーマ
+--template <id>       企業テンプレート
+--template-dir <dir>  外部テンプレートディレクトリ（複数可）
+--pattern-dir <dir>   外部 Pattern ディレクトリ（複数可）
+--knowledge-dir <dir> Knowledge ストア（複数可）
+--ai-mode <mode>      off | manual | assist | auto
+--section <slideId>   章扉（section master）にする（複数可）
+--report              Render Report を書き出す
+--advisor-report      Advisor Report を書き出す
+--strict              レイアウト警告が 1 件でもあれば終了コード 1
 ```
 
 ### ライブラリとして使う
 
 ```ts
-import { generate, generateFromFile, parsePresentation } from "./src/index.js";
+import {
+  generate, generateFromFile,
+  loadGenerationConfig, buildGenerationContext,
+  loadTemplateFromDirectory, loadPatternPackage,
+  ingestDeckFromPptx, ingestDeckFromGeneration, JsonKnowledgeStore,
+  PatternAdvisor, ScriptedAIProvider, createAnthropicProvider,
+  buildVisualPlan, buildVisualPlanWithPolicy, renderVisualPlan,
+} from "./src/index.js";
 
-const { plan, pptxBuffer, issues } = await generate(parsePresentation(json));
+const result = await generate(spec, { templateId: "acme", templateRegistry });
 ```
 
 ---
 
-## 10. Pattern の追加方法
+## 15. Pattern の追加方法
 
-1. `src/patterns/<pattern-id>/index.ts` を作る
-2. `VisualPattern<TBindings>` を実装する
-   - `compatibility`: どの `logicalRelation` に適用できるか（ハードゲート）
-   - `constraints`: evidence 件数・文字数などの定量条件（ハードゲート）
-   - `bindingsSchema`: Bindings の Zod スキーマ（実行時契約。生成時・再生時に検証される）
-   - `match()`: 意味構造とのフィット度（**共通ルーブリック準拠の 0〜1**）と**理由の文章**
-   - `buildBindings()`: `SlideSpec` → Pattern 専用の Bindings（ここだけが意味を読む）
-   - `render()`: Bindings → レイアウト計算 + `RenderContext` への描画
-3. `src/patterns/registry.ts` の `builtinPatterns` に 1 行追加する
-4. bindings の互換性を壊す変更をしたら `version` を上げる（古い Visual Plan は再生時に拒否される）
+### Declarative Pattern（推奨: TypeScript 不要）
+
+1. `patterns/company/<id>/pattern.json` を書く（[5 章](#declarative-pattern)の例を参照）
+2. `metadata.status` を `approved` にする
+3. `--pattern-dir ./patterns/company` か `generation.config.json` の `patterns.sources` で読み込む
+4. 生成して**実際に PPTX を開いて目視確認する**
+
+または PowerPoint で作ったスライドから `pattern import` で下書きを作り、レビューして登録します。
+
+### Code Pattern（複雑なレイアウト計算が要る場合）
+
+1. `src/patterns/<pattern-id>/index.ts` に `VisualPattern<TBindings>` を実装
+   （`bindingsSchema` 必須。「見せる対象」は `content` から、「根拠」は `evidence` から読む）
+2. `src/patterns/registry.ts` の `builtinPatterns` に 1 行追加
+3. テストを `tests/` に追加（compatibility / constraints / match / buildBindings +
+   競合しうる既存 Pattern との pairwise 選択テスト）
+4. サンプルを再生成し、**実際に PPTX を開いて目視確認する**
 
 Selector / Renderer / CLI の変更は不要です。
 
-```ts
-export const MyBindingsSchema = z.object({
-  headline: z.string().min(1),
-  /* ... */
-}).strict();
+### チェックリスト
 
-export const myPattern: VisualPattern<MyBindings> = {
-  id: "my-pattern",
-  version: "1.0.0",
-  description: "...",
-  variants: ["standard"],
-  compatibility: { logicalRelations: ["cause_effect"] },
-  constraints: { minEvidence: 2, maxEvidence: 3 },
-  bindingsSchema: MyBindingsSchema,
-
-  match(slide) {
-    const facts = extractSomething(slide);
-    if (!facts) return { compatible: false, score: 0, reason: "必要な構造が無い" };
-    return { compatible: true, score: 0.9, reason: "cause_effect 構造を持つため" };
-  },
-
-  buildBindings(slide) {
-    return { headline: slide.keyMessage, /* ... */ };
-  },
-
-  render(b, ctx) {
-    const body = drawFooter(ctx, drawHeader(ctx, b), b.sourceText);
-    ctx.text(body, b.headline, { role: "keyMessage" });
-  },
-};
-```
-
-### 実装時のチェックリスト
-
-- [ ] `render()` の中で意味（`slideRole` / `logicalRelation` / `evidence`）を参照していないか
-- [ ] 色を `#RRGGBB` で直書きしていないか（Theme トークンを使う）
-- [ ] `match()` のスコアが共通ルーブリック（§4）のアンカーに沿っているか
-- [ ] `match()` の `reason` が人間に読める説明になっているか
-- [ ] 適用できないケースで `compatible: false` を返しているか（無理に描かない）
-- [ ] 「見せる対象」は `content` から、「根拠」は `evidence` から読んでいるか
-- [ ] 競合しうる既存 Pattern との pairwise 選択テストを追加したか
-
-## 11. Variant の追加方法
-
-Variant は「同じ意味構造に対する見せ方の差分」です。
-
-1. `variants` 配列に ID を足す（例: `["standard", "compact"]`）
-2. `match()` が状況に応じて `variantId` を返す（例: evidence が多ければ `compact`）
-3. `render()` で `ctx.variantId` を見て分岐する
-
-```ts
-render(b, ctx) {
-  const dense = ctx.variantId === "compact";
-  const cardHeight = dense ? 1.6 : 2.5;
-  // ...
-}
-```
-
-V1 では全 Pattern が `standard` のみを実装しています。
-将来ユーザーの微調整結果を Pattern に還元するとき、この Variant が受け皿になります。
-
-## 12. Theme の差し替え方法
-
-```ts
-import { generate, type PresentationTheme } from "./src/index.js";
-
-const corporateTheme: PresentationTheme = {
-  id: "corporate",
-  name: "Corporate",
-  fonts: { heading: "Meiryo", body: "Meiryo" },
-  fontSizes: { keyMessage: 22, heading: 15, body: 13, caption: 10 },
-  spacing: { xs: 0.06, sm: 0.12, md: 0.22, lg: 0.36, xl: 0.56 },
-  colors: {
-    background: "FFFFFF", text: "1A2230", mutedText: "6B7686",
-    primary: "8A1538", secondary: "C46A85", accent: "D8A24A",
-  },
-};
-
-await generate(spec, { theme: corporateTheme });
-```
-
-Pattern のコードは一切変更しません。
-組み込みテーマ（`default` / `midnight`）は `src/theme/theme.ts` にあり、
-CLI からは `--theme midnight` で切り替えられます。
+- [ ] `match()` は共通ルーブリックに沿ったスコアを返すか（0〜1）
+- [ ] `buildBindings()` が `bindingsSchema` に適合する値を返すか
+- [ ] `render()` が Theme トークンだけを使っているか（hex のハードコード禁止）
+- [ ] 会社ロゴ・フッターを Pattern に書いていないか（それは Template の責務）
+- [ ] レイアウト検査でエラー・警告が出ないか
 
 ---
 
-## 13. サンプル
+## 16. PPTX Import の対応範囲
 
-`examples/inventory-system.json` — **在庫管理システム導入提案**（6 枚）
+**PowerPoint 仕様の完全な再実装は目指していません。** 対応範囲を明示的に絞り、
+対応できないものは必ず報告します（silent failure 禁止）。
 
-| # | KeyMessage | slideRole | logicalRelation | 意味の素材 | 選ばれた Pattern |
-| --- | --- | --- | --- | --- | --- |
-| 1 | 在庫管理コストの増加が経営課題となっている | problem | claim_evidence | comparison evidence | `chart-with-message` |
-| 2 | 現行業務では手作業の在庫管理がボトルネックになっている | analysis | claim_evidence | text evidence ×3 | `three-reasons` |
-| 3 | 在庫管理システムにより主要業務を自動化できる | solution | process | content.sequence ×4 | `process` |
-| 4 | A社では導入後に在庫管理コストを30%削減している | evidence | before_after | caseStudy evidence | `before-after` |
-| 5 | 導入コストを考慮しても2年以内に投資回収が期待できる | analysis | claim_evidence | metric evidence ×1 | `big-number` |
-| 6 | したがって在庫管理システムを導入するべきである | recommendation | claim_evidence | content.points ×1 | `message-only` |
+### 対応している要素
 
-同じ `claim_evidence` でも、意味の素材（content / evidence）の**構造**が違えば別の Pattern が選ばれます。
-これが「意味から表現が決まる」ということです。
-なお #3 の工程は根拠ではないため evidence ではなく `content.sequence` に、
-#2 の 3 項目はヒアリングで観察された事実＝根拠なので evidence に書かれています。
+| 要素 | Template Import | Pattern Capture |
+| --- | --- | --- |
+| スライドサイズ | ✅ | ✅（座標の基準） |
+| テーマ配色 / フォント | ✅ | — |
+| 単色塗りの図形（rect / line） | ✅ | ✅（roundRect も可） |
+| テキスト（段落・フォントサイズ・色・揃え） | ✅ | ✅ |
+| 画像（png / jpg / gif） | ✅ | ✅ |
+| 単純なグループ（座標変換して展開） | ✅ | ✅ |
+| プレースホルダ（本文領域・ページ番号位置） | ✅ | — |
+| マスター / レイアウトの固定装飾 | ✅ | — |
+
+### 対応していない要素（必ず報告される）
+
+- SmartArt（diagram）
+- グラフ（chart）
+- 表（table）
+- OLE 埋め込みオブジェクト
+- アニメーション・画面切り替え
+- 3D 効果・影・光彩などの特殊効果
+- グラデーション塗り・画像塗り・パターン塗り
+- カスタム図形（custGeom。矩形として近似し報告）
+- 外部リンク画像（**取得しません**）
+- VBA マクロ（読み込まず、実行もしません）
+- 動画・音声
+
+これらは `import-report.json` / `capture-report.json` の `unsupportedFeatures` に記録されます。
 
 ---
 
-## 14. テスト
+## 17. セキュリティモデル
+
+企業利用を想定し、次を**構造的に**禁止しています。
+
+| 脅威 | 対策 |
+| --- | --- |
+| Declarative Pattern からの任意コード実行 | JSON にコード表現が無い。値参照は列挙された安全パスのみ、条件はホワイトリスト語彙のみ |
+| Template JSON からの任意コード実行 | 同上。Master 要素は rect / line / text / image のデータだけ |
+| プロトタイプ汚染 | `__proto__` / `constructor` / `prototype` を含むパス・XML 属性を拒否 |
+| XXE（外部実体参照） | 自前 XML パーサが DOCTYPE / ENTITY を含む文書を拒否 |
+| ZIP パストラバーサル | 絶対パス・`..` を含むエントリを拒否。アセットはパッケージ内に限定 |
+| ZIP 爆弾 | エントリ数・パートサイズ・展開後合計サイズに上限 |
+| PPTX マクロ | 読み込まず、存在を非対応として報告するだけ |
+| 外部 URL の無条件 fetch | 画像は登録済み `assetId` 経由のみ。外部リンク画像は取得せず報告 |
+| Knowledge 由来の文字列実行 | Knowledge は検索とプロンプト材料にしか使われない。シェル実行の経路が無い |
+| AI 出力の無検証利用 | すべて Zod 検証 + 候補集合・variant・compatibility の再検証を通る |
+
+`.pptx` は常に **untrusted input** として扱います。
+
+---
+
+## 18. バージョニング
+
+保存された成果物を将来読み込むため、それぞれにスキーマバージョンがあります。
+
+| 対象 | バージョン | 不一致のときの挙動 |
+| --- | --- | --- |
+| Visual Plan | `schemaVersion` 2.0（1.1 も受け入れ、`upgradedFrom` を記録） | 対応外は例外 |
+| Pattern | `version`（bindings 互換が変わったら上げる） | Plan と実装が不一致なら例外 |
+| Template | `schemaVersion` 1.0 | 対応外は例外 |
+| Declarative Pattern | `schemaVersion` 1.0 | 対応外は例外 |
+| Knowledge | `schemaVersion` 1.0 | 対応外は例外 |
+| Generation Config | `schemaVersion` 1.0 | 対応外は例外 |
+| Render Report / Advisor Report | `schemaVersion` 1.0 | — |
+
+「スキーマが変わったが黙って読み込んで別結果になる」ことはありません。
+
+---
+
+## 19. テスト
 
 ```bash
-npm test          # vitest run
-npm run typecheck # tsc --noEmit
+npm run typecheck
+npm test
 ```
 
 | テストファイル | 内容 |
 | --- | --- |
-| `tests/schema.test.ts` | Schema validation / 不正入力の拒否 / 描画語彙の混入拒否 / content 参照整合性 |
-| `tests/patterns.test.ts` | compatibility / constraints / match / buildBindings / fallback 登録契約 |
-| `tests/extra-patterns.test.ts` | big-number / chart-with-message とネイティブグラフ出力 |
-| `tests/selector.test.ts` | スコアリング / 落選理由 / fallback / 決定論性 / pairwise 選択 |
-| `tests/visual-plan.test.ts` | Visual Plan 生成 / provenance / parseVisualPlan（改竄・version 不一致の拒否） |
-| `tests/contracts.test.ts` | スコア範囲の実行時検証 / fallback 契約 / 長文ストレス / 実効フォントサイズ検査 |
-| `tests/render.test.ts` | PPTX 内部構造 / Theme 再生（plan.themeId）/ スピーカーノート / レイアウト検査 |
-| `tests/pipeline.test.ts` | End-to-End（ファイル入出力込み） |
-| `tests/geometry.test.ts` | レイアウト計算・テキスト計測（較正済み）・配色ユーティリティ |
+| `tests/schema.test.ts` | presentation.json の検証（描画情報の混入拒否を含む） |
+| `tests/geometry.test.ts` | 幾何・テキスト計測 |
+| `tests/patterns.test.ts` / `extra-patterns.test.ts` | 各 Pattern の match / buildBindings |
+| `tests/selector.test.ts` | 決定論的選択・pairwise 競合 |
+| `tests/contracts.test.ts` | スコア契約・fallback 契約・可読性検査 |
+| `tests/visual-plan.test.ts` | Visual Plan の生成・保存・再生契約 |
+| `tests/render.test.ts` | PPTX 構造・Theme 差し替え・決定論性・入口検証 |
+| `tests/templates.test.ts` | Template スキーマ / Registry / Master 選択 / PPTX XML 検査 / 後方互換 |
+| `tests/declarative-pattern.test.ts` | 宣言スキーマ / bindings / 描画 / 不正要素拒否 / Registry 階層 |
+| `tests/pptx-import.test.ts` | XML パーサ / ZIP 安全性 / Template Import / Pattern Capture |
+| `tests/knowledge.test.ts` | ingest / 永続化 / 決定論的検索 |
+| `tests/ai-selection.test.ts` | AI Provider / Advisor / manual・assist・auto / Decision Trace |
+| `tests/enterprise-e2e.test.ts` | Generation Config と企業向け E2E |
+| `tests/pipeline.test.ts` | End-to-End |
 
-PPTX は「ファイルが存在する」だけでなく、zip を展開して
-`ppt/slides/slideN.xml` / `ppt/charts/chart1.xml` の内容まで検証しています。
+外部 API はテストから一切呼びません（AI は `ScriptedAIProvider` を使用）。
 
 ### 目視確認（Windows + PowerPoint）
-
-自動テストではレイアウトの「見た目」までは分からないため、
-生成物を PNG に書き出して確認する補助スクリプトを用意しています。
 
 ```powershell
 powershell -File scripts/preview-pptx.ps1 -Pptx examples/generated/inventory-system.pptx -OutDir .preview
@@ -676,28 +1164,62 @@ powershell -File scripts/preview-pptx.ps1 -Pptx examples/generated/inventory-sys
 
 ---
 
-## 15. ディレクトリ構成
+## 20. ディレクトリ構成
 
 ```text
 src/
-  domain/       意味・論理（型 + Zod スキーマ）      ← 座標・色を知らない
-  theme/        見た目（色・書体・余白）
-  patterns/     意味 → 表現（Visual Pattern）
-    shared/     Evidence 抽出・共通レイアウト部品
-  selector/     Pattern 選択（決定論的スコアリング）
-  plan/         Visual Plan の生成と直列化
-  render/       表現 → 描画（PptxGenJS / レイアウト検査）
-  cli/          CLI エントリポイント
-  pipeline.ts   End-to-End パイプライン
+  domain/       意味・論理（型 + Zod スキーマ）
+  theme/        デザイントークン
+  templates/    企業テンプレート（型 / スキーマ / Registry / Master 生成 / PPTX Import）
+  patterns/     意味 → 表現
+    <builtin>/  コード Pattern
+    declarative/ 宣言的 Pattern（スキーマ / 値解決 / bindings / 描画 / ローダ）
+    capture/    PowerPoint からの Pattern 化（推定 / 組み立て）
+    registry.ts 階層化された Registry
+  pptx/         PPTX 読み取り（自前 XML パーサ / ZIP / 要素抽出）
+  knowledge/    過去資料の蓄積（スキーマ / ストア / 検索 / 取り込み）
+  ai/           AI Provider / Pattern Advisor / Structure Advisor
+  selector/     決定論的選択 + Selection Policy
+  plan/         Visual Plan / Decision Trace / Advisor Report
+  render/       表現 → 描画（RenderContext + レイアウト検査）
+  config/       generation.config.json
+  cli/          CLI（サブコマンド）
+  pipeline.ts   End-to-End
+
 examples/
-  inventory-system.json
-tests/
+  inventory-system.json      V1 サンプル
+  ai-code-review.json        V1.1 サンプル
+  enterprise/                V2 企業サンプル一式
 ```
 
-## 16. V1 のスコープ外
+---
 
-GUI / Web アプリ / LLM API 連携 / PowerPoint 編集 UI / 過去資料 RAG /
-ユーザー修正の自動学習 / AI による Visual Review / 高度な AI Pattern Selector /
-完全自由レイアウト生成。
+## 21. V2 のスコープと今後
 
-V1 は **End-to-End が一本通っていること** を最優先しています。
+### V2 で実装したもの
+
+- Presentation Template（Slide Master / ロゴ / 機密表示 / スライドサイズ）
+- 既存 PPTX からの Template Import（サブセット + 明示的な非対応報告）
+- Declarative Pattern（JSON から安全にロード・描画）
+- Pattern Capture（PowerPoint → Pattern 下書き → 人間レビュー → 登録）
+- Deck Knowledge Base（ローカル JSON + 決定論的検索）
+- AI Provider 抽象と Pattern Advisor / Structure Advisor
+- Selection Policy（manual / assist / auto）と Human Override
+- Decision Trace と Advisor Report
+- Generation Config とサブコマンド CLI
+
+### V2 のスコープ外（意図的に実装していない）
+
+- PowerPoint 仕様の完全な Import（SmartArt / グラフ / 表 / アニメーション）
+- GUI / Web UI（Pattern の preview 情報は将来の GUI 向けに保持済み）
+- 外部 Vector DB / Embedding 検索（差し替え可能な抽象は用意済み）
+- AI による自由座標生成（**永久にスコープ外**）
+- Pattern の自動増殖（Capture は必ず人間レビューを通る）
+
+### 今後の候補
+
+- Embedding Retriever の実装（`KnowledgeRetriever` を差し替えるだけ）
+- Structure Advisor の CLI 化（`presentation.json` の下書き生成）
+- Variant の拡充（compact / detailed など）
+- Render Report を使った AI Visual Review
+- Pattern preview 画像の自動生成
