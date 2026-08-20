@@ -169,15 +169,17 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
     slideSize.heightIn - theme.margins.top - theme.margins.bottom,
   );
 
-  // Template 使用時のみ Slide Master を定義する（未使用なら V1 と同じ出力）
-  const assets = active ? createAssetResolver(active.assets) : undefined;
+  // 画像アセットは Template と Pattern パッケージの両方から来る。
+  // Pattern 側は `pattern:<id>:<assetId>` へ名前空間化済みなので衝突しない。
+  const allAssets = [...(active?.assets ?? []), ...registry.assets()];
+  const assets = allAssets.length > 0 ? createAssetResolver(allAssets) : undefined;
   const masterNames =
-    active && assets
+    active
       ? defineTemplateMasters({
           pptx,
           template: active.template,
           theme,
-          assets,
+          assets: assets ?? createAssetResolver([]),
           includeSlideNumbers: showSlideNumbers,
           variables: templateVariablesOf(validatedPlan, active.template),
         })

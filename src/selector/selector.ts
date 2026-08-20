@@ -148,12 +148,16 @@ export interface SelectorOptions {
 }
 
 /**
- * Visual Pattern Selector（V1: LLM 不使用の決定論的スコアリング）
+ * Visual Pattern Selector（決定論的スコアリング。ここに LLM は入らない）
  *
  *   compatibility → constraints → match() → スコアリング → 最高スコア
  *
- * 同点の場合は「fallback でない方」→「レジストリ登録順」で決まるため、
+ * 同点の場合は「scope 優先度が高い方（project > user > team > company > builtin）」
+ * →「fallback でない方」→「レジストリ登録順」で決まるため、
  * 同じ入力からは必ず同じ Pattern が選ばれる。
+ *
+ * scope 優先度が効くのは *同点のとき* だけであり、
+ * 意味的に不適合な Pattern が scope の力で選ばれることはない。
  */
 export function selectPattern(slide: SlideSpec, options: SelectorOptions = {}): PatternSelection {
   const registry = options.registry ?? defaultRegistry;
@@ -163,6 +167,7 @@ export function selectPattern(slide: SlideSpec, options: SelectorOptions = {}): 
   const evaluations = patterns.map((pattern, index) => ({
     index,
     pattern,
+    priority: registry.priorityOf(pattern.id),
     evaluation: evaluatePattern(pattern, slide),
   }));
 
@@ -171,6 +176,8 @@ export function selectPattern(slide: SlideSpec, options: SelectorOptions = {}): 
     if (b.evaluation.matchScore !== a.evaluation.matchScore) {
       return b.evaluation.matchScore - a.evaluation.matchScore;
     }
+    // 同点のときだけ scope 優先度（project > user > team > company > builtin）が効く
+    if (b.priority !== a.priority) return b.priority - a.priority;
     const aFallback = a.pattern.fallback ? 1 : 0;
     const bFallback = b.pattern.fallback ? 1 : 0;
     if (aFallback !== bFallback) return aFallback - bFallback;

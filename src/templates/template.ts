@@ -15,7 +15,6 @@ import type { PresentationTheme, ResolvedTheme } from "../theme/theme.js";
 import { resolveTheme } from "../theme/theme.js";
 import type { ColorToken, FontRole, TextRole } from "../render/context.js";
 import type { Rect } from "../render/geometry.js";
-import type { SpacingTokenName } from "../render/tokens.js";
 
 export const TEMPLATE_SCHEMA_VERSION = "1.0";
 
@@ -266,6 +265,3 @@ export function expandTemplateText(text: string, vars: TemplateTextVariables): s
     return (vars as unknown as Record<string, string | undefined>)[name] ?? "";
   });
 }
-
-/** spacing トークンを受け付ける値（Declarative Pattern と共通） */
-export type SpacingValue = SpacingTokenName | number;

@@ -13,9 +13,13 @@ export interface HeaderBindings {
   subline?: string;
 }
 
-/** 見出しブロックを描画し、残りの本文領域を返す */
-export function drawHeader(ctx: RenderContext, header: HeaderBindings): Rect {
-  const { theme, frame } = ctx;
+/**
+ * 見出しブロックを描画し、残りの本文領域を返す。
+ * `area` を渡すとその領域内に描く（既定はスライドの作図可能領域）。
+ */
+export function drawHeader(ctx: RenderContext, header: HeaderBindings, area?: Rect): Rect {
+  const { theme } = ctx;
+  const frame = area ?? ctx.frame;
   let cursor = frame.y;
 
   if (header.eyebrow) {

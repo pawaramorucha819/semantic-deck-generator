@@ -19,3 +19,4 @@ export {
 } from "./chart-with-message/index.js";
 export * from "./shared/semantics.js";
 export * from "./shared/layout.js";
+export * from "./declarative/index.js";
