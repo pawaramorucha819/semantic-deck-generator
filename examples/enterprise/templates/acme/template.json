@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "1.0",
+  "id": "acme",
+  "version": "1.0.0",
+  "name": "ACME 標準テンプレート",
+  "theme": {
+    "id": "acme",
+    "name": "ACME Brand",
+    "fonts": {
+      "heading": "Yu Gothic",
+      "body": "Yu Gothic",
+      "numeric": "Segoe UI"
+    },
+    "fontSizes": {
+      "keyMessage": 21,
+      "heading": 14,
+      "body": 12,
+      "caption": 9,
+      "display": 42
+    },
+    "spacing": { "xs": 0.06, "sm": 0.12, "md": 0.2, "lg": 0.32, "xl": 0.5 },
+    "colors": {
+      "background": "FFFFFF",
+      "text": "16202E",
+      "mutedText": "62707F",
+      "primary": "10365F",
+      "secondary": "2C7BB6",
+      "accent": "C8622F",
+      "surface": "F2F6FA",
+      "border": "D3DBE4",
+      "positive": "1B7F62",
+      "negative": "B5462F",
+      "onPrimary": "FFFFFF"
+    },
+    "margins": { "top": 0.66, "right": 0.6, "bottom": 0.66, "left": 0.6 },
+    "shape": { "cornerRadius": 0.04, "borderWidth": 1 }
+  },
+  "masters": [
+    {
+      "id": "acme-title",
+      "role": "title",
+      "name": "表紙",
+      "background": { "color": "primary" },
+      "contentMargins": { "top": 1.5, "right": 0.9, "bottom": 1.1, "left": 0.9 },
+      "elements": [
+        {
+          "kind": "image",
+          "assetId": "logo",
+          "box": { "x": 0.9, "y": 0.7, "w": 1.6, "h": 0.4 },
+          "sizing": "contain"
+        },
+        {
+          "kind": "shape",
+          "shape": "rect",
+          "box": { "x": 0.9, "y": 4.5, "w": 1.6, "h": 0.05 },
+          "style": { "fill": "accent" }
+        },
+        {
+          "kind": "text",
+          "box": { "x": 0.9, "y": 4.72, "w": 8.2, "h": 0.28 },
+          "text": "{{organization}} / {{department}}",
+          "style": { "role": "caption", "color": "onPrimary", "charSpacing": 1, "valign": "middle" }
+        }
+      ]
+    },
+    {
+      "id": "acme-section",
+      "role": "section",
+      "name": "章扉",
+      "background": { "color": "surface" },
+      "contentMargins": { "top": 2.0, "right": 0.9, "bottom": 1.2, "left": 0.9 },
+      "elements": [
+        {
+          "kind": "shape",
+          "shape": "rect",
+          "box": { "x": 0, "y": 0, "w": 10, "h": 0.1 },
+          "style": { "fill": "primary" }
+        },
+        {
+          "kind": "shape",
+          "shape": "rect",
+          "box": { "x": 0.9, "y": 1.62, "w": 1.2, "h": 0.05 },
+          "style": { "fill": "accent" }
+        }
+      ]
+    },
+    {
+      "id": "acme-content",
+      "role": "content",
+      "name": "本文",
+      "background": { "color": "background" },
+      "contentMargins": { "top": 0.66, "right": 0.6, "bottom": 0.7, "left": 0.6 },
+      "elements": [
+        {
+          "kind": "shape",
+          "shape": "rect",
+          "box": { "x": 0, "y": 0, "w": 10, "h": 0.1 },
+          "style": { "fill": "primary" }
+        },
+        {
+          "kind": "image",
+          "assetId": "logo",
+          "box": { "x": 8.55, "y": 0.2, "w": 0.85, "h": 0.22 },
+          "sizing": "contain"
+        },
+        {
+          "kind": "text",
+          "box": { "x": 0.6, "y": 0.18, "w": 5.0, "h": 0.26 },
+          "text": "{{organization}}",
+          "style": { "role": "caption", "color": "mutedText", "valign": "middle" }
+        },
+        {
+          "kind": "shape",
+          "shape": "rect",
+          "box": { "x": 0.6, "y": 5.1, "w": 8.8, "h": 0.012 },
+          "style": { "fill": "border" }
+        },
+        {
+          "kind": "text",
+          "box": { "x": 0.6, "y": 5.18, "w": 5.4, "h": 0.26 },
+          "text": "{{confidentiality}}",
+          "style": { "role": "caption", "color": "mutedText", "valign": "middle" }
+        }
+      ],
+      "slideNumber": {
+        "box": { "x": 8.4, "y": 5.18, "w": 1.0, "h": 0.26 },
+        "style": {
+          "role": "caption",
+          "font": "numeric",
+          "color": "mutedText",
+          "align": "right",
+          "valign": "middle"
+        }
+      }
+    }
+  ],
+  "defaultMasterId": "acme-content",
+  "titleMasterId": "acme-title",
+  "sectionMasterId": "acme-section",
+  "assets": [
+    { "id": "logo", "path": "assets/logo.png", "kind": "image", "description": "ACME ロゴ" }
+  ],
+  "metadata": {
+    "organization": "ACME 株式会社",
+    "department": "経営企画部",
+    "description": "ヘッダー帯・ロゴ・機密表示・ページ番号を Slide Master 側に持つ企業標準テンプレート",
+    "confidentialityLabel": "社外秘 / ACME Confidential"
+  }
+}

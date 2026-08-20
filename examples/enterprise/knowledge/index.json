@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "decks": [
+    {
+      "deckId": "fy2023-workflow-review",
+      "title": "FY2023 業務フロー棚卸し",
+      "slideCount": 3,
+      "file": "decks/fy2023-workflow-review.json",
+      "organization": "ACME 株式会社",
+      "purpose": "現状共有",
+      "audience": "部門長"
+    },
+    {
+      "deckId": "fy2024-cost-reduction",
+      "title": "FY2024 間接コスト削減方針",
+      "slideCount": 3,
+      "file": "decks/fy2024-cost-reduction.json",
+      "organization": "ACME 株式会社",
+      "purpose": "投資判断",
+      "audience": "経営会議"
+    }
+  ]
+}

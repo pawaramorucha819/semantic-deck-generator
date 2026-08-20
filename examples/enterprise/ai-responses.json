@@ -1,0 +1,9 @@
+{
+  "pattern-selection": {
+    "recommendedPatternId": "acme-three-column",
+    "recommendedVariantId": "standard",
+    "confidence": 0.87,
+    "reason": "経営会議向けの資料では、要点を3列カードで見せる社内標準パターンの利用実績が多いため",
+    "referenceSlides": ["fy2024-cost-reduction#4", "fy2024-cost-reduction#12"]
+  }
+}

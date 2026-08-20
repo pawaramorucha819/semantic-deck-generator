@@ -1,6 +1,8 @@
 node_modules/
 dist/
 examples/generated/
+examples/**/generated/
 .preview/
 *.log
 .tmp/
+.tmp-out/

@@ -1,0 +1,188 @@
+{
+  "title": "経費精算業務の自動化提案",
+  "subtitle": "紙とExcelによる精算フローからの脱却と投資回収の見通し",
+  "author": "経営企画部",
+  "slides": [
+    {
+      "id": "slide-001",
+      "keyMessage": "経費精算にかかる間接コストが年々増加している",
+      "supportingMessage": "申請から承認までの人件費は過去3年で年平均14%増加しており、間接部門の負荷を押し上げている",
+      "slideRole": "problem",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-001",
+          "type": "comparison",
+          "statement": "経費精算にかかる間接コストは2022年度の2,600万円から2024年度は3,420万円へ増加している",
+          "data": {
+            "unit": "万円",
+            "items": [
+              { "label": "2022年度", "value": 2600 },
+              { "label": "2023年度", "value": 2980 },
+              { "label": "2024年度", "value": 3420 }
+            ]
+          },
+          "sourceIds": ["source-001"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-001",
+          "title": "間接部門コスト分析 2024年度",
+          "publisher": "経理部",
+          "date": "2025-02",
+          "locator": "p.8 表3-1"
+        }
+      ]
+    },
+    {
+      "id": "slide-002",
+      "keyMessage": "コスト増の要因は3つの手作業に集中している",
+      "supportingMessage": "全12拠点への業務調査から、精算業務の遅延と差し戻しは3つの工程に偏っていることが分かった",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "領収書の手入力",
+            "description": "1件あたり平均6分を要し、月間の入力工数が突出している",
+            "evidenceRefs": ["evidence-201"]
+          },
+          {
+            "label": "規程違反の目視チェック",
+            "description": "上長が全件を目視確認しており、承認待ちの主要因になっている",
+            "evidenceRefs": ["evidence-202"]
+          },
+          {
+            "label": "会計システムへの二重入力",
+            "description": "精算システムと会計システムが連携しておらず同じ内容を2回入力している",
+            "evidenceRefs": ["evidence-203"]
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "evidence-201",
+          "type": "metric",
+          "statement": "領収書入力の平均所要時間は1件あたり6分である",
+          "data": { "label": "1件あたり入力時間", "value": 6, "unit": "分" },
+          "sourceIds": ["source-201"]
+        },
+        {
+          "id": "evidence-202",
+          "type": "metric",
+          "statement": "承認待ちの滞留時間の62%は目視チェック工程で発生している",
+          "data": { "label": "目視チェックの滞留比率", "value": 62, "unit": "%" },
+          "sourceIds": ["source-201"]
+        },
+        {
+          "id": "evidence-203",
+          "type": "metric",
+          "statement": "二重入力に費やす時間は月あたり拠点平均28時間である",
+          "data": { "label": "二重入力の月間工数", "value": 28, "unit": "時間" },
+          "sourceIds": ["source-201"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-201",
+          "title": "経費精算業務実態調査（全12拠点）",
+          "publisher": "経営企画部",
+          "date": "2025-01"
+        }
+      ]
+    },
+    {
+      "id": "slide-003",
+      "keyMessage": "OCRとルールエンジンで4工程を自動化できる",
+      "supportingMessage": "領収書の読み取りから会計仕訳までを連続処理し、人手を介するのは例外処理だけになる",
+      "slideRole": "solution",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          { "label": "領収書をスマートフォンで撮影", "description": "申請者はアプリで撮影するだけ" },
+          { "label": "OCRが金額・日付・取引先を抽出", "description": "手入力を不要にする" },
+          { "label": "ルールエンジンが規程違反を判定", "description": "違反候補だけを上長へ回す" },
+          { "label": "会計システムへ自動仕訳", "description": "二重入力を解消する" }
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "slide-004",
+      "keyMessage": "同規模のB社では精算工数を45%削減している",
+      "supportingMessage": "従業員1,200名規模のB社では、導入から9か月で年間工数が11,000時間から6,050時間へ減少した",
+      "slideRole": "evidence",
+      "logicalRelation": "before_after",
+      "evidence": [
+        {
+          "id": "evidence-401",
+          "type": "caseStudy",
+          "statement": "B社は経費精算の年間工数を11,000時間から6,050時間へ削減した",
+          "data": {
+            "organization": "B社",
+            "before": 11000,
+            "after": 6050,
+            "unit": "時間",
+            "beforeLabel": "導入前",
+            "afterLabel": "導入9か月後",
+            "changeLabel": "-45%"
+          },
+          "sourceIds": ["source-401"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-401",
+          "title": "B社 経費精算自動化 導入事例",
+          "publisher": "導入支援ベンダー",
+          "date": "2024-10",
+          "url": "https://example.com/case/b-company",
+          "accessedAt": "2025-02-14"
+        }
+      ]
+    },
+    {
+      "id": "slide-005",
+      "keyMessage": "投資回収は1.8年で見込める",
+      "supportingMessage": "初期投資3,200万円に対し、年間1,780万円の間接コスト削減が見込まれる",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "evidence": [
+        {
+          "id": "evidence-501",
+          "type": "metric",
+          "statement": "投資回収期間は1.8年と試算される",
+          "data": { "label": "投資回収期間", "value": 1.8, "unit": "年", "direction": "decrease" },
+          "sourceIds": ["source-501"]
+        }
+      ],
+      "sources": [
+        {
+          "id": "source-501",
+          "title": "経費精算自動化 投資対効果試算",
+          "publisher": "経営企画部",
+          "date": "2025-02"
+        }
+      ]
+    },
+    {
+      "id": "slide-006",
+      "keyMessage": "したがって2025年度上期に経費精算自動化を開始すべきである",
+      "supportingMessage": "上期に要件定義とPoCを行い、下期に全拠点展開する",
+      "slideRole": "recommendation",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          { "label": "4月: 要件定義とベンダー選定" },
+          { "label": "7月: 3拠点でのPoC" },
+          { "label": "10月: 全12拠点へ展開" }
+        ]
+      },
+      "evidence": []
+    }
+  ]
+}

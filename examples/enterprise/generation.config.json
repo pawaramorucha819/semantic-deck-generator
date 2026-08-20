@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+
+  "template": {
+    "id": "acme",
+    "dirs": ["./templates"]
+  },
+
+  "patterns": {
+    "builtin": true,
+    "sources": [{ "dir": "./patterns/company", "scope": "company" }]
+  },
+
+  "knowledge": {
+    "stores": [{ "type": "json", "dir": "./knowledge" }],
+    "context": { "purpose": "投資判断", "audience": "経営会議", "organization": "ACME 株式会社" },
+    "limit": 3
+  },
+
+  "ai": {
+    "mode": "auto",
+    "provider": { "type": "scripted", "responses": "./ai-responses.json" },
+    "patternSelection": true,
+    "structurePlanning": false
+  },
+
+  "selection": {
+    "sectionSlides": [],
+    "overrides": {}
+  },
+
+  "output": {
+    "dir": "./generated",
+    "titleSlide": true,
+    "renderReport": true,
+    "advisorReport": true
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "1.0",
+  "deckId": "fy2023-workflow-review",
+  "entries": [
+    {
+      "schemaVersion": "1.0",
+      "deckId": "fy2023-workflow-review",
+      "slideId": "fy2023-workflow-review#3",
+      "metadata": {
+        "title": "FY2023 業務フロー棚卸し",
+        "organization": "ACME 株式会社",
+        "department": "業務改革推進室",
+        "purpose": "現状共有",
+        "audience": "部門長",
+        "createdAt": "2023-11-08"
+      },
+      "semantic": {
+        "keyMessage": "申請から承認までの工程は4段階に整理できる",
+        "slideRole": "solution",
+        "logicalRelation": "process",
+        "keywords": ["申請", "承認", "工程", "フロー"]
+      },
+      "visual": {
+        "patternId": "process",
+        "variantId": "standard",
+        "templateId": "acme",
+        "density": "medium"
+      },
+      "content": {
+        "text": "申請から承認までの工程は4段階に整理できる。撮影・入力・チェック・仕訳の流れを矢印で示した。",
+        "bulletCount": 4
+      },
+      "source": {
+        "file": "past-decks/fy2023-workflow-review.pptx",
+        "slideNumber": 3,
+        "importedAt": "2025-01-15",
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "fy2023-workflow-review",
+      "slideId": "fy2023-workflow-review#7",
+      "metadata": {
+        "title": "FY2023 業務フロー棚卸し",
+        "organization": "ACME 株式会社",
+        "department": "業務改革推進室",
+        "purpose": "現状共有",
+        "audience": "部門長",
+        "createdAt": "2023-11-08"
+      },
+      "semantic": {
+        "keyMessage": "他社事例では導入後に工数が半減している",
+        "slideRole": "evidence",
+        "logicalRelation": "before_after",
+        "keywords": ["他社事例", "工数", "削減", "導入後"]
+      },
+      "visual": {
+        "patternId": "before-after",
+        "variantId": "standard",
+        "templateId": "acme",
+        "density": "sparse"
+      },
+      "content": {
+        "text": "他社事例では導入後に工数が半減している。導入前後の数値を左右に並べ、変化量を強調した。",
+        "bulletCount": 2
+      },
+      "source": {
+        "file": "past-decks/fy2023-workflow-review.pptx",
+        "slideNumber": 7,
+        "importedAt": "2025-01-15",
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "fy2023-workflow-review",
+      "slideId": "fy2023-workflow-review#2",
+      "metadata": {
+        "title": "FY2023 業務フロー棚卸し",
+        "organization": "ACME 株式会社",
+        "department": "業務改革推進室",
+        "purpose": "現状共有",
+        "audience": "部門長",
+        "createdAt": "2023-11-08"
+      },
+      "semantic": {
+        "keyMessage": "間接業務のコストは年々増加している",
+        "slideRole": "problem",
+        "logicalRelation": "claim_evidence",
+        "keywords": ["間接業務", "コスト", "増加", "推移"]
+      },
+      "visual": {
+        "patternId": "chart-with-message",
+        "variantId": "standard",
+        "templateId": "acme",
+        "density": "medium"
+      },
+      "content": {
+        "text": "間接業務のコストは年々増加している。3年分の推移を縦棒グラフで示し、増加傾向を一目で伝えた。",
+        "bulletCount": 1
+      },
+      "source": {
+        "file": "past-decks/fy2023-workflow-review.pptx",
+        "slideNumber": 2,
+        "importedAt": "2025-01-15",
+        "origin": "pptx"
+      }
+    }
+  ]
+}

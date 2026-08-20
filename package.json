@@ -9,7 +9,9 @@
   },
   "scripts": {
     "generate": "tsx src/cli/generate.ts",
+    "sdg": "tsx src/cli/main.ts",
     "example": "tsx src/cli/generate.ts examples/inventory-system.json",
+    "example:enterprise": "tsx src/cli/main.ts generate examples/enterprise/presentation.json --config examples/enterprise/generation.config.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

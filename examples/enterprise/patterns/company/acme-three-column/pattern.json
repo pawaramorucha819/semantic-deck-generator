@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "declarative",
+  "id": "acme-three-column",
+  "version": "1.0.0",
+  "description": "ACME 標準の 3 列カード。要点を番号付きカードで横並びに見せる。",
+  "metadata": {
+    "scope": "company",
+    "status": "approved",
+    "organization": "ACME 株式会社",
+    "author": "経営企画部",
+    "tags": ["三列", "カード", "要点整理"]
+  },
+  "compatibility": {
+    "logicalRelations": ["claim_evidence", "problem_solution", "composition"],
+    "slideRoles": ["analysis", "insight", "solution", "recommendation"]
+  },
+  "constraints": {
+    "maxKeyMessageLength": 70
+  },
+  "slots": [
+    { "id": "eyebrow", "type": "text", "source": "slideRoleLabel", "optional": true },
+    { "id": "headline", "type": "text", "source": "keyMessage" },
+    { "id": "subline", "type": "text", "source": "supportingMessage", "optional": true },
+    { "id": "sourceText", "type": "text", "source": "sourceText", "optional": true },
+    {
+      "id": "items",
+      "type": "items",
+      "source": "contentOrEvidence",
+      "min": 3,
+      "max": 3,
+      "labelMaxLength": 34
+    }
+  ],
+  "match": {
+    "baseScore": 0.62,
+    "requireSlots": ["items"],
+    "rules": [
+      {
+        "when": { "itemCount": { "eq": 3 }, "slot": "items" },
+        "score": 0.3,
+        "reason": "要点が 3 件で ACME 標準の 3 列カードに最適"
+      },
+      {
+        "when": { "slideRole": ["recommendation", "solution"] },
+        "score": 0.05,
+        "reason": "提言・解決策のスライドで社内利用実績が多い"
+      }
+    ]
+  },
+  "variants": [{ "id": "standard", "description": "番号付きカード 3 列" }],
+  "layout": {
+    "header": {
+      "eyebrow": { "ref": "eyebrow" },
+      "headline": { "ref": "headline" },
+      "subline": { "ref": "subline" }
+    },
+    "footer": { "text": { "ref": "sourceText" } },
+    "body": {
+      "type": "columns",
+      "gap": "md",
+      "repeat": { "slot": "items" },
+      "item": {
+        "type": "card",
+        "fill": "surface",
+        "border": "border",
+        "accent": "primary",
+        "child": {
+          "type": "stack",
+          "gap": "sm",
+          "children": [
+            {
+              "type": "text",
+              "value": { "template": "0{{item.index}}" },
+              "style": {
+                "role": "caption",
+                "font": "numeric",
+                "color": "accent",
+                "bold": true,
+                "charSpacing": 1
+              }
+            },
+            {
+              "type": "text",
+              "value": { "ref": "item.label" },
+              "style": { "role": "heading", "color": "text", "bold": true, "lineHeight": 1.28 }
+            },
+            {
+              "type": "text",
+              "value": { "ref": "item.metric" },
+              "when": { "hasValue": "item.metric" },
+              "style": {
+                "role": "heading",
+                "fontScale": 1.35,
+                "font": "numeric",
+                "color": "primary",
+                "bold": true
+              }
+            },
+            {
+              "type": "shape",
+              "shape": "rect",
+              "height": 0.014,
+              "style": { "fill": "border" }
+            },
+            {
+              "type": "text",
+              "value": { "ref": "item.description" },
+              "when": { "hasValue": "item.description" },
+              "height": "fill",
+              "style": { "role": "body", "color": "mutedText", "lineHeight": 1.38, "shrink": true }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

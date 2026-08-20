@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "1.0",
+  "deckId": "fy2024-cost-reduction",
+  "entries": [
+    {
+      "schemaVersion": "1.0",
+      "deckId": "fy2024-cost-reduction",
+      "slideId": "fy2024-cost-reduction#4",
+      "metadata": {
+        "title": "FY2024 間接コスト削減方針",
+        "organization": "ACME 株式会社",
+        "department": "経営企画部",
+        "purpose": "投資判断",
+        "audience": "経営会議",
+        "createdAt": "2024-05-20"
+      },
+      "semantic": {
+        "keyMessage": "間接コスト増の要因は3つの定型業務に集中している",
+        "slideRole": "analysis",
+        "logicalRelation": "claim_evidence",
+        "keywords": ["間接コスト", "定型業務", "要因分析", "手作業"]
+      },
+      "visual": {
+        "patternId": "acme-three-column",
+        "variantId": "standard",
+        "templateId": "acme",
+        "density": "medium"
+      },
+      "content": {
+        "text": "間接コスト増の要因は3つの定型業務に集中している。伝票入力・目視チェック・システム間の二重入力がボトルネックとなっており、いずれも自動化余地が大きい。",
+        "bulletCount": 3
+      },
+      "source": {
+        "file": "past-decks/fy2024-cost-reduction.pptx",
+        "slideNumber": 4,
+        "importedAt": "2025-01-15",
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "fy2024-cost-reduction",
+      "slideId": "fy2024-cost-reduction#9",
+      "metadata": {
+        "title": "FY2024 間接コスト削減方針",
+        "organization": "ACME 株式会社",
+        "department": "経営企画部",
+        "purpose": "投資判断",
+        "audience": "経営会議",
+        "createdAt": "2024-05-20"
+      },
+      "semantic": {
+        "keyMessage": "投資回収は2年以内であれば承認基準を満たす",
+        "slideRole": "analysis",
+        "logicalRelation": "claim_evidence",
+        "keywords": ["投資回収", "承認基準", "年数"]
+      },
+      "visual": {
+        "patternId": "big-number",
+        "variantId": "standard",
+        "templateId": "acme",
+        "density": "sparse"
+      },
+      "content": {
+        "text": "投資回収は2年以内であれば承認基準を満たす。単一の数値を大きく見せる構成で、経営会議での意思決定を促した。",
+        "bulletCount": 1
+      },
+      "source": {
+        "file": "past-decks/fy2024-cost-reduction.pptx",
+        "slideNumber": 9,
+        "importedAt": "2025-01-15",
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "fy2024-cost-reduction",
+      "slideId": "fy2024-cost-reduction#12",
+      "metadata": {
+        "title": "FY2024 間接コスト削減方針",
+        "organization": "ACME 株式会社",
+        "department": "経営企画部",
+        "purpose": "投資判断",
+        "audience": "経営会議",
+        "createdAt": "2024-05-20"
+      },
+      "semantic": {
+        "keyMessage": "上期に要件定義、下期に全拠点展開する",
+        "slideRole": "recommendation",
+        "logicalRelation": "claim_evidence",
+        "keywords": ["要件定義", "展開", "スケジュール", "上期", "下期"]
+      },
+      "visual": {
+        "patternId": "acme-three-column",
+        "variantId": "standard",
+        "templateId": "acme",
+        "density": "medium"
+      },
+      "content": {
+        "text": "上期に要件定義、下期に全拠点展開する。3つのマイルストーンをカードで並べ、意思決定後の道筋を示した。",
+        "bulletCount": 3
+      },
+      "source": {
+        "file": "past-decks/fy2024-cost-reduction.pptx",
+        "slideNumber": 12,
+        "importedAt": "2025-01-15",
+        "origin": "pptx"
+      }
+    }
+  ]
+}
