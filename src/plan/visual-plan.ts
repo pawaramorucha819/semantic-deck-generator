@@ -4,6 +4,11 @@ import type { PresentationSpec, SlideSpec, Source } from "../domain/types.js";
 import type { AnyVisualPattern } from "../patterns/pattern.js";
 import { defaultRegistry, PatternRegistry } from "../patterns/registry.js";
 import { selectPattern, type PatternEvaluation } from "../selector/selector.js";
+import {
+  decideSlidePattern,
+  type SelectionPolicyOptions,
+  type SlideSelectionOutcome,
+} from "../selector/selection-policy.js";
 import type { MasterRole } from "../templates/template.js";
 import { MASTER_ROLES } from "../templates/template.js";
 import { DecisionTraceSchema, type DecisionTrace } from "./decision-trace.js";
@@ -165,24 +170,40 @@ function resolveVariant(
   return fallbackVariant;
 }
 
-function planSlide(
+/** Pattern が確定した状態（決定論的選択、または Selection Policy の結果） */
+interface SlideDecision {
+  patternId: string;
+  variantId: string;
+  score: number;
+  reason: string;
+  fallbackUsed: boolean;
+  candidates: PatternEvaluation[];
+  decisionTrace?: DecisionTrace;
+}
+
+/**
+ * 決定済みの Pattern から Visual Plan の 1 枚を組み立てる。
+ *
+ * bindings 生成の失敗時に fallback へ退避する挙動は、
+ * 決定論モードでも AI モードでも同じ（AI だから検証を飛ばす、ということはない）。
+ */
+function planSlideFromDecision(
   slide: SlideSpec,
   slideNumber: number,
   registry: PatternRegistry,
   includeCandidates: boolean,
-  minimumScore: number | undefined,
+  decision: SlideDecision,
 ): VisualPlanSlide {
-  const selection = selectPattern(slide, { registry, minimumScore });
   const notes: string[] = [];
 
-  let patternId = selection.patternId;
-  let fallbackUsed = selection.fallbackUsed;
+  let patternId = decision.patternId;
+  let fallbackUsed = decision.fallbackUsed;
   let pattern = registry.get(patternId);
 
   // variant を先に確定してから bindings を作る。
   // これにより buildBindings には必ず実装済みの variant だけが渡り、
   // Plan の variantId と bindings が常に一致する。
-  let variantId = resolveVariant(pattern, selection.variantId, notes);
+  let variantId = resolveVariant(pattern, decision.variantId, notes);
   let bindings: unknown;
 
   try {
@@ -208,19 +229,115 @@ function planSlide(
 
   const provenance = buildProvenance(slide);
 
+  // 決定と実際の描画がずれた場合（fallback 退避）は Decision Trace にも残す
+  const decisionTrace =
+    decision.decisionTrace && patternId !== decision.patternId
+      ? {
+          ...decision.decisionTrace,
+          decision: {
+            ...decision.decisionTrace.decision,
+            selectedPatternId: patternId,
+            selectedVariantId: variantId,
+            reason: `${decision.decisionTrace.decision.reason} / bindings 生成に失敗したため fallback へ退避`,
+          },
+        }
+      : decision.decisionTrace;
+
   return {
     slideId: slide.id,
     slideNumber,
     patternId,
     patternVersion: pattern.version,
     variantId,
-    score: selection.score,
-    reason: selection.reason,
+    score: decision.score,
+    reason: decision.reason,
     fallbackUsed,
     bindings,
     ...(provenance ? { provenance } : {}),
-    ...(includeCandidates ? { candidates: selection.candidates } : {}),
+    ...(includeCandidates ? { candidates: decision.candidates } : {}),
     ...(notes.length > 0 ? { notes } : {}),
+    ...(decisionTrace ? { decisionTrace } : {}),
+  };
+}
+
+function planSlide(
+  slide: SlideSpec,
+  slideNumber: number,
+  registry: PatternRegistry,
+  includeCandidates: boolean,
+  minimumScore: number | undefined,
+): VisualPlanSlide {
+  const selection = selectPattern(slide, { registry, minimumScore });
+  return planSlideFromDecision(slide, slideNumber, registry, includeCandidates, {
+    patternId: selection.patternId,
+    variantId: selection.variantId,
+    score: selection.score,
+    reason: selection.reason,
+    fallbackUsed: selection.fallbackUsed,
+    candidates: selection.candidates,
+  });
+}
+
+export interface BuildVisualPlanWithPolicyOptions extends BuildVisualPlanOptions {
+  /** manual / assist / auto と、AI・Knowledge の接続 */
+  policy: SelectionPolicyOptions;
+}
+
+export interface PolicyPlanResult {
+  plan: VisualPlan;
+  /** スライドごとの決定過程（Advisor Report の材料） */
+  outcomes: SlideSelectionOutcome[];
+}
+
+/**
+ * Selection Policy を通した Visual Plan の生成（AI / Knowledge を使う経路）。
+ *
+ * 決定が確定したあとの処理は `buildVisualPlan` とまったく同じで、
+ * bindings 検証・fallback 退避・Renderer への受け渡しは共通。
+ * **Visual Plan が出来上がった時点で AI の関与は終わり**、以降は決定論的。
+ */
+export async function buildVisualPlanWithPolicy(
+  spec: PresentationSpec,
+  options: BuildVisualPlanWithPolicyOptions,
+): Promise<PolicyPlanResult> {
+  const registry = options.registry ?? defaultRegistry;
+  const includeCandidates = options.includeCandidates ?? true;
+  const sectionIds = new Set(options.sectionSlideIds ?? []);
+
+  const outcomes: SlideSelectionOutcome[] = [];
+  const slides: VisualPlanSlide[] = [];
+
+  for (const [index, slide] of spec.slides.entries()) {
+    const outcome = await decideSlidePattern(slide, {
+      ...options.policy,
+      registry,
+      ...(options.minimumScore !== undefined ? { minimumScore: options.minimumScore } : {}),
+    });
+    outcomes.push(outcome);
+
+    const planned = planSlideFromDecision(slide, index + 1, registry, includeCandidates, {
+      patternId: outcome.patternId,
+      variantId: outcome.variantId,
+      score: outcome.score,
+      reason: outcome.reason,
+      fallbackUsed: outcome.fallbackUsed,
+      candidates: outcome.candidates,
+      decisionTrace: outcome.decisionTrace,
+    });
+    slides.push(sectionIds.has(slide.id) ? { ...planned, masterRole: "section" } : planned);
+  }
+
+  return {
+    plan: {
+      schemaVersion: VISUAL_PLAN_SCHEMA_VERSION,
+      title: spec.title,
+      subtitle: spec.subtitle,
+      author: spec.author,
+      themeId: options.themeId ?? "default",
+      ...(options.templateId ? { templateId: options.templateId } : {}),
+      slides,
+    },
+    outcomes,
   };
 }
 

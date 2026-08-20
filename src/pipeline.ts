@@ -4,10 +4,17 @@ import { parsePresentation } from "./domain/schema.js";
 import type { PresentationSpec } from "./domain/types.js";
 import type { PatternRegistry } from "./patterns/registry.js";
 import {
+  buildAdvisorReport,
+  serializeAdvisorReport,
+  type AdvisorReport,
+} from "./plan/advisor-report.js";
+import {
   buildVisualPlan,
+  buildVisualPlanWithPolicy,
   serializeVisualPlan,
   type VisualPlan,
 } from "./plan/visual-plan.js";
+import type { SelectionPolicyOptions, SlideSelectionOutcome } from "./selector/selection-policy.js";
 import {
   buildRenderReport,
   renderVisualPlan,
@@ -54,6 +61,13 @@ export interface GenerateOptions {
   showSlideNumbers?: boolean;
   includeCandidates?: boolean;
   minimumScore?: number;
+  /**
+   * Selection Policy（manual / assist / auto と AI・Knowledge の接続）。
+   * 未指定なら V1 と同じ決定論的選択だけが走る。
+   */
+  policy?: SelectionPolicyOptions;
+  /** Advisor Report に記録する Knowledge Store 識別子 */
+  knowledgeStoreId?: string;
 }
 
 export interface GenerateResult {
@@ -63,6 +77,9 @@ export interface GenerateResult {
   issues: LayoutIssue[];
   renderReport: RenderReport;
   pptxBuffer: Buffer;
+  /** Selection Policy を使った場合のみ */
+  advisorReport?: AdvisorReport;
+  outcomes?: SlideSelectionOutcome[];
 }
 
 export interface GenerateFilesResult extends GenerateResult {
@@ -71,6 +88,8 @@ export interface GenerateFilesResult extends GenerateResult {
   planPath: string;
   /** --report 指定時のみ */
   reportPath?: string;
+  /** --advisor-report 指定時のみ */
+  advisorReportPath?: string;
 }
 
 interface ResolvedTemplateSelection {
@@ -107,14 +126,34 @@ export async function generate(
 ): Promise<GenerateResult> {
   const { template, assets } = templateOf(options);
   const theme = themeOf(options, template);
-  const plan = buildVisualPlan(spec, {
+
+  const planOptions = {
     registry: options.registry,
     themeId: theme.id,
     ...(template ? { templateId: template.id } : {}),
     ...(options.sectionSlideIds ? { sectionSlideIds: options.sectionSlideIds } : {}),
     includeCandidates: options.includeCandidates,
     minimumScore: options.minimumScore,
-  });
+  };
+
+  // Selection Policy（AI / Knowledge / 人間の指定）を使うかどうかで入口が変わる。
+  // どちらの経路でも、出来上がった Visual Plan 以降の処理は完全に同じで決定論的。
+  let plan: VisualPlan;
+  let outcomes: SlideSelectionOutcome[] | undefined;
+  let advisorReport: AdvisorReport | undefined;
+
+  if (options.policy) {
+    const result = await buildVisualPlanWithPolicy(spec, { ...planOptions, policy: options.policy });
+    plan = result.plan;
+    outcomes = result.outcomes;
+    advisorReport = buildAdvisorReport(result.outcomes, {
+      mode: options.policy.mode,
+      ...(options.policy.advisor ? { provider: options.policy.advisor.providerId } : {}),
+      ...(options.knowledgeStoreId ? { knowledgeStore: options.knowledgeStoreId } : {}),
+    });
+  } else {
+    plan = buildVisualPlan(spec, planOptions);
+  }
   const result = renderVisualPlan(plan, {
     theme,
     registry: options.registry,
@@ -126,7 +165,16 @@ export async function generate(
   });
   const renderReport = buildRenderReport(plan, result);
   const pptxBuffer = (await result.pptx.write({ outputType: "nodebuffer" })) as Buffer;
-  return { spec, plan, reports: result.reports, issues: result.issues, renderReport, pptxBuffer };
+  return {
+    spec,
+    plan,
+    reports: result.reports,
+    issues: result.issues,
+    renderReport,
+    pptxBuffer,
+    ...(advisorReport ? { advisorReport } : {}),
+    ...(outcomes ? { outcomes } : {}),
+  };
 }
 
 export interface GenerateFromFileOptions extends GenerateOptions {
@@ -134,6 +182,8 @@ export interface GenerateFromFileOptions extends GenerateOptions {
   outDir?: string;
   /** Render Report（配置結果 + 検査結果）も書き出すか */
   writeReport?: boolean;
+  /** Advisor Report（候補・参照・AI 推薦の詳細）も書き出すか */
+  writeAdvisorReport?: boolean;
 }
 
 /** presentation.json ファイルから .pptx と .visual-plan.json を出力する */
@@ -171,7 +221,20 @@ export async function generateFromFile(
     await writeFile(reportPath, serializeRenderReport(result.renderReport), "utf8");
   }
 
-  return { ...result, inputPath: absoluteInput, pptxPath, planPath, reportPath };
+  let advisorReportPath: string | undefined;
+  if (options.writeAdvisorReport && result.advisorReport) {
+    advisorReportPath = join(outDir, `${stem}.advisor-report.json`);
+    await writeFile(advisorReportPath, serializeAdvisorReport(result.advisorReport), "utf8");
+  }
+
+  return {
+    ...result,
+    inputPath: absoluteInput,
+    pptxPath,
+    planPath,
+    ...(reportPath ? { reportPath } : {}),
+    ...(advisorReportPath ? { advisorReportPath } : {}),
+  };
 }
 
 export { writePptxFile };
