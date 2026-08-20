@@ -32,6 +32,21 @@ export const RectSchema = z
   })
   .strict();
 
+/**
+ * 線を載せるための矩形。
+ *
+ * PowerPoint の水平線は h = 0、垂直線は w = 0 で表現されるため、
+ * 線に限っては 0 を許す。「長さ 0 の線」は下の superRefine で拒否する。
+ */
+export const LineRectSchema = z
+  .object({
+    x: z.number().finite().min(-100).max(100),
+    y: z.number().finite().min(-100).max(100),
+    w: z.number().finite().nonnegative().max(200),
+    h: z.number().finite().nonnegative().max(200),
+  })
+  .strict();
+
 export const TemplateTextStyleSchema = z
   .object({
     role: z.enum(TEXT_ROLE_NAMES).optional(),
@@ -89,7 +104,8 @@ export const TemplateElementSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("shape"),
       shape: z.enum(["rect", "line"]),
-      box: RectSchema,
+      // shape === "line" のときだけ 0 幅 / 0 高さを許す（下の superRefine で検証）
+      box: LineRectSchema,
       style: TemplateShapeStyleSchema.optional(),
     })
     .strict(),
@@ -224,6 +240,23 @@ export const PresentationTemplateSchema = z
             path: ["masters", mi, "elements", ei, "assetId"],
             message: `未登録のアセットを参照しています: ${element.assetId}`,
           });
+        }
+
+        // 大きさの契約は「線だけ別」。線は長さ 0 でなければよく、
+        // それ以外の図形は従来どおり正の幅と高さを要求する。
+        if (element.kind === "shape") {
+          const { w, h } = element.box;
+          const invalid = element.shape === "line" ? w <= 0 && h <= 0 : w <= 0 || h <= 0;
+          if (invalid) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["masters", mi, "elements", ei, "box"],
+              message:
+                element.shape === "line"
+                  ? "長さ 0 の線は配置できません（w か h のどちらかは 0 より大きい必要があります）"
+                  : "図形の w / h は 0 より大きい必要があります",
+            });
+          }
         }
       });
     });

@@ -130,12 +130,38 @@ function checkNode(node: LayoutNode, inRepeat: boolean, ctx: LayoutValidationCon
       checkNode(node.child, inRepeat, ctx, `${path}.child`);
       return;
     case "absolute":
-      node.children.forEach((child, i) =>
-        checkNode(child.node, inRepeat, ctx, `${path}.children[${i}].node`),
-      );
+      node.children.forEach((child, i) => {
+        checkBoxExtent(child.box, child.node, ctx, `${path}.children[${i}].box`);
+        checkNode(child.node, inRepeat, ctx, `${path}.children[${i}].node`);
+      });
       return;
     default:
       return;
+  }
+}
+
+/**
+ * absolute 配置の矩形の大きさを検証する。
+ *
+ * **線だけ契約が違う**。PowerPoint の水平線は h = 0、垂直線は w = 0 なので、
+ * 線に限り「長さが 0 でない」ことだけを求める。それ以外の要素は
+ * 従来どおり正の幅と高さを要求する（特殊ケースを全要素へ広げない）。
+ */
+function checkBoxExtent(
+  box: { w: number; h: number },
+  node: LayoutNode,
+  ctx: LayoutValidationContext,
+  where: string,
+): void {
+  const isLine = node.type === "shape" && node.shape === "line";
+  if (isLine) {
+    if (box.w <= 0 && box.h <= 0) {
+      ctx.issues.push(`${where}: 長さ 0 の線は配置できません（w か h のどちらかが必要です）`);
+    }
+    return;
+  }
+  if (box.w <= 0 || box.h <= 0) {
+    ctx.issues.push(`${where}: w / h は 0 より大きい必要があります (w=${box.w}, h=${box.h})`);
   }
 }
 

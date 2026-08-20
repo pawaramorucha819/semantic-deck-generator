@@ -7,7 +7,13 @@ import {
   extractTheme,
   type ExtractContext,
 } from "../../pptx/extract.js";
-import { emuToInch, type ExtractedElement, type ExtractedTheme } from "../../pptx/model.js";
+import {
+  emuToInch,
+  hasRenderableExtent,
+  isLineElement,
+  type ExtractedElement,
+  type ExtractedTheme,
+} from "../../pptx/model.js";
 import { attr, findChild, findPath, numAttr } from "../../pptx/xml.js";
 import { nearestColorToken } from "../../render/tokens.js";
 import { defaultTheme, mix, resolveTheme, tint, type PresentationTheme } from "../../theme/theme.js";
@@ -151,7 +157,8 @@ function convertElements(
   let assetIndex = 0;
 
   for (const element of elements) {
-    if (element.box.w <= 0 || element.box.h <= 0) continue;
+    // 線は w か h が 0 になりうるので、通常図形と同じ条件で弾かない
+    if (!hasRenderableExtent(element)) continue;
     if (
       element.box.x < -1 ||
       element.box.y < -1 ||
@@ -228,7 +235,9 @@ function convertElements(
       continue;
     }
 
-    if (element.kind === "line") {
+    // コネクタ (p:cxnSp) と線プリセットの図形 (p:sp + prstGeom line) の両方を線として扱う。
+    // 線は塗りを持たないので、塗りベースの分岐より前に処理する必要がある。
+    if (isLineElement(element)) {
       const color = element.line?.color
         ? nearestColorToken(resolved, element.line.color)
         : undefined;

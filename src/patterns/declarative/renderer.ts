@@ -100,6 +100,17 @@ function visible(node: LayoutNode, scope: BindingScope): boolean {
   return node.when ? evaluateCondition(node.when, scope) : true;
 }
 
+/**
+ * 描画できる大きさを持っているか。
+ *
+ * **線だけ契約が違う**。水平線は h = 0、垂直線は w = 0 で表現されるため、
+ * 通常要素と同じ「w > 0 かつ h > 0」で弾くと線が消える。
+ */
+function hasExtent(node: LayoutNode, box: Rect): boolean {
+  if (node.type === "shape" && node.shape === "line") return box.w > 0 || box.h > 0;
+  return box.w > 0 && box.h > 0;
+}
+
 class DeclarativeRenderer {
   private counter = 0;
 
@@ -251,7 +262,7 @@ class DeclarativeRenderer {
     rowHeights?: ReadonlyArray<number | "fill">,
   ): void {
     if (!visible(node, scope)) return;
-    if (box.w <= 0 || box.h <= 0) return;
+    if (!hasExtent(node, box)) return;
 
     switch (node.type) {
       case "spacer":

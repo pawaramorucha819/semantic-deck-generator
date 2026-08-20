@@ -80,6 +80,39 @@ export interface ExtractedTheme {
   fonts: { major?: string; minor?: string; majorEastAsian?: string; minorEastAsian?: string };
 }
 
+/**
+ * 「線」として扱う preset geometry。
+ *
+ * PowerPoint の線は 2 通りの表現があり、どちらも幅か高さが 0 になりうる。
+ *  - コネクタ (`p:cxnSp`)            → kind === "line"
+ *  - 線プリセットの図形 (`p:sp`)     → kind === "shape" かつ geometry === "line"
+ */
+export const LINE_GEOMETRIES = ["line", "straightConnector1"] as const;
+
+/** この要素は線か（塗りではなく線として変換すべきか） */
+export function isLineElement(element: ExtractedElement): boolean {
+  if (element.kind === "line") return true;
+  return (
+    element.kind === "shape" &&
+    element.geometry !== undefined &&
+    (LINE_GEOMETRIES as readonly string[]).includes(element.geometry)
+  );
+}
+
+/**
+ * 描画できる大きさを持っているか。
+ *
+ * **線だけ契約が違う**。水平線は h = 0、垂直線は w = 0 になるため、
+ * 通常図形と同じ「w > 0 かつ h > 0」で弾くと線が丸ごと消える。
+ * 線は「長さが 0 でない」ことだけを要求し、その他の要素は従来どおり
+ * 正の幅と高さを要求する（特殊ケースを全要素へ広げない）。
+ */
+export function hasRenderableExtent(element: ExtractedElement): boolean {
+  const { w, h } = element.box;
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w < 0 || h < 0) return false;
+  return isLineElement(element) ? w > 0 || h > 0 : w > 0 && h > 0;
+}
+
 export interface ExtractedDeck {
   slideSize: { widthIn: number; heightIn: number };
   theme?: ExtractedTheme;

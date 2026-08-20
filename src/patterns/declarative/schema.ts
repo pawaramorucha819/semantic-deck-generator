@@ -6,7 +6,7 @@ import {
   SPACING_TOKEN_NAMES,
   TEXT_ROLE_NAMES,
 } from "../../render/tokens.js";
-import { RectSchema } from "../../templates/schema.js";
+import { LineRectSchema } from "../../templates/schema.js";
 import { SafeRelativePathSchema } from "../../templates/schema.js";
 
 /**
@@ -425,7 +425,9 @@ export const LayoutNodeSchema: z.ZodType<LayoutNode> = z.lazy(() =>
         height: HeightSchema.optional(),
         when: ConditionSchema.optional(),
         children: z
-          .array(z.object({ box: RectSchema, node: LayoutNodeSchema }).strict())
+          // 水平線 (h = 0) / 垂直線 (w = 0) を置けるように 0 を許し、
+          // 「線以外は正の幅と高さ」という契約は compile 時に検証する。
+          .array(z.object({ box: LineRectSchema, node: LayoutNodeSchema }).strict())
           .min(1)
           .max(80),
       })
