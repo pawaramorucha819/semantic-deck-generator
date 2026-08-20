@@ -425,7 +425,7 @@ JSON だけで Pattern を定義できます。**任意のコードは書けま�
 | 要素 | 説明 |
 | --- | --- |
 | `stack` | 縦積み（gap / padding / 子の高さ auto・fill・数値） |
-| `columns` | 横並び。`repeat` で items slot を繰り返せる |
+| `columns` | 横並び。`repeat` で items slot を繰り返せる。`align` で縦寄せ（既定 stretch） |
 | `card` | 角丸カード（builtin Pattern と同じ `drawCard`） |
 | `text` | slot 参照・literal・`{{item.label}}` テンプレート |
 | `shape` | rect / roundRect / ellipse / line / 矢印など |
@@ -435,6 +435,10 @@ JSON だけで Pattern を定義できます。**任意のコードは書けま�
 
 `header` / `footer` は builtin Pattern と同じ共有部品を使うため、
 どの Pattern でも見出しが同じ位置に来ます。
+
+`columns` を `repeat` で使うと、**行の高さがカラム間で自動的に揃います**
+（ラベルの折り返し具合で数値や説明の位置がずれない）。
+`"align": "middle"` を付けると、カードを内容の高さに縮めて縦中央へ配置します。
 
 **Declarative Pattern も RenderContext を経由します。** したがって
 はみ出し・重なり・実効フォントサイズ検査、Theme トークン制約、Render Report への記録が

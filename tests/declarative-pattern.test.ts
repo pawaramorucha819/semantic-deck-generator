@@ -384,6 +384,40 @@ describe("Declarative Pattern の描画（RenderContext 経由）", () => {
     expect(issues.map((i) => i.code)).toContain("overlap");
   });
 
+  it("カードを横に並べたとき行の高さが揃う（列ごとにずれない）", () => {
+    const { registry, plan } = planFor();
+    const { reports } = renderVisualPlan(plan, { registry, includeTitleSlide: false });
+    const placements = reports[0]!.placements.filter((p) => p.kind === "text");
+
+    // 各カードの 2 番目のテキスト（item.label）が同じ y に並ぶ
+    const labels = placements.filter((p) => p.text?.startsWith("定型") || p.text?.startsWith("レビュー") || p.text?.startsWith("待ち"));
+    expect(labels.length).toBe(3);
+    const ys = labels.map((p) => Number(p.box.y.toFixed(3)));
+    expect(new Set(ys).size).toBe(1);
+
+    // 数値（metric）も同じ y に並ぶ
+    const metrics = placements.filter((p) => /^\d+(%|時間)$/.test(p.text ?? ""));
+    expect(metrics.length).toBe(3);
+    expect(new Set(metrics.map((p) => Number(p.box.y.toFixed(3)))).size).toBe(1);
+  });
+
+  it("align: middle は内容の高さに縮めて縦中央に置く", () => {
+    const stretched = threeColumnDoc();
+    const centered = threeColumnDoc();
+    (centered as any).layout.body.align = "middle";
+
+    const heightOf = (doc: Record<string, unknown>): number => {
+      const { registry, plan } = planFor(doc);
+      const { reports } = renderVisualPlan(plan, { registry, includeTitleSlide: false });
+      const cards = reports[0]!.placements.filter((p) => p.name.includes("card"));
+      return cards[0]!.box.h;
+    };
+
+    const stretchedHeight = heightOf(stretched);
+    const centeredHeight = heightOf(centered);
+    expect(centeredHeight).toBeLessThan(stretchedHeight);
+  });
+
   it("保存した Visual Plan を再生できる（bindings が再検証される）", async () => {
     const { registry, plan } = planFor();
     const roundTripped = parseVisualPlan(JSON.parse(serializeVisualPlan(plan)), { registry });

@@ -114,11 +114,21 @@ class DeclarativeRenderer {
     return `${prefix}-${kind}-${this.counter}`;
   }
 
-  /** ノードの必要高さ (inch)。"fill" は「残りを分け合う」を意味する。 */
-  measure(node: LayoutNode, widthIn: number, scope: BindingScope): number | "fill" {
+  /**
+   * ノードの必要高さ (inch)。"fill" は「残りを分け合う」を意味する。
+   *
+   * @param natural true のとき `height: "fill"` を「内容ぶんの高さ」として測る。
+   *   カードを内容の高さに縮めて配置する（columns.align）ために使う。
+   */
+  measure(
+    node: LayoutNode,
+    widthIn: number,
+    scope: BindingScope,
+    natural = false,
+  ): number | "fill" {
     if (!visible(node, scope)) return 0;
     const explicit = node.type === "spacer" ? undefined : (node.height as HeightSpec | undefined);
-    if (explicit === "fill") return "fill";
+    if (explicit === "fill" && !natural) return "fill";
     if (typeof explicit === "number") return explicit;
 
     switch (node.type) {
@@ -145,7 +155,7 @@ class DeclarativeRenderer {
         const visibleChildren = node.children.filter((child) => visible(child, scope));
         let total = 0;
         for (const child of visibleChildren) {
-          const measured = this.measure(child, inner, scope);
+          const measured = this.measure(child, inner, scope, natural);
           if (measured !== "fill") total += measured;
         }
         return total + Math.max(0, visibleChildren.length - 1) * gap + pad * 2;
@@ -157,7 +167,7 @@ class DeclarativeRenderer {
           if (items.length === 0) return 0;
           const colWidth = (widthIn - gap * (items.length - 1)) / items.length;
           return items.reduce((max, item, index) => {
-            const child = this.measure(node.item!, colWidth, { ...scope, item, index });
+            const child = this.measure(node.item!, colWidth, { ...scope, item, index }, natural);
             return child === "fill" ? max : Math.max(max, child);
           }, 0);
         }
@@ -171,7 +181,7 @@ class DeclarativeRenderer {
       }
       case "card": {
         const pad = this.ctx.theme.spacing.md;
-        const child = this.measure(node.child, Math.max(0, widthIn - pad * 2), scope);
+        const child = this.measure(node.child, Math.max(0, widthIn - pad * 2), scope, natural);
         return (child === "fill" ? 0 : child) + pad * 2;
       }
       case "absolute":
@@ -179,7 +189,67 @@ class DeclarativeRenderer {
     }
   }
 
-  render(node: LayoutNode, box: Rect, scope: BindingScope): void {
+  /**
+   * repeat で並べるカードの「行の高さ」を揃える。
+   *
+   * 各カラムで個別に高さを測ると、ラベルの折り返し具合で数値や説明の位置がずれる。
+   * 子インデックスごとに全カラムの必要高さの最大値を取り、全カラムで同じ高さを使う。
+   */
+  private alignRows(
+    item: LayoutNode,
+    columnWidth: number,
+    items: ReadonlyArray<Record<string, unknown>>,
+    scope: BindingScope,
+    natural: boolean,
+  ): { rows: ReadonlyArray<number | "fill">; totalHeight: number } | undefined {
+    const cardPad = this.ctx.theme.spacing.md;
+    const stack =
+      item.type === "stack"
+        ? item
+        : item.type === "card" && item.child.type === "stack"
+          ? item.child
+          : undefined;
+    if (!stack) return undefined;
+
+    const stackPad = spacing(this.ctx, stack.padding);
+    const gap = spacing(this.ctx, stack.gap);
+    const innerWidth = Math.max(
+      0,
+      columnWidth - (item.type === "card" ? cardPad * 2 : 0) - stackPad * 2,
+    );
+
+    const rows = stack.children.map((child) => {
+      let max = 0;
+      for (const [index, value] of items.entries()) {
+        const itemScope: BindingScope = { ...scope, item: value, index };
+        if (!visible(child, itemScope)) continue;
+        const measured = this.measure(child, innerWidth, itemScope, natural);
+        if (measured === "fill") return "fill" as const;
+        max = Math.max(max, measured);
+      }
+      return max;
+    });
+
+    const rowsTotal = rows.reduce<number>((sum, row) => sum + (row === "fill" ? 0 : row), 0);
+    const totalHeight =
+      rowsTotal +
+      Math.max(0, rows.length - 1) * gap +
+      stackPad * 2 +
+      (item.type === "card" ? cardPad * 2 : 0);
+
+    return { rows, totalHeight };
+  }
+
+  /**
+   * @param rowHeights columns の repeat で行を揃えるための、子インデックスごとの高さ。
+   *   stack（および card 直下の stack）にだけ適用される。
+   */
+  render(
+    node: LayoutNode,
+    box: Rect,
+    scope: BindingScope,
+    rowHeights?: ReadonlyArray<number | "fill">,
+  ): void {
     if (!visible(node, scope)) return;
     if (box.w <= 0 || box.h <= 0) return;
 
@@ -258,7 +328,7 @@ class DeclarativeRenderer {
           ...(color(this.ctx, node.accent) ? { accent: color(this.ctx, node.accent)! } : {}),
           name: this.name("card"),
         });
-        this.render(node.child, inner, scope);
+        this.render(node.child, inner, scope, rowHeights);
         return;
       }
 
@@ -266,10 +336,18 @@ class DeclarativeRenderer {
         const pad = spacing(this.ctx, node.padding);
         const gap = spacing(this.ctx, node.gap);
         const area = inset(box, pad);
-        const children = node.children.filter((child) => visible(child, scope));
+
+        // 行を揃える指定があるときは、非表示の子も「その行ぶんの高さ」を保つ。
+        // これによりカードを横に並べたときにラベル・数値・説明の行位置が揃う。
+        const aligned = rowHeights !== undefined && rowHeights.length === node.children.length;
+        const children = aligned
+          ? node.children
+          : node.children.filter((child) => visible(child, scope));
         if (children.length === 0) return;
 
-        const measured = children.map((child) => this.measure(child, area.w, scope));
+        const measured = aligned
+          ? [...rowHeights]
+          : children.map((child) => this.measure(child, area.w, scope));
         const fixed = measured.reduce<number>((sum, m) => sum + (m === "fill" ? 0 : m), 0);
         const fillCount = measured.filter((m) => m === "fill").length;
         const gaps = Math.max(0, children.length - 1) * gap;
@@ -290,9 +368,28 @@ class DeclarativeRenderer {
         if (node.repeat && node.item) {
           const items = repeatItems(node, scope);
           if (items.length === 0) return;
-          const rects = splitColumns(box, items.length, gap);
+
+          // align が stretch 以外なら、内容ぶんの高さに縮めてから縦方向に寄せる
+          const align = node.align ?? "stretch";
+          const natural = align !== "stretch";
+          const columnWidth = (box.w - gap * (items.length - 1)) / items.length;
+          const alignment = this.alignRows(node.item, columnWidth, items, scope, natural);
+
+          let area = box;
+          if (natural && alignment) {
+            const height = Math.min(box.h, alignment.totalHeight);
+            const y =
+              align === "middle"
+                ? box.y + (box.h - height) / 2
+                : align === "bottom"
+                  ? box.y + box.h - height
+                  : box.y;
+            area = { x: box.x, y, w: box.w, h: height };
+          }
+
+          const rects = splitColumns(area, items.length, gap);
           items.forEach((item, index) => {
-            this.render(node.item!, rects[index] as Rect, { ...scope, item, index });
+            this.render(node.item!, rects[index] as Rect, { ...scope, item, index }, alignment?.rows);
           });
           return;
         }

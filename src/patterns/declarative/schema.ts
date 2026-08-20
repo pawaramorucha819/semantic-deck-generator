@@ -284,6 +284,11 @@ export type LayoutNode =
       gap?: SpacingValue;
       weights?: number[];
       height?: HeightSpec;
+      /**
+       * 縦方向の寄せ。既定 'stretch'（領域いっぱいに伸ばす）。
+       * 'middle' などを指定すると内容の高さに縮めて配置する。
+       */
+      align?: "top" | "middle" | "bottom" | "stretch";
       when?: Condition;
       /** items slot を横並びで繰り返す */
       repeat?: { slot: string; max?: number };
@@ -354,6 +359,7 @@ export const LayoutNodeSchema: z.ZodType<LayoutNode> = z.lazy(() =>
         gap: SpacingValueSchema.optional(),
         weights: z.array(z.number().finite().positive().max(100)).min(1).max(12).optional(),
         height: HeightSchema.optional(),
+        align: z.enum(["top", "middle", "bottom", "stretch"]).optional(),
         when: ConditionSchema.optional(),
         repeat: z
           .object({ slot: z.string().min(1).max(80), max: z.number().int().min(1).max(12).optional() })
