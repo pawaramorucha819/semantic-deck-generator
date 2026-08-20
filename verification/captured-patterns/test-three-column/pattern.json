@@ -1,0 +1,370 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "declarative",
+  "id": "test-three-column",
+  "version": "1.0.0",
+  "description": "検証用PPTXのスライド2から取り込んだ3カードPattern",
+  "metadata": {
+    "scope": "company",
+    "status": "approved",
+    "source": {
+      "file": "verification\\semantic-deck-v2-import-test.pptx",
+      "slideNumber": 2,
+      "unsupportedFeatures": [
+        "埋め込みオブジェクト (ppt/embeddings) — 非対応"
+      ],
+      "warnings": [
+        "文字色: #172033 を Theme トークン 'text' に寄せました",
+        "文字色: #2F66D0 を Theme トークン 'secondary' に寄せました",
+        "文字色: #596579 を Theme トークン 'mutedText' に寄せました",
+        "図形の色: #2F66D0 を Theme トークン 'secondary' に寄せました",
+        "線の色: #D7DEE8 を Theme トークン 'border' に寄せました",
+        "文字色: #7B8798 を Theme トークン 'mutedText' に寄せました",
+        "カードの色: #F7F9FC を Theme トークン 'surface' に寄せました",
+        "カードの枠線: #D7DEE8 を Theme トークン 'border' に寄せました"
+      ]
+    }
+  },
+  "compatibility": {
+    "logicalRelations": [
+      "claim_evidence"
+    ]
+  },
+  "slots": [
+    {
+      "id": "headline",
+      "type": "text",
+      "source": "keyMessage"
+    },
+    {
+      "id": "eyebrow",
+      "type": "text",
+      "source": "slideRoleLabel",
+      "optional": true
+    },
+    {
+      "id": "subline",
+      "type": "text",
+      "source": "supportingMessage",
+      "optional": true
+    },
+    {
+      "id": "sourceText",
+      "type": "text",
+      "source": "sourceText",
+      "optional": true
+    },
+    {
+      "id": "items",
+      "type": "items",
+      "source": "contentOrEvidence",
+      "min": 3,
+      "max": 3,
+      "labelMaxLength": 40
+    }
+  ],
+  "match": {
+    "baseScore": 0.5,
+    "requireSlots": [
+      "items"
+    ]
+  },
+  "layout": {
+    "body": {
+      "type": "absolute",
+      "origin": "canvas",
+      "children": [
+        {
+          "box": {
+            "x": 0.75,
+            "y": 0.74,
+            "w": 1.7,
+            "h": 0.28
+          },
+          "node": {
+            "type": "text",
+            "value": {
+              "ref": "eyebrow"
+            },
+            "style": {
+              "role": "caption",
+              "color": "primary",
+              "bold": true,
+              "valign": "middle"
+            },
+            "when": {
+              "hasValue": "eyebrow"
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 0.75,
+            "y": 1.08,
+            "w": 11.85,
+            "h": 0.68
+          },
+          "node": {
+            "type": "text",
+            "value": {
+              "ref": "headline"
+            },
+            "style": {
+              "role": "keyMessage",
+              "color": "text",
+              "bold": true,
+              "valign": "middle"
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 0.77,
+            "y": 1.83,
+            "w": 11.6,
+            "h": 0.43
+          },
+          "node": {
+            "type": "text",
+            "value": {
+              "ref": "subline"
+            },
+            "style": {
+              "role": "body",
+              "color": "mutedText",
+              "valign": "middle"
+            },
+            "when": {
+              "hasValue": "subline"
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 0.75,
+            "y": 2.55,
+            "w": 11.81,
+            "h": 3.58
+          },
+          "node": {
+            "type": "columns",
+            "gap": 0.28,
+            "repeat": {
+              "slot": "items"
+            },
+            "item": {
+              "type": "card",
+              "fill": "surface",
+              "border": "border",
+              "child": {
+                "type": "stack",
+                "gap": "sm",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": {
+                      "ref": "item.label"
+                    },
+                    "style": {
+                      "role": "caption",
+                      "color": "text",
+                      "bold": true,
+                      "valign": "middle"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": {
+                      "ref": "item.description"
+                    },
+                    "style": {
+                      "role": "heading",
+                      "color": "mutedText",
+                      "bold": true,
+                      "valign": "middle"
+                    },
+                    "when": {
+                      "hasValue": "item.description"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": {
+                      "ref": "item.metric"
+                    },
+                    "style": {
+                      "role": "keyMessage",
+                      "fontScale": 1.18,
+                      "color": "primary",
+                      "bold": true,
+                      "valign": "middle"
+                    },
+                    "when": {
+                      "hasValue": "item.metric"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": {
+                      "ref": "item.description"
+                    },
+                    "style": {
+                      "role": "caption",
+                      "color": "mutedText",
+                      "valign": "top"
+                    },
+                    "height": "fill",
+                    "when": {
+                      "hasValue": "item.description"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 0.75,
+            "y": 2.55,
+            "w": 0.07,
+            "h": 3.58
+          },
+          "node": {
+            "type": "shape",
+            "shape": "rect",
+            "style": {
+              "fill": "secondary"
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 1.07,
+            "y": 4.7,
+            "w": 3.11,
+            "h": 0
+          },
+          "node": {
+            "type": "shape",
+            "shape": "line",
+            "style": {
+              "line": {
+                "color": "border",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 4.78,
+            "y": 2.55,
+            "w": 0.07,
+            "h": 3.58
+          },
+          "node": {
+            "type": "shape",
+            "shape": "rect",
+            "style": {
+              "fill": "secondary"
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 5.1,
+            "y": 4.7,
+            "w": 3.11,
+            "h": 0
+          },
+          "node": {
+            "type": "shape",
+            "shape": "line",
+            "style": {
+              "line": {
+                "color": "border",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 8.81,
+            "y": 2.55,
+            "w": 0.07,
+            "h": 3.58
+          },
+          "node": {
+            "type": "shape",
+            "shape": "rect",
+            "style": {
+              "fill": "secondary"
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 9.13,
+            "y": 4.7,
+            "w": 3.11,
+            "h": 0
+          },
+          "node": {
+            "type": "shape",
+            "shape": "line",
+            "style": {
+              "line": {
+                "color": "border",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 0.77,
+            "y": 6.55,
+            "w": 5,
+            "h": 0.22
+          },
+          "node": {
+            "type": "text",
+            "value": {
+              "literal": "出典: 社内PoC想定値（テストデータ）"
+            },
+            "style": {
+              "role": "caption",
+              "fontScale": 0.75,
+              "color": "mutedText",
+              "valign": "middle"
+            }
+          }
+        },
+        {
+          "box": {
+            "x": 12.05,
+            "y": 6.96,
+            "w": 0.5,
+            "h": 0.2
+          },
+          "node": {
+            "type": "text",
+            "value": {
+              "ref": "sourceText"
+            },
+            "style": {
+              "role": "body",
+              "color": "mutedText",
+              "align": "right"
+            },
+            "when": {
+              "hasValue": "sourceText"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

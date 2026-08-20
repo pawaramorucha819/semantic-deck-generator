@@ -2,6 +2,7 @@ node_modules/
 dist/
 examples/generated/
 examples/**/generated/
+verification/generated/
 .preview/
 *.log
 .tmp/

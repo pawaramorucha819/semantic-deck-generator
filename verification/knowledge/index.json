@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "decks": [
+    {
+      "deckId": "sdg-v2-import-test",
+      "title": "生成AI導入戦略テストデッキ",
+      "slideCount": 5,
+      "file": "decks/sdg-v2-import-test.json",
+      "organization": "Semantic Deck Generator Test",
+      "purpose": "生成AI導入提案",
+      "audience": "経営会議"
+    }
+  ]
+}

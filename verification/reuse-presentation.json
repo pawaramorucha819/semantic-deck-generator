@@ -1,0 +1,54 @@
+{
+  "title": "VisualPattern 再利用テスト",
+  "subtitle": "既存PPTXから取り込んだ3カードPatternを別内容で再利用する",
+  "author": "Verification Kit",
+  "slides": [
+    {
+      "id": "slide-reuse",
+      "keyMessage": "取り込んだVisualPatternを別の3要点スライドへ再利用できる",
+      "supportingMessage": "元スライドとは異なる内容を入れ、レイアウトの型だけが再利用されることを確認する",
+      "slideRole": "recommendation",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "設計知の再利用",
+            "description": "良いスライドの構造をPatternとして保存し、別案件でも再利用する",
+            "evidenceRefs": ["e1"]
+          },
+          {
+            "label": "作成時間の短縮",
+            "description": "毎回ゼロからレイアウトを考えず、意味構造から安定した表現を生成する",
+            "evidenceRefs": ["e2"]
+          },
+          {
+            "label": "組織標準化",
+            "description": "企業内で蓄積した資料表現を共通資産として展開する",
+            "evidenceRefs": ["e3"]
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "id": "e1",
+          "type": "metric",
+          "statement": "再利用候補Patternを12件蓄積した想定",
+          "data": { "label": "Pattern数", "value": 12, "unit": "件" }
+        },
+        {
+          "id": "e2",
+          "type": "metric",
+          "statement": "資料作成時間を40%短縮した想定",
+          "data": { "label": "作成時間削減", "value": 40, "unit": "%", "direction": "decrease" }
+        },
+        {
+          "id": "e3",
+          "type": "metric",
+          "statement": "3部門で共通利用した想定",
+          "data": { "label": "利用部門", "value": 3, "unit": "部門" }
+        }
+      ]
+    }
+  ]
+}

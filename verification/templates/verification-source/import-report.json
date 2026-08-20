@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "source": "verification\\semantic-deck-v2-import-test.pptx",
+  "templateId": "verification-source",
+  "slideSize": {
+    "widthIn": 13.333,
+    "heightIn": 7.5
+  },
+  "extracted": {
+    "themeColors": 12,
+    "masters": 2,
+    "elements": 7,
+    "assets": 2
+  },
+  "unsupportedFeatures": [
+    "埋め込みオブジェクト (ppt/embeddings) — 非対応"
+  ],
+  "warnings": [
+    "フォントサイズ・余白の体系は PPTX から一意に決まらないため既定値を使用します（template.json で調整してください）",
+    "線の色 #D7DEE8 を Theme トークン 'border' に寄せました",
+    "文字色 #596579 を Theme トークン 'mutedText' に寄せました",
+    "文字色 #C9D7EA を Theme トークン 'border' に寄せました",
+    "文字色 #B9C8DC を Theme トークン 'border' に寄せました"
+  ]
+}

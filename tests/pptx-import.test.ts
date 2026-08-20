@@ -11,9 +11,17 @@ import { HeuristicSlotInferencer, validateInference } from "../src/patterns/capt
 import { loadPatternPackage } from "../src/patterns/declarative/loader.js";
 import { messageOnlyPattern } from "../src/patterns/message-only/index.js";
 import { PatternRegistry } from "../src/patterns/registry.js";
+import { buildCapturedPattern } from "../src/patterns/capture/build.js";
+import type { SlotInferenceResult } from "../src/patterns/capture/infer.js";
 import { readDeck } from "../src/pptx/extract.js";
+import {
+  hasRenderableExtent,
+  isLineElement,
+  type ExtractedElement,
+} from "../src/pptx/model.js";
 import { PptxPackage, PptxReadError, resolvePartPath } from "../src/pptx/package.js";
 import { parseXml, XmlParseError, findDescendants, textOf } from "../src/pptx/xml.js";
+import { defaultTheme } from "../src/theme/theme.js";
 import { renderVisualPlan, toPptxBuffer } from "../src/render/renderer.js";
 import {
   importTemplateFromPptx,
@@ -525,5 +533,247 @@ describe("非対応要素の検出", () => {
     const xml = parseXml(await pkg.text("ppt/slides/slide1.xml"));
     expect(findDescendants(xml, "graphicFrame")).toHaveLength(1);
     expect(deck.slides[0]!.elements).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 1: PPTX から客観的に読み取れる構造を失わない
+// ---------------------------------------------------------------------------
+
+/** 抽出済み要素を最小構成で作る */
+function extracted(overrides: Partial<ExtractedElement> = {}): ExtractedElement {
+  return {
+    id: "1",
+    kind: "shape",
+    box: { x: 1, y: 1, w: 2, h: 1 },
+    ...overrides,
+  };
+}
+
+describe("線のジオメトリ契約（Unit）", () => {
+  it("水平線 (w > 0, h = 0) は有効", () => {
+    const line = extracted({ kind: "line", box: { x: 0.5, y: 6.9, w: 12, h: 0 } });
+    expect(isLineElement(line)).toBe(true);
+    expect(hasRenderableExtent(line)).toBe(true);
+  });
+
+  it("垂直線 (w = 0, h > 0) は有効", () => {
+    const line = extracted({ kind: "line", box: { x: 6, y: 1, w: 0, h: 3 } });
+    expect(hasRenderableExtent(line)).toBe(true);
+  });
+
+  it("長さ 0 の線 (w = 0, h = 0) は無効", () => {
+    const line = extracted({ kind: "line", box: { x: 1, y: 1, w: 0, h: 0 } });
+    expect(hasRenderableExtent(line)).toBe(false);
+  });
+
+  it("線プリセットの図形 (p:sp + prstGeom line) も線として扱う", () => {
+    const line = extracted({ kind: "shape", geometry: "line", box: { x: 0, y: 3, w: 5, h: 0 } });
+    expect(isLineElement(line)).toBe(true);
+    expect(hasRenderableExtent(line)).toBe(true);
+  });
+
+  it("通常の矩形は正の幅と高さを要求する", () => {
+    expect(hasRenderableExtent(extracted({ geometry: "rect" }))).toBe(true);
+    expect(
+      hasRenderableExtent(extracted({ geometry: "rect", box: { x: 1, y: 1, w: 2, h: 0 } })),
+    ).toBe(false);
+    expect(
+      hasRenderableExtent(extracted({ geometry: "rect", box: { x: 1, y: 1, w: 0, h: 0 } })),
+    ).toBe(false);
+  });
+
+  it("テキスト・画像には線の特例を広げない", () => {
+    expect(isLineElement(extracted({ kind: "text" }))).toBe(false);
+    expect(
+      hasRenderableExtent(extracted({ kind: "text", box: { x: 1, y: 1, w: 3, h: 0 } })),
+    ).toBe(false);
+    expect(
+      hasRenderableExtent(extracted({ kind: "image", box: { x: 1, y: 1, w: 0, h: 2 } })),
+    ).toBe(false);
+  });
+});
+
+describe("Capture の Z-order 保持（Unit）", () => {
+  /** card background → accent → text → divider という元 PPTX の順序を再現する */
+  function cardSlideElements(): ExtractedElement[] {
+    const elements: ExtractedElement[] = [
+      extracted({
+        id: "headline",
+        kind: "text",
+        box: { x: 0.6, y: 0.5, w: 9, h: 0.6 },
+        text: { paragraphs: ["見出し"], runs: [], plain: "見出し", maxFontSize: 24 },
+      }),
+    ];
+    for (let i = 0; i < 3; i += 1) {
+      const x = 0.6 + i * 3.1;
+      // 背景 → アクセント → テキスト → 区切り線（元 PPTX の重なり順）
+      elements.push(
+        extracted({
+          id: `bg-${i}`,
+          kind: "shape",
+          geometry: "roundRect",
+          box: { x, y: 2, w: 2.9, h: 2.6 },
+          fill: { type: "solid", color: "F2F6FA" },
+        }),
+        extracted({
+          id: `accent-${i}`,
+          kind: "shape",
+          geometry: "rect",
+          box: { x, y: 2, w: 0.06, h: 2.6 },
+          fill: { type: "solid", color: "0B4F8A" },
+        }),
+        extracted({
+          id: `label-${i}`,
+          kind: "text",
+          box: { x: x + 0.2, y: 2.3, w: 2.4, h: 0.4 },
+          text: { paragraphs: [`項目${i}`], runs: [], plain: `項目${i}`, maxFontSize: 15 },
+        }),
+        extracted({
+          id: `divider-${i}`,
+          kind: "shape",
+          geometry: "line",
+          box: { x: x + 0.2, y: 3.1, w: 2.4, h: 0 },
+          fill: { type: "none" },
+          line: { color: "D5DCE4", widthPt: 1 },
+        }),
+      );
+    }
+    return elements;
+  }
+
+  function inferenceFor(): SlotInferenceResult {
+    return {
+      headlineIndex: 0,
+      cells: [
+        { backgroundIndex: 1, textIndexes: [3] },
+        { backgroundIndex: 5, textIndexes: [7] },
+        { backgroundIndex: 9, textIndexes: [11] },
+      ],
+      staticIndexes: [2, 4, 6, 8, 10, 12],
+      notes: [],
+    };
+  }
+
+  function build() {
+    return buildCapturedPattern(cardSlideElements(), inferenceFor(), {
+      id: "captured-order",
+      theme: defaultTheme,
+      slideSize: { widthIn: 10, heightIn: 5.625 },
+      source: { file: "test.pptx", slideNumber: 1 },
+    });
+  }
+
+  it("元 PPTX の重なり順（背景 → アクセント → 区切り線）を保つ", () => {
+    const body = build().document.layout.body as {
+      type: string;
+      children: Array<{ node: { type: string; shape?: string } }>;
+    };
+    expect(body.type).toBe("absolute");
+
+    const types = body.children.map((c) =>
+      c.node.type === "shape" ? `shape:${c.node.shape}` : c.node.type,
+    );
+    const columnsAt = types.indexOf("columns");
+    expect(columnsAt).toBeGreaterThanOrEqual(0);
+
+    // カード（columns）より後ろに accent と divider が来る = カードの上に描かれる
+    const accentIndexes = types.flatMap((t, i) => (t === "shape:rect" ? [i] : []));
+    const dividerIndexes = types.flatMap((t, i) => (t === "shape:line" ? [i] : []));
+    expect(accentIndexes).toHaveLength(3);
+    expect(dividerIndexes).toHaveLength(3);
+    for (const index of [...accentIndexes, ...dividerIndexes]) {
+      expect(index).toBeGreaterThan(columnsAt);
+    }
+  });
+
+  it("反復セルの Z-order は構成要素の最小インデックスで決まる（決定論的）", () => {
+    const first = build().document.layout.body;
+    const second = build().document.layout.body;
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+
+    const body = first as { children: Array<{ node: { type: string } }> };
+    // 見出し(0) → カード(背景 index 1) → その後ろの装飾、という順序になる
+    expect(body.children[0]!.node.type).toBe("text");
+    expect(body.children[1]!.node.type).toBe("columns");
+  });
+
+  it("区切り線（h = 0）が Pattern から失われない", () => {
+    const body = build().document.layout.body as {
+      children: Array<{ box: { w: number; h: number }; node: { type: string; shape?: string } }>;
+    };
+    const dividers = body.children.filter(
+      (c) => c.node.type === "shape" && c.node.shape === "line",
+    );
+    expect(dividers).toHaveLength(3);
+    for (const divider of dividers) {
+      expect(divider.box.h).toBe(0);
+      expect(divider.box.w).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("Template Import が線を保持する（Integration）", () => {
+  /**
+   * Master 側に線を持つ PPTX を作る。
+   * Template Import が読むのは Slide Master / Layout なので、スライド本体ではなく
+   * defineSlideMaster の objects へ置く（実際の企業テンプレートと同じ形）。
+   */
+  async function deckWithLines(): Promise<Buffer> {
+    const pptx = new PptxGenJS();
+    pptx.layout = "LAYOUT_16x9";
+    const stroke = { color: "D5DCE4", width: 1 };
+    pptx.defineSlideMaster({
+      title: "LINES",
+      background: { color: "FFFFFF" },
+      objects: [
+        // 水平線 / 垂直線 / 通常矩形 / 長さ 0 の線 / サイズ 0 の矩形
+        { line: { x: 0.6, y: 5.1, w: 8.8, h: 0, line: stroke } },
+        { line: { x: 5, y: 1, w: 0, h: 2.5, line: stroke } },
+        { rect: { x: 0, y: 0, w: 10, h: 0.09, fill: { color: "0B4F8A" } } },
+        { line: { x: 2, y: 2, w: 0, h: 0, line: stroke } },
+        { rect: { x: 3, y: 3, w: 0, h: 0, fill: { color: "0B4F8A" } } },
+        { text: { text: "footer", options: { x: 0.6, y: 5.2, w: 4, h: 0.26, fontSize: 9 } } },
+      ],
+    });
+    pptx.addSlide({ masterName: "LINES" }).addText("body", {
+      x: 1, y: 1, w: 4, h: 0.4, fontSize: 14,
+    });
+    return (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
+  }
+
+  it("水平線と垂直線は Master 要素として残り、長さ 0 の図形は除外される", async () => {
+    const imported = await importTemplateFromPptx(await deckWithLines(), { id: "lines" });
+    const master = imported.template.masters.find((m) => m.role === "content")!;
+    const elements = master.elements ?? [];
+
+    const lines = elements.filter((e) => e.kind === "shape" && e.shape === "line");
+    expect(lines).toHaveLength(2);
+    expect(lines.some((l) => l.box.w > 0 && l.box.h === 0)).toBe(true); // 水平線
+    expect(lines.some((l) => l.box.w === 0 && l.box.h > 0)).toBe(true); // 垂直線
+
+    // 通常の矩形は残り、長さ 0 の線・サイズ 0 の矩形は残らない
+    const rects = elements.filter((e) => e.kind === "shape" && e.shape === "rect");
+    expect(rects).toHaveLength(1);
+    expect(rects[0]!.box).toMatchObject({ w: 10, h: 0.09 });
+    for (const element of elements) {
+      expect(element.box.w > 0 || element.box.h > 0).toBe(true);
+    }
+  });
+
+  it("線を含む Template で PPTX を生成できる", async () => {
+    const imported = await importTemplateFromPptx(await deckWithLines(), { id: "lines" });
+    const spec = await loadExample();
+    const registry = new TemplateRegistry().register({
+      template: imported.template,
+      source: "external",
+      assets: [],
+    });
+    const result = await generate(spec, { templateId: "lines", templateRegistry: registry });
+
+    expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
+    const pptx = await readPptx(result.pptxBuffer);
+    // 線は Slide Layout（Master）側へ入る
+    expect(pptx.slideLayoutXmls.join("")).toContain('prst="line"');
   });
 });

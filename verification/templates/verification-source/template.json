@@ -1,0 +1,231 @@
+{
+  "schemaVersion": "1.0",
+  "id": "verification-source",
+  "version": "1.0.0",
+  "name": "verification-source (imported)",
+  "theme": {
+    "id": "verification-source",
+    "name": "verification-source (imported)",
+    "fonts": {
+      "heading": "Yu Gothic",
+      "body": "Yu Gothic",
+      "numeric": "Yu Gothic"
+    },
+    "fontSizes": {
+      "keyMessage": 22,
+      "heading": 15,
+      "body": 13,
+      "caption": 10,
+      "display": 48
+    },
+    "spacing": {
+      "xs": 0.06,
+      "sm": 0.12,
+      "md": 0.22,
+      "lg": 0.36,
+      "xl": 0.56
+    },
+    "colors": {
+      "background": "FFFFFF",
+      "text": "000000",
+      "mutedText": "737373",
+      "primary": "4472C4",
+      "secondary": "ED7D31",
+      "accent": "A5A5A5",
+      "surface": "F0F4FA",
+      "border": "D5D5D5",
+      "positive": "70AD47",
+      "negative": "5B9BD5",
+      "onPrimary": "FFFFFF"
+    }
+  },
+  "slideSize": {
+    "widthIn": 13.333,
+    "heightIn": 7.5
+  },
+  "masters": [
+    {
+      "id": "verification-source-content",
+      "role": "content",
+      "name": "Content",
+      "background": {
+        "color": "background"
+      },
+      "contentMargins": {
+        "top": 0.563,
+        "right": 0.8,
+        "bottom": 0.563,
+        "left": 0.8
+      },
+      "elements": [
+        {
+          "kind": "image",
+          "assetId": "content-image-1",
+          "box": {
+            "x": 0.55,
+            "y": 0.25,
+            "w": 1.1,
+            "h": 0.33
+          },
+          "sizing": "contain"
+        },
+        {
+          "kind": "shape",
+          "shape": "line",
+          "box": {
+            "x": 0.55,
+            "y": 6.92,
+            "w": 12.18,
+            "h": 0
+          },
+          "style": {
+            "line": {
+              "color": "border",
+              "width": 0.8
+            }
+          }
+        },
+        {
+          "kind": "text",
+          "box": {
+            "x": 0.6,
+            "y": 6.98,
+            "w": 3.5,
+            "h": 0.18
+          },
+          "text": "SDG V2 検証用サンプル",
+          "style": {
+            "role": "caption",
+            "fontSize": 7.5,
+            "color": "mutedText",
+            "valign": "middle"
+          }
+        },
+        {
+          "kind": "text",
+          "box": {
+            "x": 10.25,
+            "y": 6.98,
+            "w": 1.6,
+            "h": 0.18
+          },
+          "text": "CONFIDENTIAL",
+          "style": {
+            "role": "caption",
+            "fontSize": 7.5,
+            "color": "mutedText",
+            "align": "right",
+            "valign": "middle"
+          }
+        }
+      ],
+      "slideNumber": {
+        "box": {
+          "x": 12.05,
+          "y": 6.96,
+          "w": 0.5,
+          "h": 0.2
+        },
+        "style": {
+          "role": "caption",
+          "font": "numeric",
+          "color": "mutedText",
+          "align": "right",
+          "valign": "middle"
+        }
+      }
+    },
+    {
+      "id": "verification-source-title",
+      "role": "title",
+      "name": "Title",
+      "background": {
+        "color": "text"
+      },
+      "contentMargins": {
+        "top": 1.875,
+        "right": 1.2,
+        "bottom": 1.35,
+        "left": 1.2
+      },
+      "elements": [
+        {
+          "kind": "image",
+          "assetId": "title-image-1",
+          "box": {
+            "x": 0.62,
+            "y": 0.35,
+            "w": 1.45,
+            "h": 0.44
+          },
+          "sizing": "contain"
+        },
+        {
+          "kind": "text",
+          "box": {
+            "x": 8.55,
+            "y": 0.43,
+            "w": 4.1,
+            "h": 0.25
+          },
+          "text": "SEMANTIC DECK GENERATOR / TEST",
+          "style": {
+            "role": "caption",
+            "fontSize": 8.5,
+            "color": "border",
+            "align": "right",
+            "valign": "middle"
+          }
+        },
+        {
+          "kind": "text",
+          "box": {
+            "x": 0.65,
+            "y": 7.12,
+            "w": 4.4,
+            "h": 0.18
+          },
+          "text": "CONFIDENTIAL / VERIFICATION ONLY",
+          "style": {
+            "role": "caption",
+            "fontSize": 7.5,
+            "color": "border",
+            "valign": "middle"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultMasterId": "verification-source-content",
+  "titleMasterId": "verification-source-title",
+  "assets": [
+    {
+      "id": "content-image-1",
+      "path": "assets/content-image-1.png",
+      "kind": "image"
+    },
+    {
+      "id": "title-image-1",
+      "path": "assets/title-image-1.png",
+      "kind": "image"
+    }
+  ],
+  "metadata": {
+    "organization": "SDG V2 検証用サンプル",
+    "description": "verification\\semantic-deck-v2-import-test.pptx から取り込んだ Template",
+    "confidentialityLabel": "CONFIDENTIAL"
+  },
+  "import": {
+    "importedFrom": "verification\\semantic-deck-v2-import-test.pptx",
+    "unsupportedFeatures": [
+      "埋め込みオブジェクト (ppt/embeddings) — 非対応"
+    ],
+    "warnings": [
+      "フォントサイズ・余白の体系は PPTX から一意に決まらないため既定値を使用します（template.json で調整してください）",
+      "線の色 #D7DEE8 を Theme トークン 'border' に寄せました",
+      "文字色 #596579 を Theme トークン 'mutedText' に寄せました",
+      "文字色 #C9D7EA を Theme トークン 'border' に寄せました",
+      "文字色 #B9C8DC を Theme トークン 'border' に寄せました"
+    ]
+  }
+}

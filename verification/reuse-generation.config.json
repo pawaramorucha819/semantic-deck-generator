@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0",
+
+  "template": {
+    "id": "verification-source",
+    "dirs": [
+      "./templates"
+    ]
+  },
+
+  "patterns": {
+    "builtin": true,
+    "sources": [
+      {
+        "dir": "./captured-patterns",
+        "scope": "company"
+      }
+    ]
+  },
+
+  "ai": {
+    "mode": "off",
+    "patternSelection": false,
+    "structurePlanning": false
+  },
+
+  "selection": {
+    "overrides": {
+      "slide-reuse": {
+        "patternId": "test-three-column",
+        "reason": "PPTXからCaptureしたPatternを元Template上で再利用するE2Eテスト"
+      }
+    }
+  },
+
+  "output": {
+    "dir": "./generated",
+    "renderReport": true,
+    "candidates": true
+  }
+}

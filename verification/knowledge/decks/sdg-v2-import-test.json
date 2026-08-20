@@ -1,0 +1,236 @@
+{
+  "schemaVersion": "1.0",
+  "deckId": "sdg-v2-import-test",
+  "entries": [
+    {
+      "schemaVersion": "1.0",
+      "deckId": "sdg-v2-import-test",
+      "slideId": "sdg-v2-import-test#1",
+      "metadata": {
+        "title": "生成AI導入戦略テストデッキ",
+        "organization": "Semantic Deck Generator Test",
+        "purpose": "生成AI導入提案",
+        "audience": "経営会議",
+        "createdAt": "2026-08-20T03:37:42Z"
+      },
+      "semantic": {
+        "keyMessage": "生成AI導入戦略",
+        "keywords": [
+          "01",
+          "ai",
+          "capture",
+          "deck",
+          "generator",
+          "json",
+          "knowledge",
+          "semantic",
+          "test",
+          "v2",
+          "visualpattern",
+          "スト"
+        ]
+      },
+      "visual": {
+        "density": "sparse",
+        "elementCounts": {
+          "text": 4,
+          "shape": 1,
+          "image": 0
+        }
+      },
+      "content": {
+        "text": "生成AI導入戦略\nテストデッキ\nSemantic Deck Generator V2\nKnowledge JSON化 / VisualPattern Capture 検証用\nTEST\n01\n1",
+        "bulletCount": 4
+      },
+      "source": {
+        "file": "src\\tmp\\sdg-v2-verification-kit\\semantic-deck-v2-import-test.pptx",
+        "slideNumber": 1,
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "sdg-v2-import-test",
+      "slideId": "sdg-v2-import-test#2",
+      "metadata": {
+        "title": "生成AI導入戦略テストデッキ",
+        "organization": "Semantic Deck Generator Test",
+        "purpose": "生成AI導入提案",
+        "audience": "経営会議",
+        "createdAt": "2026-08-20T03:37:42Z"
+      },
+      "semantic": {
+        "keyMessage": "30%",
+        "keywords": [
+          "ード",
+          "ビュ",
+          "ュー",
+          "レビ",
+          "観点",
+          "再利",
+          "利用",
+          "・見",
+          "・資",
+          "・数",
+          "・説",
+          "・判"
+        ]
+      },
+      "visual": {
+        "density": "dense",
+        "elementCounts": {
+          "text": 17,
+          "shape": 9,
+          "image": 0
+        }
+      },
+      "content": {
+        "text": "RECOMMENDATION\n生成AIの導入効果は、3つの観点で明確に現れる\n同じ大きさの3カード・見出し・数値・説明を持つため、VisualPattern Captureの検証に適したスライドです。\n01\n開発スピード\n30%\n定型実装とレビュー準備の時間を短縮し、価値提供までのリードタイムを圧縮する。\n02\n品質の安定\n−25%\nチェック観点を標準化し、見落としや属人的なレビュー差を減らす。\n03\n知識の再利用\n2.4×\n過去の設計・判断・資料表現を再利用し、組織知を次の成果物へつなげる。\n出典: 社内PoC想定値（テストデータ）\n2",
+        "bulletCount": 17
+      },
+      "source": {
+        "file": "src\\tmp\\sdg-v2-verification-kit\\semantic-deck-v2-import-test.pptx",
+        "slideNumber": 2,
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "sdg-v2-import-test",
+      "slideId": "sdg-v2-import-test#3",
+      "metadata": {
+        "title": "生成AI導入戦略テストデッキ",
+        "organization": "Semantic Deck Generator Test",
+        "purpose": "生成AI導入提案",
+        "audience": "経営会議",
+        "createdAt": "2026-08-20T03:37:42Z"
+      },
+      "semantic": {
+        "keyMessage": "全社一括導入より、対象業務を絞った段階導入が適している",
+        "keywords": [
+          "導入",
+          "して",
+          "段階",
+          "すい",
+          "てい",
+          "やす",
+          "一括",
+          "階導",
+          "括導",
+          "業務",
+          "検証",
+          "社一"
+        ]
+      },
+      "visual": {
+        "density": "dense",
+        "elementCounts": {
+          "text": 14,
+          "shape": 10,
+          "image": 0
+        }
+      },
+      "content": {
+        "text": "COMPARISON\n全社一括導入より、対象業務を絞った段階導入が適している\n2案比較の構造を持つスライド。Knowledge化した際に比較文脈として参照しやすい内容にしています。\nA案｜全社一括導入\n高リスク\n初期インパクトは大きい\n教育・ガバナンス負荷が集中\n成果検証前に投資が先行\nB案｜段階導入\n推奨\n効果が出やすい業務から開始\n検証結果を次部署へ展開\nルールを段階的に成熟\n3",
+        "bulletCount": 14
+      },
+      "source": {
+        "file": "src\\tmp\\sdg-v2-verification-kit\\semantic-deck-v2-import-test.pptx",
+        "slideNumber": 3,
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "sdg-v2-import-test",
+      "slideId": "sdg-v2-import-test#4",
+      "metadata": {
+        "title": "生成AI導入戦略テストデッキ",
+        "organization": "Semantic Deck Generator Test",
+        "purpose": "生成AI導入提案",
+        "audience": "経営会議",
+        "createdAt": "2026-08-20T03:37:42Z"
+      },
+      "semantic": {
+        "keyMessage": "PoCから標準化までを4段階で進める",
+        "keywords": [
+          "利用",
+          "poc",
+          "ート",
+          "ール",
+          "ーン",
+          "01",
+          "02",
+          "03",
+          "04",
+          "capture",
+          "kpi",
+          "pattern"
+        ]
+      },
+      "visual": {
+        "density": "dense",
+        "elementCounts": {
+          "text": 16,
+          "shape": 7,
+          "image": 0
+        }
+      },
+      "content": {
+        "text": "PROCESS\nPoCから標準化までを4段階で進める\n同じ構造が横方向に反復する別パターン。Pattern Captureの限界比較にも利用できます。\n01\n対象選定\n効果が測りやすい業務を選ぶ\n02\nPoC実施\n利用者とKPIを限定して検証\n03\nルール化\n成功条件と禁止事項を整理\n04\n横展開\nテンプレートと知識を再利用\n4",
+        "bulletCount": 16
+      },
+      "source": {
+        "file": "src\\tmp\\sdg-v2-verification-kit\\semantic-deck-v2-import-test.pptx",
+        "slideNumber": 4,
+        "origin": "pptx"
+      }
+    },
+    {
+      "schemaVersion": "1.0",
+      "deckId": "sdg-v2-import-test",
+      "slideId": "sdg-v2-import-test#5",
+      "metadata": {
+        "title": "生成AI導入戦略テストデッキ",
+        "organization": "Semantic Deck Generator Test",
+        "purpose": "生成AI導入提案",
+        "audience": "経営会議",
+        "createdAt": "2026-08-20T03:37:42Z"
+      },
+      "semantic": {
+        "keyMessage": "グラフを含むスライドでは「非対応」が明示されることを確認する",
+        "keywords": [
+          "capture",
+          "グラ",
+          "スト",
+          "する",
+          "フを",
+          "ラフ",
+          "確認",
+          "対応",
+          "非対",
+          "failure",
+          "ingest",
+          "knowledge"
+        ]
+      },
+      "visual": {
+        "density": "medium",
+        "elementCounts": {
+          "text": 6,
+          "shape": 1,
+          "image": 0
+        }
+      },
+      "content": {
+        "text": "NEGATIVE TEST\nグラフを含むスライドでは「非対応」が明示されることを確認する\nVisualPattern Captureがsilent failureせず、unsupportedFeaturesを返すかを見るための負荷テストです。\n期待する確認結果\n• Knowledge ingest はテキストを取り込める\n• Pattern Capture はグラフを非対応として報告\n• 処理自体は黙って欠落させない\n5",
+        "bulletCount": 6
+      },
+      "source": {
+        "file": "src\\tmp\\sdg-v2-verification-kit\\semantic-deck-v2-import-test.pptx",
+        "slideNumber": 5,
+        "origin": "pptx"
+      }
+    }
+  ]
+}

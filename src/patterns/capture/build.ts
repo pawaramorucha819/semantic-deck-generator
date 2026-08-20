@@ -1,4 +1,4 @@
-import type { ExtractedElement } from "../../pptx/model.js";
+import { isLineElement, type ExtractedElement } from "../../pptx/model.js";
 import type { Rect } from "../../render/geometry.js";
 import { nearestColorToken, TEXT_ROLE_NAMES } from "../../render/tokens.js";
 import { resolveTheme, type PresentationTheme, type ResolvedTheme } from "../../theme/theme.js";
@@ -103,9 +103,30 @@ function textStyleOf(
   };
 }
 
-function absoluteChild(box: Rect, node: LayoutNode): { box: Rect; node: LayoutNode } {
+/** absolute レイアウトの 1 要素 */
+interface AbsoluteChild {
+  box: Rect;
+  node: LayoutNode;
+}
+
+/**
+ * 元 PPTX の重なり順（Z-order）を保つための一時表現。
+ *
+ * `sourceOrder` は抽出時の要素インデックス（= PowerPoint の描画順）。
+ * 最後にこの順で並べ替えてから absolute.children にするので、
+ * 「PowerPoint で後ろにあったものは後ろ、前にあったものは前」が保たれる。
+ */
+interface LayeredCapturedNode {
+  sourceOrder: number;
+  child: AbsoluteChild;
+}
+
+/** 線は w か h が 0 になりうるので、最小サイズへ丸めない */
+function absoluteChild(box: Rect, node: LayoutNode): AbsoluteChild {
+  const isLine = node.type === "shape" && node.shape === "line";
+  const size = (value: number): number => round(isLine ? Math.max(0, value) : Math.max(0.05, value));
   return {
-    box: { x: round(box.x), y: round(box.y), w: round(Math.max(0.05, box.w)), h: round(Math.max(0.05, box.h)) },
+    box: { x: round(box.x), y: round(box.y), w: size(box.w), h: size(box.h) },
     node,
   };
 }
@@ -133,7 +154,10 @@ export function buildCapturedPattern(
   const theme = resolveTheme(options.theme);
   const warnings = [...(options.warnings ?? [])];
   const slots: SlotDefinition[] = [];
-  const children: Array<{ box: Rect; node: LayoutNode }> = [];
+  const layers: LayeredCapturedNode[] = [];
+  const layer = (sourceOrder: number, child: AbsoluteChild): void => {
+    layers.push({ sourceOrder, child });
+  };
 
   const textOf = (index: number | undefined): ExtractedElement | undefined =>
     index === undefined ? undefined : elements[index];
@@ -142,7 +166,8 @@ export function buildCapturedPattern(
   const headline = textOf(inference.headlineIndex);
   if (headline) {
     slots.push({ id: "headline", type: "text", source: "keyMessage" });
-    children.push(
+    layer(
+      inference.headlineIndex!,
       absoluteChild(headline.box, {
         type: "text",
         value: { ref: "headline" },
@@ -153,7 +178,9 @@ export function buildCapturedPattern(
     // 見出しが無いと Pattern として成立しないので、最低限の slot を用意する
     slots.push({ id: "headline", type: "text", source: "keyMessage" });
     warnings.push("見出しを推定できなかったため、headline slot の配置は手で指定してください");
-    children.push(
+    // 合成した見出しは元 PPTX に対応する要素が無いので最前面へ置く
+    layer(
+      elements.length,
       absoluteChild(
         { x: 0.6, y: 0.4, w: options.slideSize.widthIn - 1.2, h: 0.6 },
         { type: "text", value: { ref: "headline" }, style: { role: "keyMessage", bold: true } },
@@ -164,7 +191,8 @@ export function buildCapturedPattern(
   const eyebrow = textOf(inference.eyebrowIndex);
   if (eyebrow) {
     slots.push({ id: "eyebrow", type: "text", source: "slideRoleLabel", optional: true });
-    children.push(
+    layer(
+      inference.eyebrowIndex!,
       absoluteChild(eyebrow.box, {
         type: "text",
         value: { ref: "eyebrow" },
@@ -177,7 +205,8 @@ export function buildCapturedPattern(
   const subline = textOf(inference.sublineIndex);
   if (subline) {
     slots.push({ id: "subline", type: "text", source: "supportingMessage", optional: true });
-    children.push(
+    layer(
+      inference.sublineIndex!,
       absoluteChild(subline.box, {
         type: "text",
         value: { ref: "subline" },
@@ -190,7 +219,8 @@ export function buildCapturedPattern(
   const source = textOf(inference.sourceIndex);
   if (source) {
     slots.push({ id: "sourceText", type: "text", source: "sourceText", optional: true });
-    children.push(
+    layer(
+      inference.sourceIndex!,
       absoluteChild(source.box, {
         type: "text",
         value: { ref: "sourceText" },
@@ -211,7 +241,8 @@ export function buildCapturedPattern(
         warnings.push(`画像を解決できなかったため除外しました: ${element.name ?? element.id}`);
         continue;
       }
-      children.push(
+      layer(
+        index,
         absoluteChild(element.box, {
           type: "image",
           assetId,
@@ -223,19 +254,11 @@ export function buildCapturedPattern(
       continue;
     }
 
-    if (element.text && element.text.plain.trim().length > 0) {
-      children.push(
-        absoluteChild(element.box, {
-          type: "text",
-          value: { literal: element.text.plain.replace(/\n/g, " ").slice(0, 400) },
-          style: textStyleOf(theme, element, warnings, {}),
-        }),
-      );
-      continue;
-    }
-
-    if (element.kind === "line") {
-      children.push(
+    // コネクタと線プリセットの図形はどちらも線。塗りベースの分岐より前に判定する
+    // （線は塗りを持たないため、後段の solid 判定では拾えない）。
+    if (isLineElement(element)) {
+      layer(
+        index,
         absoluteChild(element.box, {
           type: "shape",
           shape: "line",
@@ -250,8 +273,21 @@ export function buildCapturedPattern(
       continue;
     }
 
+    if (element.text && element.text.plain.trim().length > 0) {
+      layer(
+        index,
+        absoluteChild(element.box, {
+          type: "text",
+          value: { literal: element.text.plain.replace(/\n/g, " ").slice(0, 400) },
+          style: textStyleOf(theme, element, warnings, {}),
+        }),
+      );
+      continue;
+    }
+
     if (element.fill?.type === "solid") {
-      children.push(
+      layer(
+        index,
         absoluteChild(element.box, {
           type: "shape",
           shape: element.geometry === "roundRect" ? "roundRect" : "rect",
@@ -342,7 +378,21 @@ export function buildCapturedPattern(
         }
       : stack;
 
-    children.push(
+    // 反復セルは複数の PPTX 要素を 1 ノードへまとめるため、
+    // 構成要素の最小インデックス（＝最も後ろにあった要素）を Z-order の代表値にする。
+    // こうすると、カード背景より後ろにあった装飾（アクセントバー・区切り線）は
+    // カードより前面に残る。
+    const cellSourceOrder = Math.min(
+      ...usableCells.map((cell) =>
+        Math.min(
+          ...(cell.backgroundIndex !== undefined ? [cell.backgroundIndex] : []),
+          ...cell.textIndexes,
+        ),
+      ),
+    );
+
+    layer(
+      cellSourceOrder,
       absoluteChild(region, {
         type: "columns",
         gap,
@@ -386,7 +436,15 @@ export function buildCapturedPattern(
       ...(slots.some((s) => s.id === "items") ? { requireSlots: ["items"] } : {}),
     },
     layout: {
-      body: { type: "absolute", origin: "canvas", children },
+      // 元 PPTX の描画順（Z-order）を保ったまま並べる。
+      // Array.prototype.sort は安定なので、同じ sourceOrder の要素は追加順のまま。
+      body: {
+        type: "absolute",
+        origin: "canvas",
+        children: [...layers]
+          .sort((a, b) => a.sourceOrder - b.sourceOrder)
+          .map((entry) => entry.child),
+      },
     },
     ...(options.assets && options.assets.length > 0
       ? { assets: options.assets.map((a) => ({ id: a.id, path: a.path, kind: "image" as const })) }

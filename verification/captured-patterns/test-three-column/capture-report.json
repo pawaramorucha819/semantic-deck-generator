@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0",
+  "patternId": "test-three-column",
+  "source": {
+    "file": "verification\\semantic-deck-v2-import-test.pptx",
+    "slideNumber": 2
+  },
+  "elements": {
+    "total": 26,
+    "text": 16,
+    "shape": 9,
+    "line": 0,
+    "image": 0,
+    "placeholder": 1
+  },
+  "inference": {
+    "inferencer": "heuristic",
+    "headline": "生成AIの導入効果は、3つの観点で明確に現れる",
+    "cells": 3,
+    "statics": 7,
+    "notes": [
+      "見出しを推定: \"生成AIの導入効果は、3つの観点で明確に現れる\" (25pt)",
+      "3 件の反復セルを検出しました"
+    ]
+  },
+  "unsupportedFeatures": [
+    "埋め込みオブジェクト (ppt/embeddings) — 非対応"
+  ],
+  "warnings": [
+    "文字色: #172033 を Theme トークン 'text' に寄せました",
+    "文字色: #2F66D0 を Theme トークン 'secondary' に寄せました",
+    "文字色: #596579 を Theme トークン 'mutedText' に寄せました",
+    "図形の色: #2F66D0 を Theme トークン 'secondary' に寄せました",
+    "線の色: #D7DEE8 を Theme トークン 'border' に寄せました",
+    "文字色: #7B8798 を Theme トークン 'mutedText' に寄せました",
+    "カードの色: #F7F9FC を Theme トークン 'surface' に寄せました",
+    "カードの枠線: #D7DEE8 を Theme トークン 'border' に寄せました"
+  ],
+  "reviewChecklist": [
+    "compatibility.logicalRelations / slideRoles を実際の用途に合わせて絞る",
+    "match.baseScore と rules を調整する（既定は 0.5 の控えめな値）",
+    "slot の source（keyMessage / supportingMessage / content / evidence）が意味と合っているか確認する",
+    "固定テキスト（literal）として残った文字列が本当に毎回同じか確認する",
+    "レビューが済んだら metadata.status を 'approved' に変更する"
+  ]
+}
