@@ -76,6 +76,12 @@ export interface PptxContents {
   presentationXml: string;
   /** ディレクトリエントリを除いた実ファイルのみ */
   files: string[];
+  /** Slide Master（Template 検査用） */
+  slideMasterXmls: string[];
+  /** Slide Layout（Template の master 定義はここへ出る） */
+  slideLayoutXmls: string[];
+  /** slideN.xml → 参照している slideLayout の番号 */
+  slideLayoutRefs: number[];
 }
 
 export async function readPptx(buffer: Buffer): Promise<PptxContents> {
@@ -91,7 +97,46 @@ export async function readPptx(buffer: Buffer): Promise<PptxContents> {
     slideNames.map((name) => zip.file(name)!.async("string")),
   );
   const presentationXml = await zip.file("ppt/presentation.xml")!.async("string");
-  return { zip, slideXmls, presentationXml, files };
+
+  const masterNames = files.filter((f) => /^ppt\/slideMasters\/slideMaster\d+\.xml$/.test(f));
+  const slideMasterXmls = await Promise.all(
+    masterNames.map((name) => zip.file(name)!.async("string")),
+  );
+  const layoutNames = files
+    .filter((f) => /^ppt\/slideLayouts\/slideLayout\d+\.xml$/.test(f))
+    .sort((a, b) => layoutIndex(a) - layoutIndex(b));
+  const slideLayoutXmls = await Promise.all(
+    layoutNames.map((name) => zip.file(name)!.async("string")),
+  );
+
+  const slideLayoutRefs: number[] = [];
+  for (const name of slideNames) {
+    const relName = name.replace(/slides\/(slide\d+)\.xml$/, "slides/_rels/$1.xml.rels");
+    const rel = await zip.file(relName)?.async("string");
+    slideLayoutRefs.push(Number(/slideLayout(\d+)\.xml/.exec(rel ?? "")?.[1] ?? 0));
+  }
+
+  return {
+    zip,
+    slideXmls,
+    presentationXml,
+    files,
+    slideMasterXmls,
+    slideLayoutXmls,
+    slideLayoutRefs,
+  };
+}
+
+function layoutIndex(name: string): number {
+  return Number(/slideLayout(\d+)\.xml$/.exec(name)?.[1] ?? 0);
+}
+
+/** 1x1 の有効な PNG（テンプレートアセットのテスト用） */
+export const TINY_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+export function tinyPngBytes(): Buffer {
+  return Buffer.from(TINY_PNG_BASE64, "base64");
 }
 
 function slideIndex(name: string): number {

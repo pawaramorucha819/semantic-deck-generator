@@ -81,6 +81,37 @@ export interface ShapeStyle {
   name?: string;
 }
 
+/**
+ * 画像の描画指定。
+ *
+ * URL やファイルパスは受け付けない。Template / Pattern パッケージに同梱され、
+ * `AssetResolver` へ登録済みの `assetId` しか参照できない
+ * （= 外部 URL の無条件 fetch を構造的に禁止する）。
+ */
+export interface ImageSpec {
+  assetId: string;
+  /** 既定 'contain'（アスペクト比を保って box 内に収める） */
+  sizing?: "contain" | "cover" | "stretch";
+  /** 0-100 (%) */
+  transparency?: number;
+  layer?: Layer;
+  name?: string;
+}
+
+/** assetId → 埋め込み可能な画像データ。Template / Pattern パッケージがロード時に構築する。 */
+export interface ResolvedAsset {
+  id: string;
+  /** data URI ('image/png;base64,....')。PptxGenJS の `data` にそのまま渡せる形。 */
+  data: string;
+  /** 元ファイル名（デバッグ用） */
+  fileName?: string;
+}
+
+export interface AssetResolver {
+  resolve(assetId: string): ResolvedAsset;
+  has(assetId: string): boolean;
+}
+
 export interface ChartSeries {
   name: string;
   values: number[];
@@ -114,6 +145,11 @@ export interface RenderContext {
   text(box: Rect, content: TextContent, style?: TextStyle): void;
   shape(kind: ShapeKind, box: Rect, style?: ShapeStyle): void;
   chart(box: Rect, spec: ChartSpec): void;
+  /**
+   * 登録済みアセット（ロゴ等）を描画する。
+   * アセットが未登録の場合は例外になる（silent failure を作らない）。
+   */
+  image(box: Rect, spec: ImageSpec): void;
 
   /** テキストが必要とする高さ (inch) を概算する。レイアウト計算用。 */
   measureText(

@@ -2,6 +2,7 @@
 import { relative } from "node:path";
 import { PresentationValidationError } from "../domain/schema.js";
 import { generateFromFile } from "../pipeline.js";
+import { TemplateRegistry } from "../templates/registry.js";
 import { builtinThemes } from "../theme/theme.js";
 import type { LayoutIssue } from "../render/validate.js";
 
@@ -9,6 +10,9 @@ interface CliArgs {
   input?: string;
   outDir?: string;
   themeId?: string;
+  templateId?: string;
+  templateDirs: string[];
+  sectionSlideIds: string[];
   noTitleSlide: boolean;
   noCandidates: boolean;
   report: boolean;
@@ -17,8 +21,15 @@ interface CliArgs {
   help: boolean;
 }
 
+function required(value: string | undefined, option: string): string {
+  if (!value) throw new Error(`${option} には値が必要です`);
+  return value;
+}
+
 function parseArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
+    templateDirs: [],
+    sectionSlideIds: [],
     noTitleSlide: false,
     noCandidates: false,
     report: false,
@@ -39,6 +50,15 @@ function parseArgs(argv: string[]): CliArgs {
         break;
       case "--theme":
         args.themeId = argv[++i];
+        break;
+      case "--template":
+        args.templateId = argv[++i];
+        break;
+      case "--template-dir":
+        args.templateDirs.push(required(argv[++i], "--template-dir"));
+        break;
+      case "--section":
+        args.sectionSlideIds.push(required(argv[++i], "--section"));
         break;
       case "--no-title-slide":
         args.noTitleSlide = true;
@@ -73,6 +93,9 @@ Semantic Deck Generator — presentation.json から PowerPoint を生成しま�
 Options
   --out-dir <dir>     出力先ディレクトリ (既定: 入力と同階層の generated/)
   --theme <id>        テーマ (${Object.keys(builtinThemes).join(" | ")})
+  --template <id>     企業テンプレート (default | corporate | --template-dir で追加したもの)
+  --template-dir <d>  外部テンプレートディレクトリを読み込む (複数可)
+  --section <slideId> そのスライドを章扉 (section master) として描く (複数可)
   --no-title-slide    表紙スライドを付けない
   --no-candidates     Visual Plan に Pattern 候補一覧を含めない
   --report            Render Report (配置結果 + 検査結果) も書き出す
@@ -97,9 +120,25 @@ async function main(): Promise<number> {
     return args.input ? 0 : 1;
   }
 
+  let templateRegistry: TemplateRegistry | undefined;
+  if (args.templateDirs.length > 0) {
+    templateRegistry = new TemplateRegistry();
+    for (const dir of args.templateDirs) {
+      const loaded = await templateRegistry.registerDirectory(dir);
+      if (!args.quiet) {
+        console.log(
+          `テンプレート読込: ${dir} → ${loaded.map((t) => t.template.id).join(", ") || "(なし)"}`,
+        );
+      }
+    }
+  }
+
   const result = await generateFromFile(args.input, {
     outDir: args.outDir,
     themeId: args.themeId,
+    templateId: args.templateId,
+    ...(templateRegistry ? { templateRegistry } : {}),
+    ...(args.sectionSlideIds.length > 0 ? { sectionSlideIds: args.sectionSlideIds } : {}),
     includeTitleSlide: !args.noTitleSlide,
     includeCandidates: !args.noCandidates,
     writeReport: args.report,
@@ -111,6 +150,7 @@ async function main(): Promise<number> {
   if (!args.quiet) {
     console.log(`入力    : ${rel(result.inputPath)}`);
     console.log(`テーマ  : ${result.plan.themeId}`);
+    if (result.plan.templateId) console.log(`テンプレ: ${result.plan.templateId}`);
     console.log(`スライド: ${result.plan.slides.length} 枚`);
     console.log("");
     console.log("Pattern 選択結果");

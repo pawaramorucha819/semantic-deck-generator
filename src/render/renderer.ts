@@ -11,7 +11,19 @@ import {
   type SlideProvenance,
   type VisualPlan,
 } from "../plan/visual-plan.js";
-import { getTheme, normalizeHex, resolveTheme, type PresentationTheme } from "../theme/theme.js";
+import { defineTemplateMasters } from "../templates/master.js";
+import { createAssetResolver } from "../templates/loader.js";
+import { defaultTemplateRegistry, type TemplateRegistry } from "../templates/registry.js";
+import {
+  contentFrameOf,
+  masterForRole,
+  type LoadedTemplateAsset,
+  type MasterRole,
+  type PresentationTemplate,
+  type SlideMasterDefinition,
+  type TemplateTextVariables,
+} from "../templates/template.js";
+import { getTheme, normalizeHex, resolveTheme, type PresentationTheme, type ResolvedTheme } from "../theme/theme.js";
 import { rect, type Rect } from "./geometry.js";
 import { SlideSurface, type Placement } from "./surface.js";
 import { validatePlacements, type LayoutIssue } from "./validate.js";
@@ -20,9 +32,21 @@ import { validatePlacements, type LayoutIssue } from "./validate.js";
 export const SLIDE_WIDTH_IN = 10;
 export const SLIDE_HEIGHT_IN = 5.625;
 
+/** Template が独自スライドサイズを持つ場合に定義するレイアウト名 */
+const CUSTOM_LAYOUT_NAME = "SDG_TEMPLATE";
+
 export interface RenderOptions {
   theme?: PresentationTheme;
   registry?: PatternRegistry;
+  /**
+   * 企業テンプレートを明示的に渡す（`plan.templateId` より優先）。
+   * 未指定かつ `plan.templateId` も無い場合は Template 非使用（V1 と同じ紙面）。
+   */
+  template?: PresentationTemplate;
+  /** Template の画像アセット（ロゴ等）。options.template と併用する。 */
+  templateAssets?: LoadedTemplateAsset[];
+  /** `plan.templateId` の解決に使う Registry（既定: ビルトインのみ） */
+  templateRegistry?: TemplateRegistry;
   /** 表紙スライドを付けるか（既定 true） */
   includeTitleSlide?: boolean;
   /** ページ番号を入れるか（既定 true） */
@@ -42,6 +66,49 @@ export interface RenderResult {
   pptx: PptxGenJS;
   reports: SlideRenderReport[];
   issues: LayoutIssue[];
+  /** 使用した Template（未使用なら undefined） */
+  templateId?: string;
+}
+
+interface ActiveTemplate {
+  template: PresentationTemplate;
+  assets: LoadedTemplateAsset[];
+}
+
+/**
+ * 描画に使う Template を決める。
+ *  1. options.template（明示指定）
+ *  2. plan.templateId → Registry
+ *  3. なし（V1 と同じ紙面）
+ * plan.templateId が未登録の場合は例外。黙って Template 無しにはしない。
+ */
+function resolveActiveTemplate(
+  plan: VisualPlan,
+  options: RenderOptions,
+): ActiveTemplate | undefined {
+  if (options.template) {
+    return { template: options.template, assets: options.templateAssets ?? [] };
+  }
+  if (!plan.templateId) return undefined;
+  const entry = (options.templateRegistry ?? defaultTemplateRegistry).get(plan.templateId);
+  return { template: entry.template, assets: entry.assets };
+}
+
+/**
+ * Theme の解決順序（V1 の契約をそのまま維持する）:
+ *  1. options.theme（明示指定）
+ *  2. Template の theme（plan.themeId と一致する場合のみ = --theme で上書きされていない）
+ *  3. plan.themeId からビルトインテーマを解決（未知の id は例外）
+ */
+function resolveThemeFor(
+  plan: VisualPlan,
+  active: ActiveTemplate | undefined,
+  options: RenderOptions,
+): ResolvedTheme {
+  if (options.theme) return resolveTheme(options.theme);
+  const templateTheme = active?.template.theme;
+  if (templateTheme && templateTheme.id === plan.themeId) return resolveTheme(templateTheme);
+  return resolveTheme(getTheme(plan.themeId));
 }
 
 /**
@@ -67,33 +134,88 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
   // という抜け道が塞がれる。
   const validatedPlan = parseVisualPlan(plan, { registry });
 
-  const theme = resolveTheme(options.theme ?? getTheme(validatedPlan.themeId));
+  const active = resolveActiveTemplate(validatedPlan, options);
+  const theme = resolveThemeFor(validatedPlan, active, options);
   const includeTitleSlide = options.includeTitleSlide ?? true;
   const showSlideNumbers = options.showSlideNumbers ?? true;
 
+  const slideSize = active?.template.slideSize ?? {
+    widthIn: SLIDE_WIDTH_IN,
+    heightIn: SLIDE_HEIGHT_IN,
+  };
+
   const pptx = new PptxGenJS();
-  pptx.layout = "LAYOUT_16x9";
+  if (slideSize.widthIn === SLIDE_WIDTH_IN && slideSize.heightIn === SLIDE_HEIGHT_IN) {
+    pptx.layout = "LAYOUT_16x9";
+  } else {
+    // Template が独自のスライドサイズを持つ場合のみカスタムレイアウトを定義する
+    pptx.defineLayout({
+      name: CUSTOM_LAYOUT_NAME,
+      width: slideSize.widthIn,
+      height: slideSize.heightIn,
+    });
+    pptx.layout = CUSTOM_LAYOUT_NAME;
+  }
   pptx.title = validatedPlan.title;
   pptx.subject = validatedPlan.subtitle ?? "";
   pptx.author = validatedPlan.author ?? "";
-  pptx.company = "";
+  pptx.company = active?.template.metadata?.organization ?? "";
 
-  const canvas: Rect = rect(0, 0, SLIDE_WIDTH_IN, SLIDE_HEIGHT_IN);
-  const frame: Rect = rect(
+  const canvas: Rect = rect(0, 0, slideSize.widthIn, slideSize.heightIn);
+  const defaultFrame: Rect = rect(
     theme.margins.left,
     theme.margins.top,
-    SLIDE_WIDTH_IN - theme.margins.left - theme.margins.right,
-    SLIDE_HEIGHT_IN - theme.margins.top - theme.margins.bottom,
+    slideSize.widthIn - theme.margins.left - theme.margins.right,
+    slideSize.heightIn - theme.margins.top - theme.margins.bottom,
   );
+
+  // Template 使用時のみ Slide Master を定義する（未使用なら V1 と同じ出力）
+  const assets = active ? createAssetResolver(active.assets) : undefined;
+  const masterNames =
+    active && assets
+      ? defineTemplateMasters({
+          pptx,
+          template: active.template,
+          theme,
+          assets,
+          includeSlideNumbers: showSlideNumbers,
+          variables: templateVariablesOf(validatedPlan, active.template),
+        })
+      : undefined;
+
+  /** 役割に応じた Master でスライドを作り、本文領域を返す */
+  const openSlide = (role: MasterRole): { slide: PptxGenJS.Slide; frame: Rect } => {
+    if (!active || !masterNames) {
+      const slide = pptx.addSlide();
+      slide.background = { color: normalizeHex(theme.colors.background) };
+      return { slide, frame: defaultFrame };
+    }
+    const master = masterForRole(active.template, role);
+    const masterName = masterNames.get(master.id);
+    const slide = pptx.addSlide(masterName ? { masterName } : undefined);
+    return { slide, frame: contentFrameOf(master, theme, slideSize) };
+  };
 
   const reports: SlideRenderReport[] = [];
   const total = validatedPlan.slides.length;
 
   if (includeTitleSlide) {
-    const slide = pptx.addSlide();
-    slide.background = { color: normalizeHex(theme.colors.background) };
-    const surface = new SlideSurface(slide, theme, canvas, frame, "title", 0, total);
-    renderTitleSlide(surface, validatedPlan);
+    const opened = openSlide("title");
+    const surface = new SlideSurface({
+      slide: opened.slide,
+      theme,
+      canvas,
+      frame: opened.frame,
+      variantId: "title",
+      slideNumber: 0,
+      totalSlides: total,
+      ...(assets ? { assets } : {}),
+    });
+    // Template 使用時は帯・ロゴ等が Master 側にあるので、表紙は文字だけを描く
+    renderTitleSlide(surface, validatedPlan, {
+      drawAccentBand: !active,
+      onColoredBackground: isColoredTitleBackground(active, theme),
+    });
     reports.push({
       slideId: "__title__",
       slideNumber: 0,
@@ -105,7 +227,7 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
         slideNumber: 0,
         patternId: "__title__",
         canvas,
-        frame,
+        frame: opened.frame,
       }),
     });
   }
@@ -114,29 +236,31 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
   // patternId / patternVersion / variantId / bindings がすべて検証済み。
   for (const planSlide of validatedPlan.slides) {
     const pattern = registry.get(planSlide.patternId);
-    const slide = pptx.addSlide();
-    slide.background = { color: normalizeHex(theme.colors.background) };
+    const opened = openSlide(planSlide.masterRole ?? "content");
 
-    const surface = new SlideSurface(
-      slide,
+    const surface = new SlideSurface({
+      slide: opened.slide,
       theme,
       canvas,
-      frame,
-      planSlide.variantId,
-      planSlide.slideNumber,
-      total,
-    );
+      frame: opened.frame,
+      variantId: planSlide.variantId,
+      slideNumber: planSlide.slideNumber,
+      totalSlides: total,
+      ...(assets ? { assets } : {}),
+    });
 
     pattern.render(planSlide.bindings, surface);
 
-    if (showSlideNumbers) {
-      drawSlideNumberChrome(slide, theme, planSlide.slideNumber, total);
+    // Template 使用時のページ番号は Slide Master 側（PowerPoint のページ番号
+    // フィールド）が担当するため、ここでは描かない。
+    if (showSlideNumbers && !active) {
+      drawSlideNumberChrome(opened.slide, theme, planSlide.slideNumber, total, slideSize);
     }
 
     // 完全な出典（URL・参照箇所込み）はスピーカーノートへ格納する。
     // フッターの短い出典行と役割を分ける（表示用 / 検証用）。
     const notesText = buildNotesText(planSlide.provenance);
-    if (notesText) slide.addNotes(notesText);
+    if (notesText) opened.slide.addNotes(notesText);
 
     reports.push({
       slideId: planSlide.slideId,
@@ -149,12 +273,49 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
         slideNumber: planSlide.slideNumber,
         patternId: planSlide.patternId,
         canvas,
-        frame,
+        frame: opened.frame,
       }),
     });
   }
 
-  return { pptx, reports, issues: reports.flatMap((r) => r.issues) };
+  return {
+    pptx,
+    reports,
+    issues: reports.flatMap((r) => r.issues),
+    ...(active ? { templateId: active.template.id } : {}),
+  };
+}
+
+/** Master のテキストで使える変数を Plan と Template から組み立てる */
+function templateVariablesOf(
+  plan: VisualPlan,
+  template: PresentationTemplate,
+): TemplateTextVariables {
+  return {
+    deckTitle: plan.title,
+    ...(plan.subtitle ? { deckSubtitle: plan.subtitle } : {}),
+    ...(plan.author ? { author: plan.author } : {}),
+    ...(template.metadata?.organization ? { organization: template.metadata.organization } : {}),
+    ...(template.metadata?.department ? { department: template.metadata.department } : {}),
+    ...(template.metadata?.confidentialityLabel
+      ? { confidentiality: template.metadata.confidentialityLabel }
+      : {}),
+  };
+}
+
+/**
+ * 表紙 Master の背景が濃色かどうか。
+ * 濃色なら表紙の文字色を onPrimary 側へ切り替える（Theme トークンのみで判定する）。
+ */
+function isColoredTitleBackground(
+  active: { template: PresentationTemplate } | undefined,
+  theme: ResolvedTheme,
+): boolean {
+  if (!active) return false;
+  const master = masterForRole(active.template, "title");
+  const token = master.background?.color;
+  if (!token || typeof token !== "string") return false;
+  return token === "primary" || token === "secondary" || token === "accent" || token === "text";
 }
 
 /** presentation.json から一気に PPTX まで（CLI / テスト用の便宜関数） */
@@ -244,17 +405,26 @@ export function serializeRenderReport(report: RenderReport): string {
   return `${JSON.stringify(report, null, 2)}\n`;
 }
 
-function renderTitleSlide(ctx: SlideSurface, plan: VisualPlan): void {
+function renderTitleSlide(
+  ctx: SlideSurface,
+  plan: VisualPlan,
+  options: { drawAccentBand: boolean; onColoredBackground: boolean },
+): void {
   const { theme, canvas, frame } = ctx;
+  const titleColor = options.onColoredBackground ? "onPrimary" : "text";
+  const subColor = options.onColoredBackground ? "onPrimary" : "mutedText";
 
-  ctx.shape("rect", { x: 0, y: 0, w: 0.34, h: canvas.h }, {
-    fill: "primary",
-    layer: "background",
-    name: "title-band",
-  });
+  if (options.drawAccentBand) {
+    ctx.shape("rect", { x: 0, y: 0, w: 0.34, h: canvas.h }, {
+      fill: "primary",
+      layer: "background",
+      name: "title-band",
+    });
+  }
 
   const titleSize = Math.round(theme.fontSizes.keyMessage * 1.8);
-  const titleW = frame.w - 0.4;
+  const textOffset = options.drawAccentBand ? 0.4 : 0;
+  const titleW = frame.w - textOffset;
   const titleH = Math.max(
     0.7,
     ctx.measureText(plan.title, { widthIn: titleW, fontSize: titleSize, lineHeight: 1.24 }),
@@ -266,10 +436,10 @@ function renderTitleSlide(ctx: SlideSurface, plan: VisualPlan): void {
     (plan.author ? theme.spacing.lg + 0.26 : 0);
   let cursor = frame.y + Math.max(0, (frame.h - blockH) / 2);
 
-  ctx.text({ x: frame.x + 0.4, y: cursor, w: titleW, h: titleH }, plan.title, {
+  ctx.text({ x: frame.x + textOffset, y: cursor, w: titleW, h: titleH }, plan.title, {
     role: "keyMessage",
     fontSize: titleSize,
-    color: "text",
+    color: titleColor,
     bold: true,
     lineHeight: 1.24,
     layer: "content",
@@ -279,9 +449,9 @@ function renderTitleSlide(ctx: SlideSurface, plan: VisualPlan): void {
 
   if (plan.subtitle) {
     cursor += theme.spacing.md;
-    ctx.text({ x: frame.x + 0.4, y: cursor, w: titleW, h: 0.36 }, plan.subtitle, {
+    ctx.text({ x: frame.x + textOffset, y: cursor, w: titleW, h: 0.36 }, plan.subtitle, {
       role: "heading",
-      color: "mutedText",
+      color: subColor,
       layer: "content",
       name: "deck-subtitle",
     });
@@ -290,9 +460,9 @@ function renderTitleSlide(ctx: SlideSurface, plan: VisualPlan): void {
 
   if (plan.author) {
     cursor += theme.spacing.lg;
-    ctx.text({ x: frame.x + 0.4, y: cursor, w: titleW, h: 0.26 }, plan.author, {
+    ctx.text({ x: frame.x + textOffset, y: cursor, w: titleW, h: 0.26 }, plan.author, {
       role: "caption",
-      color: "mutedText",
+      color: subColor,
       layer: "content",
       name: "deck-author",
     });
@@ -308,10 +478,11 @@ function drawSlideNumberChrome(
   theme: ReturnType<typeof resolveTheme>,
   slideNumber: number,
   total: number,
+  slideSize: { widthIn: number; heightIn: number },
 ): void {
   slide.addText(`${slideNumber} / ${total}`, {
-    x: SLIDE_WIDTH_IN - theme.margins.right - 1.2,
-    y: SLIDE_HEIGHT_IN - theme.margins.bottom + 0.02,
+    x: slideSize.widthIn - theme.margins.right - 1.2,
+    y: slideSize.heightIn - theme.margins.bottom + 0.02,
     w: 1.2,
     h: 0.26,
     align: "right",

@@ -1,8 +1,10 @@
 import type PptxGenJS from "pptxgenjs";
-import { mix, normalizeHex, type ResolvedTheme } from "../theme/theme.js";
+import type { ResolvedTheme } from "../theme/theme.js";
 import type {
+  AssetResolver,
   ChartSpec,
   ColorToken,
+  ImageSpec,
   Layer,
   RenderContext,
   ShapeKind,
@@ -12,10 +14,11 @@ import type {
   TextStyle,
 } from "./context.js";
 import { estimateTextHeight, roundRectValues, type Rect } from "./geometry.js";
+import { defaultFontRoleFor, resolveColor, resolveFontFace, tintToken } from "./tokens.js";
 
 /** 配置された 1 要素の記録（レイアウト検査に使う） */
 export interface Placement {
-  kind: "text" | "shape" | "chart";
+  kind: "text" | "shape" | "chart" | "image";
   layer: Layer;
   box: Rect;
   name: string;
@@ -30,20 +33,42 @@ export interface Placement {
 
 const DEFAULT_LINE_HEIGHT = 1.3;
 
+export interface SlideSurfaceOptions {
+  slide: PptxGenJS.Slide;
+  theme: ResolvedTheme;
+  canvas: Rect;
+  frame: Rect;
+  variantId: string;
+  slideNumber: number;
+  totalSlides: number;
+  /** ロゴ等の埋め込みアセット。未指定なら image() は必ず例外になる。 */
+  assets?: AssetResolver;
+}
+
 /** PptxGenJS の Slide に描き込みつつ、配置矩形をすべて記録する RenderContext 実装 */
 export class SlideSurface implements RenderContext {
   readonly placements: Placement[] = [];
   private counter = 0;
 
-  constructor(
-    private readonly slide: PptxGenJS.Slide,
-    readonly theme: ResolvedTheme,
-    readonly canvas: Rect,
-    readonly frame: Rect,
-    readonly variantId: string,
-    readonly slideNumber: number,
-    readonly totalSlides: number,
-  ) {}
+  private readonly slide: PptxGenJS.Slide;
+  readonly theme: ResolvedTheme;
+  readonly canvas: Rect;
+  readonly frame: Rect;
+  readonly variantId: string;
+  readonly slideNumber: number;
+  readonly totalSlides: number;
+  private readonly assets: AssetResolver | undefined;
+
+  constructor(options: SlideSurfaceOptions) {
+    this.slide = options.slide;
+    this.theme = options.theme;
+    this.canvas = options.canvas;
+    this.frame = options.frame;
+    this.variantId = options.variantId;
+    this.slideNumber = options.slideNumber;
+    this.totalSlides = options.totalSlides;
+    this.assets = options.assets;
+  }
 
   fontSizeOf(role: TextRole): number {
     return this.theme.fontSizes[role];
@@ -51,19 +76,15 @@ export class SlideSurface implements RenderContext {
 
   /** 背景色方向へ混色する。ダークテーマでも「淡くなる」意味が保たれる。 */
   tint(token: ColorToken, amount: number): ColorToken {
-    return `#${mix(this.color(token), this.color("background"), amount)}`;
+    return tintToken(this.theme, token, amount);
   }
 
   private fontFace(role: "heading" | "body" | "numeric" = "body"): string {
-    return this.theme.fonts[role];
+    return resolveFontFace(this.theme, role);
   }
 
   private color(token: ColorToken | undefined, fallback: ColorToken = "text"): string {
-    const t = token ?? fallback;
-    if (typeof t === "string" && t.startsWith("#")) return normalizeHex(t);
-    const value = this.theme.colors[t as keyof ResolvedTheme["colors"]];
-    if (!value) throw new Error(`未知のカラートークンです: ${String(t)}`);
-    return normalizeHex(value);
+    return resolveColor(this.theme, token, fallback);
   }
 
   private nextName(prefix: string, explicit?: string): string {
@@ -90,7 +111,7 @@ export class SlideSurface implements RenderContext {
       y: b.y,
       w: b.w,
       h: b.h,
-      fontFace: this.fontFace(style.font ?? (role === "display" ? "numeric" : role === "keyMessage" || role === "heading" ? "heading" : "body")),
+      fontFace: this.fontFace(style.font ?? defaultFontRoleFor(role)),
       fontSize,
       color: this.color(style.color, "text"),
       bold: style.bold ?? (role === "keyMessage" || role === "display"),
@@ -230,6 +251,38 @@ export class SlideSurface implements RenderContext {
     this.placements.push({
       kind: "chart",
       layer: spec.layer ?? "content",
+      box: b,
+      name,
+    });
+  }
+
+  image(box: Rect, spec: ImageSpec): void {
+    const name = this.nextName("image", spec.name);
+    const b = roundRectValues(box);
+    if (!this.assets) {
+      throw new Error(
+        `画像アセット '${spec.assetId}' を解決できません: この描画面にはアセットが登録されていません`,
+      );
+    }
+    const asset = this.assets.resolve(spec.assetId);
+
+    const sizing = spec.sizing ?? "contain";
+    this.slide.addImage({
+      data: asset.data,
+      x: b.x,
+      y: b.y,
+      w: b.w,
+      h: b.h,
+      objectName: name,
+      transparency: spec.transparency,
+      ...(sizing === "stretch"
+        ? {}
+        : { sizing: { type: sizing, w: b.w, h: b.h } as PptxGenJS.ImageProps["sizing"] }),
+    });
+
+    this.placements.push({
+      kind: "image",
+      layer: spec.layer ?? "decoration",
       box: b,
       name,
     });

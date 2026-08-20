@@ -4,8 +4,20 @@ import type { PresentationSpec, SlideSpec, Source } from "../domain/types.js";
 import type { AnyVisualPattern } from "../patterns/pattern.js";
 import { defaultRegistry, PatternRegistry } from "../patterns/registry.js";
 import { selectPattern, type PatternEvaluation } from "../selector/selector.js";
+import type { MasterRole } from "../templates/template.js";
+import { MASTER_ROLES } from "../templates/template.js";
+import { DecisionTraceSchema, type DecisionTrace } from "./decision-trace.js";
 
-export const VISUAL_PLAN_SCHEMA_VERSION = "1.1";
+export const VISUAL_PLAN_SCHEMA_VERSION = "2.0";
+
+/**
+ * 読み込みを受け付ける Visual Plan の schemaVersion。
+ *
+ * V2 で追加されたフィールド（templateId / masterRole / decisionTrace）はすべて任意なので、
+ * V1.1 で保存された Plan は「同じ描画結果になる」ことが保証できる範囲でのみ受け入れる。
+ * 受け入れた場合は `upgradedFrom` に元のバージョンを残し、黙って読み替えたことにしない。
+ */
+export const SUPPORTED_VISUAL_PLAN_SCHEMA_VERSIONS = ["1.1", "2.0"] as const;
 
 /**
  * Provenance — この 1 枚が依拠している出典と根拠の構造化された記録。
@@ -46,6 +58,16 @@ export interface VisualPlanSlide {
   candidates?: PatternEvaluation[];
   /** buildBindings 失敗などの注記 */
   notes?: string[];
+  /**
+   * このスライドを描く Slide Master の役割（Template 使用時のみ意味を持つ）。
+   * 省略時は 'content'。
+   */
+  masterRole?: MasterRole;
+  /**
+   * なぜこの Pattern になったのかの追跡記録（V2）。
+   * deterministic / knowledge / ai / decision の 4 段構成。
+   */
+  decisionTrace?: DecisionTrace;
 }
 
 export interface VisualPlan {
@@ -54,12 +76,24 @@ export interface VisualPlan {
   subtitle?: string;
   author?: string;
   themeId: string;
+  /** 企業テンプレート ID（未指定なら Template 非使用 = V1 と同じ紙面） */
+  templateId?: string;
   slides: VisualPlanSlide[];
+  /** 旧バージョンから読み込んだ場合の元バージョン */
+  upgradedFrom?: string;
 }
 
 export interface BuildVisualPlanOptions {
   registry?: PatternRegistry;
   themeId?: string;
+  /** 企業テンプレート ID（Renderer が Slide Master を解決するのに使う） */
+  templateId?: string;
+  /**
+   * 章扉（section master）として描くスライドの id。
+   * 「どのスライドを章扉にするか」は意味ではなく表現の決定なので
+   * presentation.json ではなくこちら（生成設定）で指定する。
+   */
+  sectionSlideIds?: readonly string[];
   /** 候補一覧を Visual Plan に含めるか（既定 true） */
   includeCandidates?: boolean;
   minimumScore?: number;
@@ -78,10 +112,14 @@ export function buildVisualPlan(
 ): VisualPlan {
   const registry = options.registry ?? defaultRegistry;
   const includeCandidates = options.includeCandidates ?? true;
+  const sectionIds = new Set(options.sectionSlideIds ?? []);
 
-  const slides = spec.slides.map((slide, index) =>
-    planSlide(slide, index + 1, registry, includeCandidates, options.minimumScore),
-  );
+  const slides = spec.slides.map((slide, index) => {
+    const planned = planSlide(slide, index + 1, registry, includeCandidates, options.minimumScore);
+    return sectionIds.has(slide.id)
+      ? ({ ...planned, masterRole: "section" as MasterRole })
+      : planned;
+  });
 
   return {
     schemaVersion: VISUAL_PLAN_SCHEMA_VERSION,
@@ -89,6 +127,7 @@ export function buildVisualPlan(
     subtitle: spec.subtitle,
     author: spec.author,
     themeId: options.themeId ?? "default",
+    ...(options.templateId ? { templateId: options.templateId } : {}),
     slides,
   };
 }
@@ -237,6 +276,8 @@ const VisualPlanSlideShape = z
       .optional(),
     candidates: z.array(PatternEvaluationShape).optional(),
     notes: z.array(z.string()).optional(),
+    masterRole: z.enum(MASTER_ROLES).optional(),
+    decisionTrace: DecisionTraceSchema.optional(),
   })
   .strict();
 
@@ -247,7 +288,9 @@ const VisualPlanShape = z
     subtitle: z.string().optional(),
     author: z.string().optional(),
     themeId: z.string().min(1),
+    templateId: z.string().min(1).optional(),
     slides: z.array(VisualPlanSlideShape).min(1),
+    upgradedFrom: z.string().min(1).optional(),
   })
   .strict();
 
@@ -291,11 +334,15 @@ export function parseVisualPlan(
   }
   const plan = structure.data;
 
-  if (plan.schemaVersion !== VISUAL_PLAN_SCHEMA_VERSION) {
+  if (!(SUPPORTED_VISUAL_PLAN_SCHEMA_VERSIONS as readonly string[]).includes(plan.schemaVersion)) {
     throw new VisualPlanValidationError(
-      `Visual Plan の schemaVersion が不一致です (plan=${plan.schemaVersion}, 現行=${VISUAL_PLAN_SCHEMA_VERSION})。presentation.json から再生成してください`,
+      `Visual Plan の schemaVersion が非対応です (plan=${plan.schemaVersion}, 対応=${SUPPORTED_VISUAL_PLAN_SCHEMA_VERSIONS.join(" / ")})。presentation.json から再生成してください`,
     );
   }
+  // 旧バージョンの Plan は「V2 で追加されたフィールドがすべて任意」であることを根拠に
+  // 受け入れる。読み替えたことは upgradedFrom として必ず残す。
+  const upgradedFrom =
+    plan.schemaVersion === VISUAL_PLAN_SCHEMA_VERSION ? undefined : plan.schemaVersion;
 
   const slides = plan.slides.map((slide) => {
     if (!registry.has(slide.patternId)) {
@@ -330,5 +377,10 @@ export function parseVisualPlan(
     return { ...slide, bindings: bindings.data } as VisualPlanSlide;
   });
 
-  return { ...plan, slides };
+  return {
+    ...plan,
+    schemaVersion: VISUAL_PLAN_SCHEMA_VERSION,
+    ...(upgradedFrom ? { upgradedFrom } : {}),
+    slides,
+  };
 }
