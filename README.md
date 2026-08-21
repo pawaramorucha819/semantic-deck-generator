@@ -470,8 +470,21 @@ compatibility / constraints / match のハードゲートは scope より常に�
 人が PowerPoint で作った良いスライドを Pattern 化します。
 
 ```text
-PPTX → 要素抽出 → Slot 推定 → 下書き（pattern.json） → 人間レビュー → 登録
+PPTX → Extract → Interpret → Compile → Draft → 人間レビュー → Approved
+        客観構造   意味の解釈   構造化    pattern.json        登録可能
 ```
+
+| 段階 | 責務 | やらないこと |
+| --- | --- | --- |
+| **Extract** | 図形・テキスト・座標・色を「見たまま」取り出す | 意味を推測しない |
+| **Interpret** | 各要素が何なのかを決める（`CaptureInterpretation`） | 座標を動かさない |
+| **Compile** | 解釈を Declarative Pattern の構造へ落とす | **意味を判断しない** |
+| **Review** | 人が解釈と結果を確認し `approved` にする | — |
+
+Extract は事実、Interpret は意味、Compile は構造です。
+`buildCapturedPattern()`（Compile）は「この文字列は数値だから metric だろう」のような
+**意味の判断をしません**。役割は必ず Interpretation から受け取ります。
+だから「解釈が正しければ、その解釈どおりの Pattern が必ず出てくる」ことが保証されます。
 
 ```bash
 npm run sdg -- pattern import sample.pptx --slide 3 --id company-three-column
@@ -486,10 +499,78 @@ patterns/company/company-three-column/
   assets/image-1.png    取り込んだ画像
 ```
 
-### Slot 推定
+### Interpretation（要素の意味を決める）
 
-「固定デザイン」と「毎回差し替わるコンテンツ」を分けます。既定は**決定論的なヒューリスティクス**で、
-幾何とフォントサイズだけを見ます。
+`CaptureInterpretation` は「どの要素が何なのか」だけを持つ小さなモデルです。
+座標も色も持ちません（それは Extract の結果にあります）。
+
+役割は 2 種類あり、**混ぜません**。
+
+| 種類 | 役割 | 意味 |
+| --- | --- | --- |
+| **Content Role** | `index` | 連番（01 / 02 / 03）。**順番から作り直される** |
+| | `label` | 項目の見出し（必須） |
+| | `metric` | 主役の数値 |
+| | `description` | 補足説明 |
+| **Structural Role** | `background` | カードの下地 |
+| | `accent` | 強調バー・カラーチップ |
+| | `divider` | 区切り線 |
+
+Content Role は**中身が入れ替わる**もの、Structural Role は**見た目を作る**ものです。
+accent / divider は Pattern の中だけの表現であり、`presentation.json` の意味モデルには入りません。
+「装飾を足したい」ために意味スキーマを拡張してはいけません。
+
+```jsonc
+{
+  "schemaVersion": "1.0",
+  "interpretationSource": "human",
+  "headlineIndex": 1,
+  "sublineIndex": 2,
+  "cells": [
+    {
+      "backgroundIndex": 3,
+      "content": { "indexIndex": 5, "labelIndex": 6, "metricIndex": 7, "descriptionIndexes": [9] },
+      "decoration": { "accentIndexes": [4], "dividerIndexes": [8] }
+    }
+    // 他のセルも同じ役割構成であること
+  ],
+  "staticIndexes": []
+}
+```
+
+Interpretation は **untrusted input** として Zod で検証されます。
+
+- `.strict()`（未知キーは拒否）+ `schemaVersion` の一致
+- すべてのインデックスが `0 <= i < 要素数` の整数
+- **同じ要素へ 2 つの役割を割り当てられない**（`cells[0].content.label` と
+  `cells[1].decoration.accent` のような衝突を検出して、どの経路が競合したかを示す）
+- `labelIndex` は必須。セル数 / description 数 / 装飾数に上限
+- セルごとに役割構成が違うものは拒否（1 つの `item` 契約にできないため）
+- 値参照・条件・式は一切書けない。**eval も関数文字列も無い**
+
+### 連番（index）の扱い
+
+`index` に指定した要素のテキスト（"01"）は**焼き付けません**。
+再利用時に項目の順番から作り直されるよう `{{item.paddedOrdinal}}` へ変換します。
+
+| 参照 | 値 | 由来 |
+| --- | --- | --- |
+| `item.index` | `1`, `2`, `3` | **V1 からの意味のまま**（1 始まり・変更なし） |
+| `item.ordinal` | `"1"`, `"2"`, `"3"` | 並び順から導出 |
+| `item.paddedOrdinal` | `"01"`, `"02"`, `"03"` | 並び順から導出（ゼロ埋め 2 桁） |
+
+`ordinal` / `paddedOrdinal` は**導出フィールド**で、実データに同名フィールドがあればそちらが勝ちます。
+汎用テンプレート言語ではありません（列挙済みの安全パスだけで、式評価は入りません）。
+
+### 解釈の作り方（heuristic / human）
+
+| source | 使い方 | 状態 |
+| --- | --- | --- |
+| `heuristic` | 既定。幾何とフォントサイズだけを見る決定論的推定 | 実装済み |
+| `human` | `--interpretation` で解釈 JSON を渡す | 実装済み |
+| `ai` | LLM に解釈させる | **未実装**（拡張点だけ用意） |
+
+既定のヒューリスティクスは以下だけを見ます。
 
 | 推定 | 根拠 |
 | --- | --- |
@@ -500,14 +581,45 @@ patterns/company/company-three-column/
 | 反復項目（items） | 同じ大きさの図形が横に 2 つ以上並んでいる領域 |
 | 固定デザイン | 上記以外（ロゴ・装飾・固定ラベル） |
 
-推定器は `SlotInferencer` インターフェースなので **AI 実装へ差し替えられます**。
-AI 由来でも同じ `SlotInferenceResult` スキーマで検証され、範囲外のインデックスは拒否されます。
-CLI から明示指定して上書きすることもできます。
+ヒューリスティクスの結果は `interpretFromSlotInference()` で Interpretation へ変換されるので、
+**Compiler から見えるのは常に Interpretation だけ**です。推定器を差し替えても Compiler は変わりません。
+
+ただしヒューリスティクスは意味までは分かりません（"01" を連番と見抜けない、
+accent / divider を装飾と判定できない）。正しく解釈させたいときは
+`capture-report.json` の **inventory** を見て、人が解釈 JSON を書きます。
+
+```bash
+# 1) まず取り込んで inventory を見る
+npm run sdg -- pattern import sample.pptx --slide 3 --id x
+
+# 2) 解釈 JSON を書いて、解釈どおりに取り込み直す
+npm run sdg -- pattern import sample.pptx --slide 3 --id x \
+  --interpretation interpretation.json
+```
+
+inventory は人がレビューするための要素一覧です。
+
+```jsonc
+{
+  "inventory": [
+    {
+      "index": 6, "id": "card-label-1", "kind": "text", "text": "開発スピードの向上",
+      "box": { "x": 1.02, "y": 2.94, "w": 3.2, "h": 0.4 },
+      "sourceOrder": 6, "role": "cells[0].content.label"
+    }
+  ]
+}
+```
+
+Slot だけを直接指定して上書きすることもできます（従来どおり）。
 
 ```bash
 npm run sdg -- pattern import sample.pptx --slide 3 --id x \
   --headline-index 1 --source-index 12 --static 0,4
 ```
+
+推定器は `SlotInferencer` インターフェースなので **AI 実装へ差し替えられます**。
+AI 由来でも同じスキーマで検証され、範囲外のインデックスは拒否されます。
 
 ### 必ず人間のレビューを通る
 
@@ -517,6 +629,9 @@ PatternRegistry は draft を受け付けないので、**人がレビューし�
 
 取り込んだ色は必ず Theme トークンへ寄せられ（近似した場合は警告）、
 フォントサイズは Theme のロール + 倍率に変換されます。生の hex が Pattern に残ることはありません。
+
+どの解釈で作られたかは `metadata.source.interpretationSource` に残るので、
+レビュー時に「人が決めたのか、推定なのか」が分かります。
 
 ---
 
@@ -984,6 +1099,10 @@ npm run sdg -- template import company-template.pptx --id corporate
 
 # 良いスライドを Pattern 化する（出力は draft）
 npm run sdg -- pattern import sample.pptx --slide 3 --id company-three-column
+
+# 要素の意味を人が指定して Pattern 化する
+npm run sdg -- pattern import sample.pptx --slide 3 --id company-three-column \
+  --interpretation interpretation.json
 
 # 過去資料を蓄積して検索する
 npm run sdg -- knowledge ingest ./past-decks --store ./knowledge

@@ -151,6 +151,50 @@ generation.config ─┘   決定論的       manual/assist/auto   表現の確�
     「AI が勝手に Pattern を増やす」経路を作らないでください
     （Capture → Draft → **人間レビュー** → Register）。
 
+16-b. **Capture の 3 段階（Extract / Interpret / Compile）を混ぜない**
+
+    ```text
+    PPTX → Extract → Interpret → Compile → Draft → 人間レビュー → Approved
+            客観構造   意味の解釈   構造化
+    ```
+
+    - **Extract** = 見たままの事実（図形・座標・色・テキスト）。意味を推測しない
+    - **Interpret** = 各要素が何なのか（`CaptureInterpretation`）。座標を動かさない
+    - **Compile** = 解釈を Declarative Pattern の構造へ落とす。**意味を判断しない**
+
+    `buildCapturedPattern()` の中で「この文字列は数値だから metric だろう」のような
+    意味の判断をしないでください。役割は必ず `CaptureInterpretation` から受け取ります。
+    意味を決めるロジックを足したくなったら、それは Compiler ではなく
+    `src/patterns/capture/interpretation.ts` 側（または解釈器の実装）に置く場所があります。
+
+    解釈の出どころは `interpretationSource` に必ず残します。
+
+    | source | 状態 |
+    | --- | --- |
+    | `heuristic` | 実装済み（`interpretFromSlotInference()` で Interpretation へ変換） |
+    | `human` | 実装済み（`--interpretation`） |
+    | `ai` | **未実装**。拡張点だけ用意してある |
+
+    推定器（`SlotInferencer`）を差し替えても Compiler が変わらない状態を保ってください。
+    **Compiler から見えるのは常に Interpretation だけ**です。
+
+16-c. **Interpretation JSON は untrusted input**
+    `parseCaptureInterpretation()` を必ず通します。`.strict()` / schemaVersion 一致 /
+    インデックスの範囲検査 / **同じ要素への役割の二重割り当て検出** を緩めないでください。
+    値参照・条件・式を書けるようにしてはいけません（**eval / 関数文字列は禁止**）。
+
+16-d. **Interpretation を presentation.json や Renderer へ持ち込まない**
+    Interpretation は Capture の中だけの概念です。意味モデル（`presentation.json`）にも
+    Visual Plan にも入れず、Renderer からも見えないようにしてください。
+    accent / divider のような装飾を表現したいときは、意味スキーマを拡張するのではなく
+    Declarative Pattern 側の既存プリミティブ（shape / stack / absolute）で表現します。
+
+16-e. **連番は「順番から作る」。`item.index` の意味は変えない**
+    取り込んだ "01" を literal として焼き付けないこと。`{{item.paddedOrdinal}}` を使います。
+    `item.index` は **V1 のまま 1 始まり**で、黙って変えてはいけません。
+    `ordinal` / `paddedOrdinal` は列挙済みの導出フィールドであり、
+    汎用テンプレート言語や式評価を追加しないでください。
+
 17. **取り込んだ色・サイズは Theme トークン / ロールへ寄せる**
     生の hex を Declarative Pattern に残さないこと。近似したときは必ず警告に残します。
 
@@ -218,6 +262,8 @@ npm run example:enterprise                           # V2 企業サンプル一�
 npm run sdg -- generate deck.json --config generation.config.json
 npm run sdg -- template import company.pptx --id corporate
 npm run sdg -- pattern import sample.pptx --slide 3 --id company-cards
+npm run sdg -- pattern import sample.pptx --slide 3 --id company-cards \
+  --interpretation interpretation.json          # 要素の意味を人が指定する
 npm run sdg -- knowledge ingest ./past-decks --store ./knowledge
 npm run sdg -- knowledge search --store ./knowledge --role recommendation
 

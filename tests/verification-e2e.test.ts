@@ -29,6 +29,7 @@ import { projectRoot } from "./helpers.js";
 
 const SOURCE_PPTX = join(projectRoot, "verification", "semantic-deck-v2-import-test.pptx");
 const REUSE_PRESENTATION = join(projectRoot, "verification", "reuse-presentation.json");
+const INTERPRETATION = join(projectRoot, "verification", "interpretation-slide2.json");
 
 const tempDirs: string[] = [];
 
@@ -51,12 +52,17 @@ async function importTemplate() {
   });
 }
 
-async function capturePattern() {
+async function capturePattern(interpretation?: unknown) {
   return capturePatternFromPptx(SOURCE_PPTX, {
     id: "test-three-column",
     slideNumber: 2,
     sourceLabel: "semantic-deck-v2-import-test.pptx",
+    ...(interpretation !== undefined ? { interpretation } : {}),
   });
+}
+
+async function humanInterpretation(): Promise<unknown> {
+  return JSON.parse(await readFile(INTERPRETATION, "utf8"));
 }
 
 describe("検証用 PPTX の抽出（前提）", () => {
@@ -169,43 +175,47 @@ describe("Pattern Capture（Integration）", () => {
   });
 });
 
-describe("Capture した Pattern を同じ Template で再利用（E2E）", () => {
-  async function reuse() {
-    const root = await makeTempDir();
+/**
+ * PPTX → Template Import + Pattern Capture → 人間レビュー → 同じ Template で再利用。
+ * `interpretation` を渡すと人手の解釈、省略するとヒューリスティクスを使う。
+ */
+async function reuse(interpretation?: unknown) {
+  const root = await makeTempDir();
 
-    const importedTemplate = await importTemplate();
-    const templateDir = await writeTemplatePackage(join(root, "templates"), importedTemplate);
-    const loadedTemplate = await loadTemplateFromDirectory(templateDir.dir);
+  const importedTemplate = await importTemplate();
+  const templateDir = await writeTemplatePackage(join(root, "templates"), importedTemplate);
+  const loadedTemplate = await loadTemplateFromDirectory(templateDir.dir);
 
-    const captured = await capturePattern();
-    // 人間レビュー相当（draft → approved）
-    const approved = {
-      ...captured.document,
-      metadata: { ...captured.document.metadata, status: "approved" as const },
-    };
-    const written = await writePatternPackage(join(root, "patterns"), {
-      document: approved,
-      assets: captured.assets,
-    });
-    const pkg = await loadPatternPackage(written.dir);
+  const captured = await capturePattern(interpretation);
+  // 人間レビュー相当（draft → approved）
+  const approved = {
+    ...captured.document,
+    metadata: { ...captured.document.metadata, status: "approved" as const },
+  };
+  const written = await writePatternPackage(join(root, "patterns"), {
+    document: approved,
+    assets: captured.assets,
+  });
+  const pkg = await loadPatternPackage(written.dir);
 
-    const registry = new PatternRegistry(builtinPatterns).registerPackage(pkg);
-    const templates = new TemplateRegistry().registerLoaded(loadedTemplate);
-    const spec = parsePresentation(JSON.parse(await readFile(REUSE_PRESENTATION, "utf8")));
+  const registry = new PatternRegistry(builtinPatterns).registerPackage(pkg);
+  const templates = new TemplateRegistry().registerLoaded(loadedTemplate);
+  const spec = parsePresentation(JSON.parse(await readFile(REUSE_PRESENTATION, "utf8")));
 
-    return generate(spec, {
-      registry,
-      templateRegistry: templates,
-      templateId: "verification-source",
-      policy: {
-        mode: "manual",
-        overrides: {
-          "slide-reuse": { patternId: "test-three-column", reason: "Capture した Pattern の再利用" },
-        },
+  return generate(spec, {
+    registry,
+    templateRegistry: templates,
+    templateId: "verification-source",
+    policy: {
+      mode: "manual",
+      overrides: {
+        "slide-reuse": { patternId: "test-three-column", reason: "Capture した Pattern の再利用" },
       },
-    });
-  }
+    },
+  });
+}
 
+describe("Capture した Pattern を同じ Template で再利用（E2E）", () => {
   it("生成が完了し、レイアウトエラーが出ない", async () => {
     const result = await reuse();
     expect(result.plan.slides[0]!.patternId).toBe("test-three-column");
@@ -247,5 +257,129 @@ describe("Capture した Pattern を同じ Template で再利用（E2E）", () =
     const slideXml = pptx.slideXmls[pptx.slideXmls.length - 1]!;
     expect(slideXml).toContain('prst="line"');
     expect(slideXml).toContain('prst="roundRect"');
+  });
+});
+
+describe("Phase 2: 人手の解釈で取り込む（E2E）", () => {
+  it("解釈 JSON の各要素が役割どおりに Pattern へ入る", async () => {
+    const captured = await capturePattern(await humanInterpretation());
+    expect(captured.document.metadata?.source?.interpretationSource).toBe("human");
+
+    const body = captured.document.layout.body as {
+      children: Array<{ box: { w: number }; node: Record<string, any> }>;
+    };
+    const columns = body.children.find((c) => c.node.type === "columns")!;
+    const stack = columns.node.item.child.children as Array<Record<string, any>>;
+
+    // index → 順番から作る / label / metric / divider / description の順
+    expect(stack.map((n) => n.type)).toEqual(["text", "text", "text", "shape", "text"]);
+    expect(stack[0]!.value).toEqual({ template: "{{item.paddedOrdinal}}" });
+    expect(stack[1]!.value).toEqual({ ref: "item.label" });
+    expect(stack[2]!.value).toEqual({ ref: "item.metric" });
+    expect(stack[3]!.shape).toBe("line");
+    expect(stack[4]!.value).toEqual({ ref: "item.description" });
+
+    // 元 PPTX の "01" が literal として焼き付いていない
+    expect(JSON.stringify(captured.document)).not.toContain('"literal":"01"');
+
+    // 背景は card、アクセントはカードより前面の装飾として残る
+    expect(columns.node.item.type).toBe("card");
+    const columnsAt = body.children.indexOf(columns);
+    const accents = body.children.flatMap((c, i) =>
+      c.node.type === "shape" && c.node.shape === "rect" && c.box.w < 0.2 ? [i] : [],
+    );
+    expect(accents).toHaveLength(3);
+    for (const index of accents) expect(index).toBeGreaterThan(columnsAt);
+  });
+
+  it("Capture Report に inventory と採用された解釈の両方が残る", async () => {
+    const captured = await capturePattern(await humanInterpretation());
+
+    expect(captured.report.inventory).toHaveLength(captured.report.elements.total);
+    const label = captured.report.inventory.find((e) => e.index === 6)!;
+    expect(label.role).toBe("cells[0].content.label");
+    expect(label.text).toContain("開発スピード");
+    expect(label.sourceOrder).toBe(6);
+
+    expect(captured.report.interpretation.source).toBe("human");
+    expect(captured.report.interpretation.cellRoles).toHaveLength(3);
+    expect(captured.report.interpretation.cellRoles[0]).toMatchObject({
+      background: 3,
+      index: 5,
+      label: 6,
+      metric: 7,
+      descriptions: [9],
+      accents: [4],
+      dividers: [8],
+    });
+  });
+
+  it("別内容へ再利用すると 01 / 02 / 03 と label / metric が正しく入る", async () => {
+    const result = await reuse(await humanInterpretation());
+    expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
+
+    const { readPptx } = await import("./helpers.js");
+    const { extractTexts } = await import("./helpers.js");
+    const pptx = await readPptx(result.pptxBuffer);
+    const texts = extractTexts(pptx.slideXmls[pptx.slideXmls.length - 1]!);
+
+    // 連番は item の順番から作られる
+    expect(texts).toContain("01");
+    expect(texts).toContain("02");
+    expect(texts).toContain("03");
+
+    // label / metric が再利用先の内容になる
+    for (const label of ["設計知の再利用", "作成時間の短縮", "組織標準化"]) {
+      expect(texts.filter((t) => t === label)).toHaveLength(1);
+    }
+    for (const metric of ["12件", "40%", "3部門"]) {
+      expect(texts).toContain(metric);
+    }
+
+    // description は 1 回だけ（重複描画しない）
+    const description = "良いスライドの構造をPatternとして保存し、別案件でも再利用する";
+    expect(texts.filter((t) => t === description)).toHaveLength(1);
+  });
+
+  it("再利用後もカード・アクセント・区切り線が残り、Z-order が保たれる（Phase 1 の維持）", async () => {
+    const result = await reuse(await humanInterpretation());
+    const placements = result.reports.find((r) => r.slideId === "slide-reuse")!.placements;
+
+    const cards = placements.flatMap((p, i) => (p.name.includes("card") ? [i] : []));
+    const accents = placements.flatMap((p, i) =>
+      p.kind === "shape" && !p.name.includes("card") && p.box.w < 0.2 ? [i] : [],
+    );
+    const dividers = placements.flatMap((p, i) =>
+      p.kind === "shape" && p.box.h === 0 ? [i] : [],
+    );
+
+    expect(cards).toHaveLength(3);
+    expect(accents).toHaveLength(3);
+    expect(dividers).toHaveLength(3);
+    // アクセントはカードより後に描かれる = カードの上に見える
+    for (const index of accents) expect(index).toBeGreaterThan(Math.max(...cards));
+  });
+
+  it("解釈なし（ヒューリスティクス）でも従来どおり取り込める（後方互換）", async () => {
+    const captured = await capturePattern();
+    expect(captured.document.metadata?.source?.interpretationSource).toBe("heuristic");
+    expect(captured.report.interpretation.source).toBe("heuristic");
+    expect(captured.report.interpretation.inferencer).toBe("heuristic");
+
+    // 解釈なしでも生成まで到達する
+    const result = await reuse();
+    expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
+  });
+
+  it("壊れた解釈 JSON は Compiler へ到達しない", async () => {
+    await expect(
+      capturePattern({ schemaVersion: "1.0", interpretationSource: "human", cells: [], statics: [] }),
+    ).rejects.toThrow(/Capture Interpretation/);
+
+    const outOfRange = JSON.parse(JSON.stringify(await humanInterpretation())) as {
+      cells: Array<{ content: { labelIndex: number } }>;
+    };
+    outOfRange.cells[0]!.content.labelIndex = 9999;
+    await expect(capturePattern(outOfRange)).rejects.toThrow(/存在しない要素インデックス/);
   });
 });

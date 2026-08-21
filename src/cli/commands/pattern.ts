@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import {
   capturePatternFromPptx,
@@ -24,6 +25,9 @@ semantic-deck pattern <import|list> [options]
     --id <id>           作成する pattern id（必須）
     --out-dir <dir>     出力先ルート (既定: ./patterns/company)
     --scope <scope>     company | team | project | user (既定: company)
+    --interpretation <f>  要素の意味を書いた JSON（人間が作成）。
+                          指定するとヒューリスティック推定の代わりに使われる。
+                          材料は capture-report.json の inventory を参照。
     --theme <id>        色・サイズを寄せる先のテーマ (既定: default)
     --organization <s>  組織名
     --description <s>   Pattern の説明
@@ -68,6 +72,7 @@ export async function runPattern(argv: readonly string[]): Promise<number> {
         "eyebrow-index",
         "source-index",
         "imported-at",
+        "interpretation",
       ],
       repeatable: ["static"],
     });
@@ -109,9 +114,26 @@ export async function runPattern(argv: readonly string[]): Promise<number> {
         : {}),
     };
 
+    const interpretationPath = stringFlag(args, "interpretation");
+    let interpretation: unknown;
+    if (interpretationPath) {
+      const path = resolve(interpretationPath);
+      try {
+        interpretation = JSON.parse(await readFile(path, "utf8"));
+      } catch (error) {
+        throw new CliArgumentError(
+          `--interpretation を読み込めませんでした: ${path}
+${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
     const captured = await capturePatternFromPptx(input, {
       id,
       slideNumber,
+      ...(interpretation !== undefined ? { interpretation } : {}),
       scope: scope as "company" | "team" | "project" | "user",
       theme: getTheme(stringFlag(args, "theme")),
       ...(stringFlag(args, "organization")
@@ -130,8 +152,20 @@ export async function runPattern(argv: readonly string[]): Promise<number> {
     console.log(
       `  要素: text=${captured.report.elements.text} shape=${captured.report.elements.shape} image=${captured.report.elements.image}`,
     );
-    console.log(`  推定: ${captured.report.inference.inferencer}`);
-    for (const note of captured.report.inference.notes) console.log(`    - ${note}`);
+    console.log(
+      `  解釈: ${captured.report.interpretation.source}` +
+        (captured.report.interpretation.inferencer
+          ? ` (${captured.report.interpretation.inferencer})`
+          : ""),
+    );
+    for (const note of captured.report.interpretation.notes) console.log(`    - ${note}`);
+    captured.report.interpretation.cellRoles.forEach((roles, i) => {
+      const described = Object.entries(roles)
+        .filter(([, value]) => value !== undefined)
+        .map(([role, value]) => `${role}=${Array.isArray(value) ? value.join("/") : value}`)
+        .join(" ");
+      console.log(`    cell[${i}]: ${described}`);
+    });
     console.log(`  slot: ${captured.document.slots.map((s) => s.id).join(", ")}`);
 
     if (captured.report.unsupportedFeatures.length > 0) {

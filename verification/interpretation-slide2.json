@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "interpretationSource": "human",
+
+  "headlineIndex": 1,
+  "eyebrowIndex": 0,
+  "sublineIndex": 2,
+  "sourceTextIndex": 24,
+
+  "cells": [
+    {
+      "backgroundIndex": 3,
+      "content": {
+        "indexIndex": 5,
+        "labelIndex": 6,
+        "metricIndex": 7,
+        "descriptionIndexes": [9]
+      },
+      "decoration": {
+        "accentIndexes": [4],
+        "dividerIndexes": [8]
+      }
+    },
+    {
+      "backgroundIndex": 10,
+      "content": {
+        "indexIndex": 12,
+        "labelIndex": 13,
+        "metricIndex": 14,
+        "descriptionIndexes": [16]
+      },
+      "decoration": {
+        "accentIndexes": [11],
+        "dividerIndexes": [15]
+      }
+    },
+    {
+      "backgroundIndex": 17,
+      "content": {
+        "indexIndex": 19,
+        "labelIndex": 20,
+        "metricIndex": 21,
+        "descriptionIndexes": [23]
+      },
+      "decoration": {
+        "accentIndexes": [18],
+        "dividerIndexes": [22]
+      }
+    }
+  ],
+
+  "staticIndexes": [],
+
+  "notes": [
+    "capture-report.json の inventory を見て人手で作成した解釈。",
+    "要素 25 はページ番号プレースホルダなので、どの役割にも割り当てていない（ページ番号は Template の責務）。"
+  ]
+}

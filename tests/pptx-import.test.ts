@@ -12,7 +12,10 @@ import { loadPatternPackage } from "../src/patterns/declarative/loader.js";
 import { messageOnlyPattern } from "../src/patterns/message-only/index.js";
 import { PatternRegistry } from "../src/patterns/registry.js";
 import { buildCapturedPattern } from "../src/patterns/capture/build.js";
-import type { SlotInferenceResult } from "../src/patterns/capture/infer.js";
+import {
+  CAPTURE_INTERPRETATION_SCHEMA_VERSION,
+  type CaptureInterpretation,
+} from "../src/patterns/capture/interpretation.js";
 import { readDeck } from "../src/pptx/extract.js";
 import {
   hasRenderableExtent,
@@ -642,13 +645,19 @@ describe("Capture の Z-order 保持（Unit）", () => {
     return elements;
   }
 
-  function inferenceFor(): SlotInferenceResult {
+  /**
+   * ヒューリスティクスは accent / divider を判別しないため、
+   * それらは静的要素として元の Z-order のまま残る（Phase 1 の挙動）。
+   */
+  function interpretationFor(): CaptureInterpretation {
     return {
+      schemaVersion: CAPTURE_INTERPRETATION_SCHEMA_VERSION,
+      interpretationSource: "heuristic",
       headlineIndex: 0,
       cells: [
-        { backgroundIndex: 1, textIndexes: [3] },
-        { backgroundIndex: 5, textIndexes: [7] },
-        { backgroundIndex: 9, textIndexes: [11] },
+        { backgroundIndex: 1, content: { labelIndex: 3 } },
+        { backgroundIndex: 5, content: { labelIndex: 7 } },
+        { backgroundIndex: 9, content: { labelIndex: 11 } },
       ],
       staticIndexes: [2, 4, 6, 8, 10, 12],
       notes: [],
@@ -656,7 +665,7 @@ describe("Capture の Z-order 保持（Unit）", () => {
   }
 
   function build() {
-    return buildCapturedPattern(cardSlideElements(), inferenceFor(), {
+    return buildCapturedPattern(cardSlideElements(), interpretationFor(), {
       id: "captured-order",
       theme: defaultTheme,
       slideSize: { widthIn: 10, heightIn: 5.625 },
