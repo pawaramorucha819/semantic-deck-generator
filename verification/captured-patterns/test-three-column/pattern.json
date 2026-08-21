@@ -10,7 +10,7 @@
     "source": {
       "file": "verification\\semantic-deck-v2-import-test.pptx",
       "slideNumber": 2,
-      "interpretationSource": "human",
+      "interpretationSource": "heuristic",
       "unsupportedFeatures": [
         "埋め込みオブジェクト (ppt/embeddings) — 非対応"
       ],

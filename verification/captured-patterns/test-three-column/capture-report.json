@@ -454,7 +454,8 @@
   ],
   "interpretation": {
     "schemaVersion": "1.1",
-    "source": "human",
+    "source": "heuristic",
+    "inferencer": "heuristic",
     "headline": "生成AIの導入効果は、3つの観点で明確に現れる",
     "cells": 3,
     "statics": 0,
@@ -500,18 +501,30 @@
       }
     ],
     "notes": [
-      "capture-report.json の inventory を見て人手で作成した解釈。",
-      "要素 25 はページ番号プレースホルダなので、どの役割にも割り当てていない（ページ番号は Template の責務）。"
+      "見出しを推定: \"生成AIの導入効果は、3つの観点で明確に現れる\" (25pt)",
+      "3 件の反復セルを検出しました",
+      "01 / 02 / 03 が同じ相対位置に並ぶ連番だったため index と推定しました",
+      "30% / −25% / 2.4× が同じ相対位置の数値テキストだったため metric と推定しました",
+      "フォント階層（17pt > 10.5pt）と配置順から label / description を区別しました",
+      "各セルの同じ位置にある水平線を divider と推定しました",
+      "各セルの縁にある細い装飾を accent と推定しました",
+      "ページ番号・フッターのプレースホルダ（要素 25）は Template の責務なので Pattern へ取り込みませんでした"
     ]
   },
   "inference": {
-    "inferencer": "human",
+    "inferencer": "heuristic",
     "headline": "生成AIの導入効果は、3つの観点で明確に現れる",
     "cells": 3,
     "statics": 0,
     "notes": [
-      "capture-report.json の inventory を見て人手で作成した解釈。",
-      "要素 25 はページ番号プレースホルダなので、どの役割にも割り当てていない（ページ番号は Template の責務）。"
+      "見出しを推定: \"生成AIの導入効果は、3つの観点で明確に現れる\" (25pt)",
+      "3 件の反復セルを検出しました",
+      "01 / 02 / 03 が同じ相対位置に並ぶ連番だったため index と推定しました",
+      "30% / −25% / 2.4× が同じ相対位置の数値テキストだったため metric と推定しました",
+      "フォント階層（17pt > 10.5pt）と配置順から label / description を区別しました",
+      "各セルの同じ位置にある水平線を divider と推定しました",
+      "各セルの縁にある細い装飾を accent と推定しました",
+      "ページ番号・フッターのプレースホルダ（要素 25）は Template の責務なので Pattern へ取り込みませんでした"
     ]
   },
   "unsupportedFeatures": [
