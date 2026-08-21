@@ -11,10 +11,16 @@ import type {
   ValueRef,
 } from "../declarative/schema.js";
 import { DECLARATIVE_PATTERN_SCHEMA_VERSION } from "../declarative/schema.js";
-import type { SlotInferenceResult } from "./infer.js";
+import type { CaptureInterpretation, InterpretedCell } from "./interpretation.js";
 
 /**
- * 推定結果 + 抽出要素 → Declarative Pattern の下書き。
+ * Pattern Compiler — 解釈 + 抽出要素 → Declarative Pattern の下書き。
+ *
+ * **ここは意味判断をしない**。「この文字列は数字だから metric だろう」のような推定は
+ * すべて Interpretation 層（interpretation.ts）の責務で、Compiler は
+ * `CaptureInterpretation` に書かれた役割をそのまま描画構造へ写すだけ。
+ * こうしておくと、解釈の出どころを heuristic → human → AI と差し替えても
+ * Compiler は変更不要になる。
  *
  * 取り込んだスライドの *幾何をそのまま残す* ため absolute レイアウトで組む。
  * 一方で色とフォントサイズは必ず Theme トークン / role へ寄せる
@@ -131,6 +137,24 @@ function absoluteChild(box: Rect, node: LayoutNode): AbsoluteChild {
   };
 }
 
+/** セルを構成する要素の矩形（幾何の基準） */
+function cellBoxesOf(elements: readonly ExtractedElement[], cell: InterpretedCell): Rect[] {
+  return contentIndexesOf(cell)
+    .map((index) => elements[index]?.box)
+    .filter((box): box is Rect => box !== undefined);
+}
+
+/** セルを構成する要素インデックス（背景と内容。装飾は含めない） */
+function contentIndexesOf(cell: InterpretedCell): number[] {
+  return [
+    ...(cell.backgroundIndex !== undefined ? [cell.backgroundIndex] : []),
+    ...(cell.content.indexIndex !== undefined ? [cell.content.indexIndex] : []),
+    cell.content.labelIndex,
+    ...(cell.content.metricIndex !== undefined ? [cell.content.metricIndex] : []),
+    ...(cell.content.descriptionIndexes ?? []),
+  ];
+}
+
 function boundingBox(boxes: Rect[]): Rect {
   const x = Math.min(...boxes.map((b) => b.x));
   const y = Math.min(...boxes.map((b) => b.y));
@@ -139,16 +163,10 @@ function boundingBox(boxes: Rect[]): Rect {
   return { x, y, w: right - x, h: bottom - y };
 }
 
-const NUMERIC_PATTERN = /^[\s0-9.,+\-%¥$€£億万千人年月日時間件社%]+$/;
-
-function looksNumeric(text: string): boolean {
-  return /\d/.test(text) && NUMERIC_PATTERN.test(text.trim());
-}
-
-/** 推定結果から Declarative Pattern の下書きを組み立てる */
+/** 解釈から Declarative Pattern の下書きを組み立てる */
 export function buildCapturedPattern(
   elements: ExtractedElement[],
-  inference: SlotInferenceResult,
+  interpretation: CaptureInterpretation,
   options: BuildCaptureOptions,
 ): BuildCaptureResult {
   const theme = resolveTheme(options.theme);
@@ -163,11 +181,11 @@ export function buildCapturedPattern(
     index === undefined ? undefined : elements[index];
 
   // --- 見出し・補足・役割ラベル・出典 --------------------------------------
-  const headline = textOf(inference.headlineIndex);
+  const headline = textOf(interpretation.headlineIndex);
   if (headline) {
     slots.push({ id: "headline", type: "text", source: "keyMessage" });
     layer(
-      inference.headlineIndex!,
+      interpretation.headlineIndex!,
       absoluteChild(headline.box, {
         type: "text",
         value: { ref: "headline" },
@@ -188,11 +206,11 @@ export function buildCapturedPattern(
     );
   }
 
-  const eyebrow = textOf(inference.eyebrowIndex);
+  const eyebrow = textOf(interpretation.eyebrowIndex);
   if (eyebrow) {
     slots.push({ id: "eyebrow", type: "text", source: "slideRoleLabel", optional: true });
     layer(
-      inference.eyebrowIndex!,
+      interpretation.eyebrowIndex!,
       absoluteChild(eyebrow.box, {
         type: "text",
         value: { ref: "eyebrow" },
@@ -202,11 +220,11 @@ export function buildCapturedPattern(
     );
   }
 
-  const subline = textOf(inference.sublineIndex);
+  const subline = textOf(interpretation.sublineIndex);
   if (subline) {
     slots.push({ id: "subline", type: "text", source: "supportingMessage", optional: true });
     layer(
-      inference.sublineIndex!,
+      interpretation.sublineIndex!,
       absoluteChild(subline.box, {
         type: "text",
         value: { ref: "subline" },
@@ -216,11 +234,11 @@ export function buildCapturedPattern(
     );
   }
 
-  const source = textOf(inference.sourceIndex);
+  const source = textOf(interpretation.sourceTextIndex);
   if (source) {
     slots.push({ id: "sourceText", type: "text", source: "sourceText", optional: true });
     layer(
-      inference.sourceIndex!,
+      interpretation.sourceTextIndex!,
       absoluteChild(source.box, {
         type: "text",
         value: { ref: "sourceText" },
@@ -231,7 +249,7 @@ export function buildCapturedPattern(
   }
 
   // --- 固定デザイン（ロゴ・装飾・固定ラベル） --------------------------------
-  for (const index of inference.staticIndexes) {
+  for (const index of interpretation.staticIndexes) {
     const element = elements[index];
     if (!element) continue;
 
@@ -303,17 +321,11 @@ export function buildCapturedPattern(
   }
 
   // --- 反復セル -------------------------------------------------------------
-  const usableCells = inference.cells.filter((cell) => cell.textIndexes.length > 0);
-  if (usableCells.length >= 2) {
-    const cellBoxes = usableCells.map((cell) => {
-      const boxes = [
-        ...(cell.backgroundIndex !== undefined && elements[cell.backgroundIndex]
-          ? [elements[cell.backgroundIndex]!.box]
-          : []),
-        ...cell.textIndexes.map((i) => elements[i]!.box),
-      ];
-      return boundingBox(boxes);
-    });
+  // Compiler は解釈された役割をそのまま構造へ写す。どのテキストが label なのか、
+  // どれが metric なのかを *ここで判断することはない*。
+  const cells = interpretation.cells;
+  if (cells.length >= 2) {
+    const cellBoxes = cells.map((cell) => boundingBox(cellBoxesOf(elements, cell)));
     const region = boundingBox(cellBoxes);
     const gaps = cellBoxes
       .slice(1)
@@ -321,7 +333,7 @@ export function buildCapturedPattern(
       .filter((g) => g > 0);
     const gap = gaps.length > 0 ? round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : 0.2;
 
-    const count = usableCells.length;
+    const count = cells.length;
     slots.push({
       id: "items",
       type: "items",
@@ -331,38 +343,89 @@ export function buildCapturedPattern(
       labelMaxLength: 40,
     });
 
-    const template = usableCells[0]!;
-    const templateTexts = template.textIndexes
-      .map((i) => elements[i])
-      .filter((e): e is ExtractedElement => !!e);
-
+    // 1 セル目の見た目を反復テンプレートの基準にする（全セルは同じ役割構成）
+    const template = cells[0]!;
     const stackChildren: LayoutNode[] = [];
-    let usedLabel = false;
-    let usedMetric = false;
-    templateTexts.forEach((element, position) => {
-      const plain = element.text?.plain ?? "";
-      let ref: ValueRef;
-      let defaults: Partial<DeclarativeTextStyle> = {};
-      if (!usedLabel) {
-        ref = { ref: "item.label" };
-        defaults = { bold: true, color: "text" };
-        usedLabel = true;
-      } else if (!usedMetric && looksNumeric(plain)) {
-        ref = { ref: "item.metric" };
-        defaults = { bold: true, color: "primary" };
-        usedMetric = true;
-      } else {
-        ref = { ref: "item.description" };
-        defaults = { color: "mutedText" };
-      }
-      stackChildren.push({
+
+    const push = (
+      element: ExtractedElement | undefined,
+      node: (style: DeclarativeTextStyle) => LayoutNode,
+      defaults: Partial<DeclarativeTextStyle>,
+    ): void => {
+      if (!element) return;
+      stackChildren.push(node(textStyleOf(theme, element, warnings, defaults)));
+    };
+
+    // index: 元の "01" を literal で残さず、item の順番から作る（再利用しても正しく並ぶ）
+    push(
+      textOf(template.content.indexIndex),
+      (style) => ({
         type: "text",
-        value: ref,
-        style: textStyleOf(theme, element, warnings, defaults),
-        ...(position === templateTexts.length - 1 ? { height: "fill" as const } : {}),
-        ...("ref" in ref && ref.ref !== "item.label" ? { when: { hasValue: ref.ref } } : {}),
+        value: { template: "{{item.paddedOrdinal}}" },
+        style,
+      }),
+      { bold: true, color: "primary" },
+    );
+
+    push(
+      textOf(template.content.labelIndex),
+      (style) => ({ type: "text", value: { ref: "item.label" }, style }),
+      { bold: true, color: "text" },
+    );
+
+    push(
+      textOf(template.content.metricIndex),
+      (style) => ({
+        type: "text",
+        value: { ref: "item.metric" },
+        style,
+        when: { hasValue: "item.metric" },
+      }),
+      { bold: true, color: "primary" },
+    );
+
+    // divider: セル内の区切り線は内容と一緒に動くよう、カードのフローへ入れる
+    const divider = elements[template.decoration?.dividerIndexes?.[0] ?? -1];
+    if (divider) {
+      stackChildren.push({
+        type: "shape",
+        shape: "line",
+        // 元 PPTX と同じ「高さ 0 の水平線」のまま流し込む（Phase 1 の契約）
+        height: 0,
+        style: {
+          line: {
+            color: colorTokenOf(theme, divider.line?.color, "border", warnings, "区切り線の色"),
+            ...(divider.line?.widthPt ? { width: round(divider.line.widthPt) } : {}),
+          },
+        },
+        when: { hasValue: "item.description" },
       });
-    });
+    }
+    if ((template.decoration?.dividerIndexes ?? []).length > 1) {
+      warnings.push(
+        "セル内に複数の区切り線が指定されたため、先頭の 1 本だけをテンプレートに使いました",
+      );
+    }
+
+    // description: 同じ値を複数ノードへ出さない（重複描画の原因になる）
+    const descriptionIndexes = template.content.descriptionIndexes ?? [];
+    push(
+      textOf(descriptionIndexes[0]),
+      (style) => ({
+        type: "text",
+        value: { ref: "item.description" },
+        style,
+        height: "fill" as const,
+        when: { hasValue: "item.description" },
+      }),
+      { color: "mutedText" },
+    );
+    if (descriptionIndexes.length > 1) {
+      warnings.push(
+        `セルに ${descriptionIndexes.length} 件の description が指定されましたが、` +
+          "同じ内容を重複描画しないよう先頭の 1 件だけを使いました",
+      );
+    }
 
     const background =
       template.backgroundIndex !== undefined ? elements[template.backgroundIndex] : undefined;
@@ -380,15 +443,9 @@ export function buildCapturedPattern(
 
     // 反復セルは複数の PPTX 要素を 1 ノードへまとめるため、
     // 構成要素の最小インデックス（＝最も後ろにあった要素）を Z-order の代表値にする。
-    // こうすると、カード背景より後ろにあった装飾（アクセントバー・区切り線）は
-    // カードより前面に残る。
+    // こうすると、カード背景より後ろにあった装飾（アクセントバー）はカードより前面に残る。
     const cellSourceOrder = Math.min(
-      ...usableCells.map((cell) =>
-        Math.min(
-          ...(cell.backgroundIndex !== undefined ? [cell.backgroundIndex] : []),
-          ...cell.textIndexes,
-        ),
-      ),
+      ...cells.map((cell) => Math.min(...contentIndexesOf(cell))),
     );
 
     layer(
@@ -400,6 +457,47 @@ export function buildCapturedPattern(
         item: cellNode,
       }),
     );
+
+    // accent: セルの縁を飾る図形。元の座標のまま、カードより前面に置く
+    // （セル内フローには含めない。カードと同じ絶対位置に固定されるため崩れない）
+    for (const cell of cells) {
+      for (const index of cell.decoration?.accentIndexes ?? []) {
+        const accent = elements[index];
+        if (!accent) continue;
+        if (accent.fill?.type === "solid") {
+          layer(
+            index,
+            absoluteChild(accent.box, {
+              type: "shape",
+              shape: accent.geometry === "roundRect" ? "roundRect" : "rect",
+              style: {
+                fill: colorTokenOf(theme, accent.fill.color, "primary", warnings, "アクセントの色"),
+              },
+            }),
+          );
+          continue;
+        }
+        if (isLineElement(accent)) {
+          layer(
+            index,
+            absoluteChild(accent.box, {
+              type: "shape",
+              shape: "line",
+              style: {
+                line: {
+                  color: colorTokenOf(theme, accent.line?.color, "primary", warnings, "アクセントの色"),
+                  ...(accent.line?.widthPt ? { width: round(accent.line.widthPt) } : {}),
+                },
+              },
+            }),
+          );
+          continue;
+        }
+        warnings.push(`アクセントとして解釈された要素を描画できませんでした: index ${index}`);
+      }
+    }
+  } else if (interpretation.cells.length === 1) {
+    warnings.push("反復セルが 1 件しかないため、反復構造にしませんでした");
   }
 
   const document: DeclarativePatternDocument = {
@@ -419,6 +517,8 @@ export function buildCapturedPattern(
       source: {
         file: options.source.file,
         slideNumber: options.source.slideNumber,
+        // 解釈の出どころ（heuristic / human、将来は ai）を成果物に残す
+        interpretationSource: interpretation.interpretationSource,
         ...(options.source.importedAt ? { importedAt: options.source.importedAt } : {}),
         ...(options.unsupportedFeatures?.length
           ? { unsupportedFeatures: [...new Set(options.unsupportedFeatures)] }
