@@ -488,6 +488,8 @@ export interface DeclarativePatternDocument {
       file?: string;
       slideNumber?: number;
       importedAt?: string;
+      /** 要素の意味を誰が解釈したか（heuristic / human、将来は ai） */
+      interpretationSource?: string;
       unsupportedFeatures?: string[];
       warnings?: string[];
     };
@@ -542,6 +544,7 @@ export const DeclarativePatternDocumentSchema = z
             file: z.string().trim().min(1).max(400).optional(),
             slideNumber: z.number().int().min(1).max(10000).optional(),
             importedAt: z.string().trim().min(1).max(40).optional(),
+            interpretationSource: z.string().trim().min(1).max(40).optional(),
             unsupportedFeatures: z.array(z.string().min(1).max(200)).max(200).optional(),
             warnings: z.array(z.string().min(1).max(400)).max(200).optional(),
           })
