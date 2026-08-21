@@ -1,12 +1,15 @@
 import { z } from "zod";
 import type { ExtractedElement } from "../../pptx/model.js";
+import type { Rect } from "../../render/geometry.js";
 import {
   canRenderAsAccent,
   canRenderAsBackground,
   canRenderAsDivider,
   canRenderAsText,
   describeElement,
+  isTemplatePlaceholder,
 } from "./element-roles.js";
+import { inferRepeatedCellRoles, type HeuristicCell } from "./heuristic-roles.js";
 import type { SlotInferenceResult } from "./infer.js";
 
 /**
@@ -542,27 +545,21 @@ export function assignmentsOf(
   return assigned;
 }
 
+
 // ---------------------------------------------------------------------------
 // Heuristic → Interpretation（AI 無しの既定経路）
 // ---------------------------------------------------------------------------
 
-const NUMERIC_PATTERN = /^[\s0-9.,+\-−%¥$€£×xX億万千人年月日時間件社]+$/;
-
-/** 数値・指標らしい文字列か（ヒューリスティクスの判断であり、Compiler は使わない） */
-export function looksNumeric(text: string): boolean {
-  return /\d/.test(text) && NUMERIC_PATTERN.test(text.trim());
-}
-
 /**
  * 既存のヒューリスティック推定結果 → Interpretation。
  *
- * ここが「テキストの並びから label / metric / description を決める」唯一の場所。
- * Phase 2 では推定の賢さは変えず、判断の置き場所だけを Compiler から移した。
- * 「01 は連番だ」「この線は区切り線だ」といった判別はまだ行わない（Phase 3 の課題）。
- * 現時点でそれらを正しく解釈したい場合は、人間が interpretation JSON を書く。
+ * ここが「抽出結果から役割を決める」唯一の場所で、**Compiler は関与しない**。
+ * Phase 3 で、反復カードを横断した強い規則（連番・数値・フォント階層・
+ * 縁の帯・繰り返される線）だけを `heuristic-roles.ts` で判定するようにした。
  *
- * 描画できない要素へ役割を割り当てないよう、ここでも要素の種類を確認する。
- * 役割を外した要素は捨てずに「固定デザイン」へ回して元の見た目を保つ。
+ * 方針は Precision 優先。根拠が弱ければ役割を付けず、
+ * 要素を「固定デザイン」として元の見た目のまま残し、理由を notes に書く。
+ * 一般的なスライドの意味理解はここでは扱わない（Phase 4 の AI 解釈の領域）。
  */
 export function interpretFromSlotInference(
   elements: readonly ExtractedElement[],
@@ -595,83 +592,113 @@ export function interpretFromSlotInference(
   const eyebrowIndex = usableAs(inference.eyebrowIndex, "text", "eyebrow");
   const sourceTextIndex = usableAs(inference.sourceIndex, "text", "sourceText");
 
-  const usableCells = inference.cells.filter((cell) => cell.textIndexes.length > 0);
-  const cells: InterpretedCell[] = [];
+  const claimedBySlide = new Set(
+    [headlineIndex, sublineIndex, eyebrowIndex, sourceTextIndex].filter(
+      (index): index is number => index !== undefined,
+    ),
+  );
 
-  for (const cell of usableCells) {
-    const texts = cell.textIndexes.filter((index) => {
+  // --- 反復セルの下ごしらえ（領域と、役割になりうるテキスト） -----------------
+  const heuristicCells: HeuristicCell[] = [];
+  for (const cell of inference.cells) {
+    const textIndexes = cell.textIndexes.filter((index) => {
       const element = elements[index];
-      return element !== undefined && canRenderAsText(element);
+      return element !== undefined && canRenderAsText(element) && !claimedBySlide.has(index);
     });
-    if (texts.length === 0) continue;
-
-    let labelIndex: number | undefined;
-    let metricIndex: number | undefined;
-    const descriptionIndexes: number[] = [];
-
-    for (const index of texts) {
-      const plain = elements[index]?.text?.plain ?? "";
-      if (labelIndex === undefined) {
-        labelIndex = index;
-        continue;
-      }
-      if (metricIndex === undefined && looksNumeric(plain)) {
-        metricIndex = index;
-        continue;
-      }
-      descriptionIndexes.push(index);
-    }
-
-    if (labelIndex === undefined) continue;
+    if (textIndexes.length === 0) continue;
     const backgroundIndex = usableAs(cell.backgroundIndex, "background", "background");
-    cells.push({
+    const box =
+      backgroundIndex !== undefined
+        ? elements[backgroundIndex]!.box
+        : boundingBoxOf(textIndexes.map((index) => elements[index]!.box));
+    heuristicCells.push({
+      box,
       ...(backgroundIndex !== undefined ? { backgroundIndex } : {}),
-      content: {
-        labelIndex,
-        ...(metricIndex !== undefined ? { metricIndex } : {}),
-        ...(descriptionIndexes.length > 0 ? { descriptionIndexes } : {}),
-      },
+      textIndexes,
     });
   }
 
+  const claimedByCells = new Set<number>();
+  for (const cell of heuristicCells) {
+    if (cell.backgroundIndex !== undefined) claimedByCells.add(cell.backgroundIndex);
+    for (const index of cell.textIndexes) claimedByCells.add(index);
+  }
+
+  // 装飾（accent / divider）の候補は、まだどの役割にもなっていない要素だけ
+  const structuralCandidates = elements
+    .map((_, index) => index)
+    .filter(
+      (index) =>
+        !claimedBySlide.has(index) &&
+        !claimedByCells.has(index) &&
+        !isTemplatePlaceholder(elements[index]!),
+    );
+
+  const roles = inferRepeatedCellRoles(elements, heuristicCells, structuralCandidates);
+  notes.push(...roles.notes);
+
+  const inferredContent = roles.content;
+  const cells: InterpretedCell[] = inferredContent
+    ? heuristicCells.map((cell, c) => {
+        const content = inferredContent[c]!;
+        const structural = roles.structural[c]!;
+        const decoration = {
+          ...(structural.accentIndexes.length > 0
+            ? { accentIndexes: structural.accentIndexes }
+            : {}),
+          ...(structural.dividerIndex !== undefined
+            ? { dividerIndex: structural.dividerIndex }
+            : {}),
+        };
+        return {
+          ...(cell.backgroundIndex !== undefined ? { backgroundIndex: cell.backgroundIndex } : {}),
+          content: {
+            ...(content.indexIndex !== undefined ? { indexIndex: content.indexIndex } : {}),
+            labelIndex: content.labelIndex,
+            ...(content.metricIndex !== undefined ? { metricIndex: content.metricIndex } : {}),
+            ...(content.descriptionIndexes.length > 0
+              ? { descriptionIndexes: content.descriptionIndexes }
+              : {}),
+          },
+          ...(Object.keys(decoration).length > 0 ? { decoration } : {}),
+        };
+      })
+    : [];
+
   // セルごとに役割の構成がずれる場合は反復として扱えないので、解釈を空にする
-  const shapes = new Set(cells.map((cell) => cellRoleSignatureKey(cell)));
-  const usable = cells.length >= 2 && shapes.size === 1;
+  const signatures = new Set(cells.map((cell) => cellRoleSignatureKey(cell)));
+  const usable = cells.length >= 2 && signatures.size === 1;
   if (cells.length >= 2 && !usable) {
     notes.push(
       "セルごとに推定された役割の構成が揃わなかったため、反復セルとして扱いませんでした",
     );
   }
 
-  const claimed = new Set<number>();
-  const add = (index: number | undefined): void => {
-    if (index !== undefined) claimed.add(index);
-  };
-  add(headlineIndex);
-  add(sublineIndex);
-  add(eyebrowIndex);
-  add(sourceTextIndex);
+  // 役割として採用した要素は固定デザインへ残さない（二重割り当てになるため）
+  const claimed = new Set<number>(claimedBySlide);
   if (usable) {
     for (const cell of cells) {
-      add(cell.backgroundIndex);
-      add(cell.content.indexIndex);
-      add(cell.content.labelIndex);
-      add(cell.content.metricIndex);
-      for (const index of cell.content.descriptionIndexes ?? []) add(index);
+      for (const index of interpretedCellIndexes(cell)) claimed.add(index);
     }
   }
 
-  // ヒューリスティクスは accent / divider を判別しない（Phase 3 の課題）。
-  // 判別できなかった要素は「固定デザイン」として元の見た目のまま残す。
   const staticIndexes = [
-    ...new Set([
-      ...inference.staticIndexes,
-      ...demoted,
-      ...(usable ? [] : cells.flatMap((cell) => cellElementIndexes(cell))),
-    ]),
+    ...new Set([...inference.staticIndexes, ...demoted, ...(usable ? [] : [...claimedByCells])]),
   ]
-    .filter((index) => !claimed.has(index) && index < elements.length)
+    .filter(
+      (index) =>
+        index < elements.length && !claimed.has(index) && !isTemplatePlaceholder(elements[index]!),
+    )
     .sort((a, b) => a - b);
+
+  const dropped = elements
+    .map((_, index) => index)
+    .filter((index) => isTemplatePlaceholder(elements[index]!) && !claimed.has(index));
+  if (dropped.length > 0) {
+    notes.push(
+      `ページ番号・フッターのプレースホルダ（要素 ${dropped.join(", ")}）は Template の責務なので Pattern へ取り込みませんでした`,
+    );
+  }
 
   return {
     schemaVersion: CAPTURE_INTERPRETATION_SCHEMA_VERSION,
@@ -686,12 +713,23 @@ export function interpretFromSlotInference(
   };
 }
 
-function cellElementIndexes(cell: InterpretedCell): number[] {
+/** そのセルが占有している要素（Content + Structural のすべて） */
+function interpretedCellIndexes(cell: InterpretedCell): number[] {
   return [
     ...(cell.backgroundIndex !== undefined ? [cell.backgroundIndex] : []),
     ...(cell.content.indexIndex !== undefined ? [cell.content.indexIndex] : []),
     cell.content.labelIndex,
     ...(cell.content.metricIndex !== undefined ? [cell.content.metricIndex] : []),
     ...(cell.content.descriptionIndexes ?? []),
+    ...(cell.decoration?.accentIndexes ?? []),
+    ...(cell.decoration?.dividerIndex !== undefined ? [cell.decoration.dividerIndex] : []),
   ];
+}
+
+function boundingBoxOf(boxes: readonly Rect[]): Rect {
+  const x = Math.min(...boxes.map((b) => b.x));
+  const y = Math.min(...boxes.map((b) => b.y));
+  const right = Math.max(...boxes.map((b) => b.x + b.w));
+  const bottom = Math.max(...boxes.map((b) => b.y + b.h));
+  return { x, y, w: right - x, h: bottom - y };
 }

@@ -806,7 +806,7 @@ describe("連番（item の順番から作る値）", () => {
 });
 
 describe("ヒューリスティクスとの互換（Interpretation へ寄せても壊れない）", () => {
-  it("推定結果を Interpretation へ変換できる", () => {
+  it("推定結果を Interpretation へ変換できる（Phase 3: 明白な役割を認識する）", () => {
     const elements = cardSlideElements();
     const interpretation = interpretFromSlotInference(elements, {
       headlineIndex: 0,
@@ -821,14 +821,22 @@ describe("ヒューリスティクスとの互換（Interpretation へ寄せて�
 
     expect(interpretation.interpretationSource).toBe("heuristic");
     expect(interpretation.cells).toHaveLength(3);
-    // Phase 2 では推定の賢さを変えていない: 先頭テキストが label、数値らしいものが metric
-    expect(interpretation.cells[0]!.content.labelIndex).toBe(3);
-    expect(interpretation.cells[0]!.content.metricIndex).toBe(5);
-    expect(interpretation.cells[0]!.content.descriptionIndexes).toEqual([4, 7]);
-    // accent / divider は判別しない（Phase 3 の課題）
-    expect(interpretation.cells[0]!.decoration).toBeUndefined();
+    expect(interpretation.cells[0]).toEqual({
+      backgroundIndex: 1,
+      content: {
+        indexIndex: 3,
+        labelIndex: 4,
+        metricIndex: 5,
+        descriptionIndexes: [7],
+      },
+      decoration: { accentIndexes: [2], dividerIndex: 6 },
+    });
     // 変換結果は human と同じ入口をそのまま通る
     expect(() => parseAndValidateCaptureInterpretation(interpretation, elements)).not.toThrow();
+    // 役割として採用した装飾は固定デザインへ残さない
+    for (const index of [2, 6, 9, 13, 16, 20]) {
+      expect(interpretation.staticIndexes).not.toContain(index);
+    }
   });
 
   it("推定が揃わない場合は反復セルにせず、要素を固定デザインとして残す", () => {
@@ -842,7 +850,7 @@ describe("ヒューリスティクスとの互換（Interpretation へ寄せて�
       notes: [],
     });
     expect(interpretation.cells).toEqual([]);
-    expect(interpretation.notes?.join()).toContain("役割の構成が揃わなかった");
+    expect(interpretation.notes?.join()).toContain("テキスト数が揃わない");
     expect(interpretation.staticIndexes).toContain(3);
   });
 

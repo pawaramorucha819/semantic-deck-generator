@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ExtractedElement } from "../../pptx/model.js";
 import type { Rect } from "../../render/geometry.js";
+import { isTemplatePlaceholder } from "./element-roles.js";
 
 /**
  * Slot 推定 — 「固定デザイン」と「毎回差し替わるコンテンツ」を分ける工程。
@@ -171,9 +172,11 @@ export class HeuristicSlotInferencer implements SlotInferencer {
     const notes: string[] = [];
     const assigned = new Set<number>();
 
+    // ページ番号・フッターのプレースホルダは Template の責務なので、
+    // 見出しや出典の候補にしない（"2" というページ番号を出典と推定しないため）
     const textIndexes = elements
       .map((element, index) => ({ element, index }))
-      .filter(({ element }) => hasText(element));
+      .filter(({ element }) => hasText(element) && !isTemplatePlaceholder(element));
 
     // --- 見出し -------------------------------------------------------------
     const topBand = slideSize.heightIn * 0.45;

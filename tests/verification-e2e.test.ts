@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { parsePresentation } from "../src/domain/schema.js";
 import { capturePatternFromPptx, writePatternPackage } from "../src/patterns/capture/capture.js";
-import { parseAndValidateCaptureInterpretation } from "../src/patterns/capture/interpretation.js";
+import { heuristicSlotInferencer } from "../src/patterns/capture/infer.js";
+import {
+  interpretFromSlotInference,
+  parseAndValidateCaptureInterpretation,
+} from "../src/patterns/capture/interpretation.js";
 import { loadPatternPackage } from "../src/patterns/declarative/loader.js";
 import { PatternRegistry, builtinPatterns } from "../src/patterns/registry.js";
 import { generate } from "../src/pipeline.js";
@@ -135,25 +139,32 @@ describe("Template Import（Integration）", () => {
 });
 
 describe("Pattern Capture（Integration）", () => {
-  it("区切り線が Pattern に残る", async () => {
+  it("区切り線が Pattern に残る（高さ 0 のまま）", async () => {
     const captured = await capturePattern();
     const body = captured.document.layout.body as {
       type: string;
-      children: Array<{ box: { w: number; h: number }; node: { type: string; shape?: string } }>;
+      children: Array<{ box: { w: number; h: number }; node: Record<string, any> }>;
     };
 
     expect(body.type).toBe("absolute");
-    const dividers = body.children.filter(
-      (c) => c.node.type === "shape" && c.node.shape === "line",
-    );
-    expect(dividers).toHaveLength(3);
-    for (const divider of dividers) {
-      expect(divider.box.h).toBe(0);
-      expect(divider.box.w).toBeGreaterThan(0);
+
+    // Phase 3 以降、区切り線は反復セルの中身（divider ロール）として保持される
+    const columns = body.children.find((c) => c.node.type === "columns")!;
+    const stack = columns.node.item.child.children as Array<Record<string, any>>;
+    const inFlow = stack.filter((n) => n.type === "shape" && n.shape === "line");
+    expect(inFlow).toHaveLength(1);
+    expect(inFlow[0]!.height).toBe(0);
+
+    // 反復に取り込まれなかった線があっても、高さ 0 のまま残る（Phase 1 の契約）
+    for (const child of body.children) {
+      if (child.node.type === "shape" && child.node.shape === "line") {
+        expect(child.box.h).toBe(0);
+        expect(child.box.w).toBeGreaterThan(0);
+      }
     }
   });
 
-  it("元 PPTX の重なり順を保つ（カードより後ろにアクセント・区切り線）", async () => {
+  it("元 PPTX の重なり順を保つ（カードより後ろにアクセント）", async () => {
     const captured = await capturePattern();
     const body = captured.document.layout.body as {
       children: Array<{ box: { w: number }; node: { type: string; shape?: string } }>;
@@ -165,14 +176,8 @@ describe("Pattern Capture（Integration）", () => {
     const accents = body.children.flatMap((c, i) =>
       c.node.type === "shape" && c.node.shape === "rect" && c.box.w < 0.2 ? [i] : [],
     );
-    const dividers = body.children.flatMap((c, i) =>
-      c.node.type === "shape" && c.node.shape === "line" ? [i] : [],
-    );
     expect(accents).toHaveLength(3);
-    expect(dividers).toHaveLength(3);
-    for (const index of [...accents, ...dividers]) {
-      expect(index).toBeGreaterThan(columnsAt);
-    }
+    for (const index of accents) expect(index).toBeGreaterThan(columnsAt);
   });
 
   it("Capture 結果は draft で、決定論的", async () => {
@@ -248,10 +253,10 @@ describe("Capture した Pattern を同じ Template で再利用（E2E）", () =
     expect(accents).toHaveLength(3);
     expect(dividers).toHaveLength(3);
 
-    // 描画順 = PPTX の Z-order。カードより後に描かれる = カードの上に見える
-    for (const index of [...accents, ...dividers]) {
-      expect(index).toBeGreaterThan(Math.max(...cards));
-    }
+    // 描画順 = PPTX の Z-order。アクセントは全カードより後 = カードの上に見える
+    for (const index of accents) expect(index).toBeGreaterThan(Math.max(...cards));
+    // 区切り線はカードの中身なので、自分のカード背景より後に描かれる
+    expect(Math.min(...dividers)).toBeGreaterThan(Math.min(...cards));
   });
 
   it("生成した PPTX に Template の Footer 線とカードが含まれる", async () => {
@@ -448,5 +453,141 @@ describe("Phase 2: 人手の解釈で取り込む（E2E）", () => {
     };
     outOfRange.cells[0]!.content.labelIndex = 9999;
     await expect(capturePattern(outOfRange)).rejects.toThrow(/存在しない要素インデックス/);
+  });
+});
+
+describe("Phase 3: ヒューリスティクスだけで役割を認識する（E2E）", () => {
+  /** 解釈から「どの要素がどの役割か」だけを取り出す（notes や出どころは比較しない） */
+  function roleMap(interpretation: {
+    headlineIndex?: number;
+    sublineIndex?: number;
+    eyebrowIndex?: number;
+    sourceTextIndex?: number;
+    cells: Array<Record<string, any>>;
+  }) {
+    return {
+      headline: interpretation.headlineIndex,
+      subline: interpretation.sublineIndex,
+      eyebrow: interpretation.eyebrowIndex,
+      sourceText: interpretation.sourceTextIndex,
+      cells: interpretation.cells.map((cell) => ({
+        background: cell.backgroundIndex,
+        index: cell.content.indexIndex,
+        label: cell.content.labelIndex,
+        metric: cell.content.metricIndex,
+        descriptions: cell.content.descriptionIndexes,
+        accents: cell.decoration?.accentIndexes,
+        divider: cell.decoration?.dividerIndex,
+      })),
+    };
+  }
+
+  async function heuristicInterpretation() {
+    const elements = await slide2Elements();
+    const pkg = await PptxPackage.open(SOURCE_PPTX);
+    const deck = await readDeck(pkg, { slideNumbers: [2], includeNotes: false });
+    const inference = await heuristicSlotInferencer.infer({
+      slideNumber: 2,
+      slideSize: deck.slideSize,
+      elements,
+    });
+    return { interpretation: interpretFromSlotInference(elements, inference), elements };
+  }
+
+  it("ヒューリスティクスの役割割り当てが人手の解釈と一致する", async () => {
+    const { interpretation } = await heuristicInterpretation();
+    const human = (await humanInterpretation()) as Parameters<typeof roleMap>[0];
+
+    expect(roleMap(interpretation)).toEqual(roleMap(human));
+    expect(roleMap(interpretation).cells[0]).toEqual({
+      background: 3,
+      index: 5,
+      label: 6,
+      metric: 7,
+      descriptions: [9],
+      accents: [4],
+      divider: 8,
+    });
+  });
+
+  it("推定の根拠が Capture Report の notes に残る", async () => {
+    const captured = await capturePattern();
+    const notes = captured.report.interpretation.notes.join("\n");
+    expect(notes).toContain("01 / 02 / 03");
+    expect(notes).toContain("index と推定");
+    expect(notes).toContain("metric と推定");
+    expect(notes).toContain("フォント階層");
+    expect(notes).toContain("水平線を divider と推定");
+    expect(notes).toContain("accent と推定");
+  });
+
+  it("推定した解釈も human と同じ検証を通ってから Compiler へ渡る", async () => {
+    const { interpretation, elements } = await heuristicInterpretation();
+    expect(() =>
+      parseAndValidateCaptureInterpretation(interpretation, elements),
+    ).not.toThrow();
+    // 役割として採用した装飾は固定デザインに残らない
+    expect(interpretation.staticIndexes).toEqual([]);
+  });
+
+  it("同じ PPTX からは必ず同じ解釈になる（決定論的）", async () => {
+    const first = await heuristicInterpretation();
+    const second = await heuristicInterpretation();
+    expect(JSON.stringify(first.interpretation)).toBe(JSON.stringify(second.interpretation));
+  });
+
+  it("--interpretation なしで Capture した Pattern が人手の解釈と同じ構造になる", async () => {
+    const [auto, manual] = await Promise.all([
+      capturePattern(),
+      capturePattern(await humanInterpretation()),
+    ]);
+    const strip = (document: unknown) => {
+      const copy = JSON.parse(JSON.stringify(document)) as Record<string, any>;
+      delete copy.metadata.source;
+      return copy;
+    };
+    expect(strip(auto.document)).toEqual(strip(manual.document));
+    expect(auto.document.metadata?.source?.interpretationSource).toBe("heuristic");
+  });
+
+  it("ヒューリスティクスだけで再利用しても 01 / 02 / 03 と label / metric が入る", async () => {
+    const result = await reuse();
+    expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
+
+    const { extractTexts, readPptx } = await import("./helpers.js");
+    const pptx = await readPptx(result.pptxBuffer);
+    const texts = extractTexts(pptx.slideXmls[pptx.slideXmls.length - 1]!);
+
+    for (const ordinal of ["01", "02", "03"]) expect(texts).toContain(ordinal);
+    for (const label of ["設計知の再利用", "作成時間の短縮", "組織標準化"]) {
+      expect(texts.filter((t) => t === label)).toHaveLength(1);
+    }
+    for (const metric of ["12件", "40%", "3部門"]) expect(texts).toContain(metric);
+
+    // description は 1 回だけ（重複描画しない）
+    const description = "良いスライドの構造をPatternとして保存し、別案件でも再利用する";
+    expect(texts.filter((t) => t === description)).toHaveLength(1);
+
+    // 元 PPTX の "01" が literal として焼き付いていない
+    expect(texts).not.toContain("開発スピード");
+  });
+
+  it("ヒューリスティクスだけでもカード・アクセント・区切り線と Z-order が残る", async () => {
+    const result = await reuse();
+    const placements = result.reports.find((r) => r.slideId === "slide-reuse")!.placements;
+
+    const cards = placements.flatMap((p, i) => (p.name.includes("card") ? [i] : []));
+    const accents = placements.flatMap((p, i) =>
+      p.kind === "shape" && !p.name.includes("card") && p.box.w < 0.2 ? [i] : [],
+    );
+    const dividers = placements.flatMap((p, i) =>
+      p.kind === "shape" && p.box.h === 0 ? [i] : [],
+    );
+
+    expect(cards).toHaveLength(3);
+    expect(accents).toHaveLength(3);
+    expect(dividers).toHaveLength(3);
+    for (const index of accents) expect(index).toBeGreaterThan(Math.max(...cards));
+    expect(Math.min(...dividers)).toBeGreaterThan(Math.min(...cards));
   });
 });

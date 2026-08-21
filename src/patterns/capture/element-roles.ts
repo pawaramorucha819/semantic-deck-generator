@@ -54,6 +54,20 @@ export function canRenderAsDivider(element: ExtractedElement): boolean {
   return isRenderableLine(element);
 }
 
+/**
+ * Template が面倒を見る装飾プレースホルダか（ページ番号・フッター・日付）。
+ *
+ * これらは「情報をどう見せるか」ではなく企業テンプレートの責務なので、
+ * Pattern の中へ取り込まない（CLAUDE.md の Template / Pattern 責務分離）。
+ * PowerPoint の placeholder type を見るだけの客観的な判定で、意味は推測しない。
+ */
+export const TEMPLATE_PLACEHOLDER_TYPES = ["sldNum", "ftr", "dt"] as const;
+
+export function isTemplatePlaceholder(element: ExtractedElement): boolean {
+  const type = element.placeholder?.type;
+  return type !== undefined && (TEMPLATE_PLACEHOLDER_TYPES as readonly string[]).includes(type);
+}
+
 /** エラーメッセージ用の短い要素の説明（"text \"見出し…\"" / "shape(roundRect)" など） */
 export function describeElement(element: ExtractedElement): string {
   const kind = isLineElement(element) ? "line" : element.kind;
