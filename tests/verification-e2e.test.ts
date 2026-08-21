@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { parsePresentation } from "../src/domain/schema.js";
 import { capturePatternFromPptx, writePatternPackage } from "../src/patterns/capture/capture.js";
+import { parseAndValidateCaptureInterpretation } from "../src/patterns/capture/interpretation.js";
 import { loadPatternPackage } from "../src/patterns/declarative/loader.js";
 import { PatternRegistry, builtinPatterns } from "../src/patterns/registry.js";
 import { generate } from "../src/pipeline.js";
@@ -63,6 +64,13 @@ async function capturePattern(interpretation?: unknown) {
 
 async function humanInterpretation(): Promise<unknown> {
   return JSON.parse(await readFile(INTERPRETATION, "utf8"));
+}
+
+/** 検証用 PPTX スライド 2 の抽出結果（役割 ↔ 要素種別の検証に使う） */
+async function slide2Elements() {
+  const pkg = await PptxPackage.open(SOURCE_PPTX);
+  const deck = await readDeck(pkg, { slideNumbers: [2], includeNotes: false });
+  return deck.slides[0]!.elements;
 }
 
 describe("検証用 PPTX の抽出（前提）", () => {
@@ -310,8 +318,67 @@ describe("Phase 2: 人手の解釈で取り込む（E2E）", () => {
       metric: 7,
       descriptions: [9],
       accents: [4],
-      dividers: [8],
+      divider: 8,
     });
+    // divider は単数役割（Capture Interpretation 1.1）
+    expect(captured.report.interpretation.schemaVersion).toBe("1.1");
+  });
+
+  it("実機 PPTX の各要素が役割として描画可能であることを検証してから Compiler へ渡す", async () => {
+    const elements = await slide2Elements();
+    const interpretation = (await humanInterpretation()) as Record<string, any>;
+
+    // fixture はそのまま通る（headline/label/metric は text、divider は h=0 の線、
+    // background/accent は塗り図形）
+    expect(() => parseAndValidateCaptureInterpretation(interpretation, elements)).not.toThrow();
+
+    // 区切り線（要素 8）と見出しテキスト（要素 6）を取り違えた解釈は Compiler へ到達しない
+    const wrongDivider = JSON.parse(JSON.stringify(interpretation)) as Record<string, any>;
+    wrongDivider.cells[0].decoration.dividerIndex = 6;
+    wrongDivider.cells[0].content.labelIndex = 8;
+    await expect(capturePattern(wrongDivider)).rejects.toThrow(
+      /cells\[0\]\.decoration\.dividerIndex: 要素 6 .* divider として利用できません/,
+    );
+
+    // カード背景ではなくテキストを background と解釈した場合も同様
+    const wrongBackground = JSON.parse(JSON.stringify(interpretation)) as Record<string, any>;
+    wrongBackground.cells[0].backgroundIndex = 6;
+    wrongBackground.cells[0].content.labelIndex = 3;
+    await expect(capturePattern(wrongBackground)).rejects.toThrow(
+      /backgroundIndex: .* background として利用できません/,
+    );
+  });
+
+  it("セルごとに Visual Role 構成が違う解釈は Compiler へ到達しない", async () => {
+    const uneven = JSON.parse(JSON.stringify(await humanInterpretation())) as Record<string, any>;
+    // cell 1 だけ divider / accent を落とす
+    uneven.cells[1].decoration = {};
+    uneven.staticIndexes = [11, 15];
+    await expect(capturePattern(uneven)).rejects.toThrow(
+      /cells\[1\] の Visual Role 構成が cells\[0\] と一致しません/,
+    );
+  });
+
+  it("旧 1.0 形式の解釈 JSON も読める（dividerIndexes → dividerIndex）", async () => {
+    const legacy = JSON.parse(JSON.stringify(await humanInterpretation())) as Record<string, any>;
+    legacy.schemaVersion = "1.0";
+    for (const cell of legacy.cells) {
+      cell.decoration = {
+        accentIndexes: cell.decoration.accentIndexes,
+        dividerIndexes: [cell.decoration.dividerIndex],
+      };
+      delete cell.decoration.dividerIndex;
+    }
+
+    const captured = await capturePattern(legacy);
+    expect(captured.report.interpretation.schemaVersion).toBe("1.1");
+    expect(captured.report.interpretation.cellRoles[0]).toMatchObject({ divider: 8 });
+    expect(captured.report.interpretation.notes.join()).toContain("1.0 から 1.1 へ移行しました");
+
+    // 複数指定は黙って先頭を採らず、明示エラーにする
+    const multiple = JSON.parse(JSON.stringify(legacy)) as Record<string, any>;
+    multiple.cells[0].decoration.dividerIndexes = [8, 15];
+    await expect(capturePattern(multiple)).rejects.toThrow(/divider は単数です/);
   });
 
   it("別内容へ再利用すると 01 / 02 / 03 と label / metric が正しく入る", async () => {

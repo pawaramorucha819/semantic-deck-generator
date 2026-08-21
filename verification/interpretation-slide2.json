@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "interpretationSource": "human",
 
   "headlineIndex": 1,
@@ -18,7 +18,7 @@
       },
       "decoration": {
         "accentIndexes": [4],
-        "dividerIndexes": [8]
+        "dividerIndex": 8
       }
     },
     {
@@ -31,7 +31,7 @@
       },
       "decoration": {
         "accentIndexes": [11],
-        "dividerIndexes": [15]
+        "dividerIndex": 15
       }
     },
     {
@@ -44,7 +44,7 @@
       },
       "decoration": {
         "accentIndexes": [18],
-        "dividerIndexes": [22]
+        "dividerIndex": 22
       }
     }
   ],

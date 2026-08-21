@@ -17,7 +17,7 @@ import {
   assignmentsOf,
   describeAssignment,
   interpretFromSlotInference,
-  parseCaptureInterpretation,
+  parseAndValidateCaptureInterpretation,
   type CaptureInterpretation,
 } from "./interpretation.js";
 
@@ -37,7 +37,12 @@ import {
  * 人がレビューして approved に変えるまで PatternRegistry は受け付けない。
  */
 
-export const PATTERN_CAPTURE_REPORT_VERSION = "1.0";
+/**
+ * Capture Report のスキーマ。
+ * 1.1 で cellRoles の `dividers: number[]` を `divider?: number` へ変更した
+ * （Capture Interpretation 1.1 で divider が単数役割になったため）。
+ */
+export const PATTERN_CAPTURE_REPORT_VERSION = "1.1";
 
 /** 人間（や将来の AI）が解釈を書くための、要素 1 つぶんの目録 */
 export interface CapturedElementSummary {
@@ -73,6 +78,8 @@ export interface PatternCaptureReport {
   inventory: CapturedElementSummary[];
   /** 実際に採用された解釈 */
   interpretation: {
+    /** 解釈が従っている Capture Interpretation スキーマ */
+    schemaVersion: string;
     source: string;
     inferencer?: string;
     headline?: string;
@@ -127,7 +134,8 @@ export interface CapturePatternOptions {
   overrides?: CaptureOverrides;
   /**
    * 人間（将来は AI）が書いた解釈。検証前の値でよく、内部で必ず
-   * `parseCaptureInterpretation()` を通す（untrusted input として扱う）。
+   * `parseAndValidateCaptureInterpretation()` を通す（untrusted input として扱う）。
+   * 形式検証に加えて「その要素をその役割として描けるか」も検証される。
    * 指定するとヒューリスティック推定は使われない。
    */
   interpretation?: unknown;
@@ -177,7 +185,7 @@ function cellRolesOf(interpretation: CaptureInterpretation): Array<
     metric: cell.content.metricIndex,
     descriptions: cell.content.descriptionIndexes,
     accents: cell.decoration?.accentIndexes,
-    dividers: cell.decoration?.dividerIndexes,
+    divider: cell.decoration?.dividerIndex,
   }));
 }
 
@@ -323,7 +331,10 @@ export async function capturePatternFromPptx(
         "interpretation と overrides は同時に指定できません（overrides はヒューリスティック推定への上書きです）",
       );
     }
-    interpretation = parseCaptureInterpretation(options.interpretation, slide.elements.length);
+    interpretation = parseAndValidateCaptureInterpretation(
+      options.interpretation,
+      slide.elements,
+    );
     if (interpretation.interpretationSource !== "human") {
       throw new SlotInferenceError(
         `外部から渡せる interpretationSource は 'human' だけです (指定=${interpretation.interpretationSource})`,
@@ -340,10 +351,10 @@ export async function capturePatternFromPptx(
     inference = applyOverrides(validated, options.overrides, slide.elements.length);
     // 上書き後も整合していることを再検証する
     validateInference(inference, slide.elements.length);
-    // ヒューリスティクスの結果も同じスキーマ検証を通す（経路を揃える）
-    interpretation = parseCaptureInterpretation(
+    // ヒューリスティクスの結果も human と同じ入口を通す（経路を揃える）
+    interpretation = parseAndValidateCaptureInterpretation(
       interpretFromSlotInference(slide.elements, inference),
-      slide.elements.length,
+      slide.elements,
     );
   }
 
@@ -416,6 +427,7 @@ export async function capturePatternFromPptx(
     elements: countKinds(slide.elements),
     inventory: buildInventory(slide.elements, interpretation),
     interpretation: {
+      schemaVersion: interpretation.schemaVersion,
       source: interpretation.interpretationSource,
       ...(inferencerId ? { inferencer: inferencerId } : {}),
       ...(headlineText ? { headline: headlineText } : {}),

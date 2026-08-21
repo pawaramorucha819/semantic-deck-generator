@@ -1,4 +1,5 @@
 import { isLineElement, type ExtractedElement } from "../../pptx/model.js";
+import { isRenderableLine, isSolidFillShape } from "./element-roles.js";
 import type { Rect } from "../../render/geometry.js";
 import { nearestColorToken, TEXT_ROLE_NAMES } from "../../render/tokens.js";
 import { resolveTheme, type PresentationTheme, type ResolvedTheme } from "../../theme/theme.js";
@@ -384,8 +385,9 @@ export function buildCapturedPattern(
       { bold: true, color: "primary" },
     );
 
-    // divider: セル内の区切り線は内容と一緒に動くよう、カードのフローへ入れる
-    const divider = elements[template.decoration?.dividerIndexes?.[0] ?? -1];
+    // divider: セル内の区切り線は内容と一緒に動くよう、カードのフローへ入れる。
+    // 解釈側で単数に決まっているので、ここで「複数から 1 本を選ぶ」判断はしない。
+    const divider = elements[template.decoration?.dividerIndex ?? -1];
     if (divider) {
       stackChildren.push({
         type: "shape",
@@ -401,12 +403,6 @@ export function buildCapturedPattern(
         when: { hasValue: "item.description" },
       });
     }
-    if ((template.decoration?.dividerIndexes ?? []).length > 1) {
-      warnings.push(
-        "セル内に複数の区切り線が指定されたため、先頭の 1 本だけをテンプレートに使いました",
-      );
-    }
-
     // description: 同じ値を複数ノードへ出さない（重複描画の原因になる）
     const descriptionIndexes = template.content.descriptionIndexes ?? [];
     push(
@@ -464,20 +460,22 @@ export function buildCapturedPattern(
       for (const index of cell.decoration?.accentIndexes ?? []) {
         const accent = elements[index];
         if (!accent) continue;
-        if (accent.fill?.type === "solid") {
+        // 判定は Interpretation Validator と同じ helper を使う
+        // （別々に条件を書くと「検証は通ったのに描けない」状態が生まれる）
+        if (isSolidFillShape(accent)) {
           layer(
             index,
             absoluteChild(accent.box, {
               type: "shape",
               shape: accent.geometry === "roundRect" ? "roundRect" : "rect",
               style: {
-                fill: colorTokenOf(theme, accent.fill.color, "primary", warnings, "アクセントの色"),
+                fill: colorTokenOf(theme, accent.fill?.color, "primary", warnings, "アクセントの色"),
               },
             }),
           );
           continue;
         }
-        if (isLineElement(accent)) {
+        if (isRenderableLine(accent)) {
           layer(
             index,
             absoluteChild(accent.box, {
