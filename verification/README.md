@@ -49,13 +49,16 @@ npm run sdg -- generate verification/reuse-presentation.json \
 - 元 PPTX の重なり順（カード背景 → アクセント → 区切り線）が保たれること
 - 再利用生成がレイアウトエラーなく完了すること
 
-Phase 2 で追加した回帰:
+Phase 2 / 2.1 で追加した回帰:
 
 - 解釈 JSON の各要素が役割どおり（index / label / metric / description / accent / divider）に入ること
 - `01` が literal として焼き付かず、再利用先の項目順から `01 / 02 / 03` が作り直されること
 - description がカードごとに 1 回だけ描かれること
 - capture-report.json に inventory と採用された解釈が残ること
 - 解釈を渡さない従来の取り込みが変わらず動くこと（後方互換）
+- 要素の種類と矛盾する役割（区切り線ではなくテキストを divider にする等）を拒否すること
+- セルごとに Visual Role 構成が違う解釈を拒否すること
+- 旧 1.0 形式（`dividerIndexes`）を読めること / 複数指定は明示エラーになること
 
 ## 解釈 JSON（interpretation-slide2.json）
 
@@ -69,7 +72,7 @@ Phase 2 で追加した回帰:
 | 5, 12, 19 | 連番（index）→ 順番から作り直される |
 | 6, 13, 20 | 見出し（label） |
 | 7, 14, 21 | 数値（metric） |
-| 8, 15, 22 | 区切り線（divider, h = 0） |
+| 8, 15, 22 | 区切り線（divider, h = 0。1 セルに 1 本） |
 | 9, 16, 23 | 説明（description） |
 | 24 | 出典（sourceText） |
 | 25 | ページ番号プレースホルダ（Template の責務なので未割り当て） |

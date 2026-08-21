@@ -514,7 +514,7 @@ patterns/company/company-three-column/
 | | `description` | 補足説明 |
 | **Structural Role** | `background` | カードの下地 |
 | | `accent` | 強調バー・カラーチップ |
-| | `divider` | 区切り線 |
+| | `divider` | 区切り線（**1 セルに 1 本**） |
 
 Content Role は**中身が入れ替わる**もの、Structural Role は**見た目を作る**ものです。
 accent / divider は Pattern の中だけの表現であり、`presentation.json` の意味モデルには入りません。
@@ -522,7 +522,7 @@ accent / divider は Pattern の中だけの表現であり、`presentation.json
 
 ```jsonc
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "interpretationSource": "human",
   "headlineIndex": 1,
   "sublineIndex": 2,
@@ -530,7 +530,7 @@ accent / divider は Pattern の中だけの表現であり、`presentation.json
     {
       "backgroundIndex": 3,
       "content": { "indexIndex": 5, "labelIndex": 6, "metricIndex": 7, "descriptionIndexes": [9] },
-      "decoration": { "accentIndexes": [4], "dividerIndexes": [8] }
+      "decoration": { "accentIndexes": [4], "dividerIndex": 8 }
     }
     // 他のセルも同じ役割構成であること
   ],
@@ -538,15 +538,51 @@ accent / divider は Pattern の中だけの表現であり、`presentation.json
 }
 ```
 
-Interpretation は **untrusted input** として Zod で検証されます。
+Interpretation は **untrusted input** です。検証は 2 段階あり、
+**両方を通した解釈だけが Compiler へ届きます**（入口は
+`parseAndValidateCaptureInterpretation()` ひとつ）。
+
+**1. 形式・構造の検証**
 
 - `.strict()`（未知キーは拒否）+ `schemaVersion` の一致
 - すべてのインデックスが `0 <= i < 要素数` の整数
 - **同じ要素へ 2 つの役割を割り当てられない**（`cells[0].content.label` と
   `cells[1].decoration.accent` のような衝突を検出して、どの経路が競合したかを示す）
 - `labelIndex` は必須。セル数 / description 数 / 装飾数に上限
-- セルごとに役割構成が違うものは拒否（1 つの `item` 契約にできないため）
+- **全セルの Visual Role 構成が一致すること**。Content Role だけでなく
+  background / accent（**個数まで**）/ divider も比較する
 - 値参照・条件・式は一切書けない。**eval も関数文字列も無い**
+
+**2. 役割 ↔ 要素種別の検証**
+
+「その要素をその役割として *描けるか*」だけを見ます。判定は Compiler と同じ
+helper（`src/patterns/capture/element-roles.ts`）を使うので、
+「検証は通ったのに Compiler が描けない」状態は作れません。
+
+| 役割 | 必要な要素 |
+| --- | --- |
+| headline / subline / eyebrow / sourceText / index / label / metric / description | テキストを持つ要素 |
+| `background` | 塗り (solid fill) を持つ図形 |
+| `accent` | 塗りを持つ図形、または線 |
+| `divider` | 線（コネクタ / 線プリセット / h = 0 / w = 0） |
+| `staticIndexes` | 制限なし（元デザインとして残すため） |
+
+ここで判定するのは客観的な描画可能性だけで、**意味の妥当性は見ません**。
+`"30%"` を label と解釈するのは（不自然でも）text である以上通します。
+それを判断するのは human / heuristic / 将来の AI の責務です。
+
+```text
+cells[1].decoration.dividerIndex: 要素 13 (text "開発スピードの向上") は
+  divider として利用できません (線 (line) 要素が必要です)
+```
+
+**スキーマのバージョン**
+
+現行は `1.1` です。`1.0` の `dividerIndexes: number[]` は読み込み時に
+`dividerIndex` へ移行され、痕跡が `notes` に残ります。
+ただし `dividerIndexes: [8, 9]` のように複数あった場合は、
+黙って先頭を採らずエラーにします（Compiler は 1 本しか描けないため、
+どれを使うかは人が決め直す）。
 
 ### 連番（index）の扱い
 

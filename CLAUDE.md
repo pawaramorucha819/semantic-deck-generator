@@ -179,9 +179,46 @@ generation.config ─┘   決定論的       manual/assist/auto   表現の確�
     **Compiler から見えるのは常に Interpretation だけ**です。
 
 16-c. **Interpretation JSON は untrusted input**
-    `parseCaptureInterpretation()` を必ず通します。`.strict()` / schemaVersion 一致 /
-    インデックスの範囲検査 / **同じ要素への役割の二重割り当て検出** を緩めないでください。
+    `parseAndValidateCaptureInterpretation()` を必ず通します。これが
+    **Compiler へ渡してよい解釈を作る唯一の入口**で、human / heuristic /
+    将来の AI のどの経路も同じゲートを通ります。検証は 2 段階です。
+
+    1. **形式・構造** … `.strict()` / schemaVersion 一致 / インデックスの範囲検査 /
+       **同じ要素への役割の二重割り当て検出** / **全セルの Visual Role 構成の一致**
+    2. **役割 ↔ 要素種別** … その要素をその役割として *描けるか*
+
     値参照・条件・式を書けるようにしてはいけません（**eval / 関数文字列は禁止**）。
+
+16-c-1. **Visual Role 構成の一致には Structural Role も含める**
+    Compiler は 1 セル目を反復テンプレートの基準にします。
+    background / accent（**個数まで**）/ divider を比較対象から外すと、
+    「解釈では divider を持たないセルにも divider が描かれる」= 意味の書き換えが起きます。
+    比較の定義は `cellRoleSignature()` の 1 箇所に置いてください。
+
+16-c-2. **役割 ↔ 要素種別の判定は Compiler と共有する**
+    判定は `src/patterns/capture/element-roles.ts` の helper だけを使い、
+    Validator と Compiler で条件を別々に書かないでください
+    （「検証は通ったのに Compiler が描けない」= 解釈が黙って捨てられる状態を作らない）。
+
+    | 役割 | 必要な要素 |
+    | --- | --- |
+    | text 系（headline / label / metric / description / index など） | テキストを持つ要素 |
+    | `background` | 塗り (solid fill) を持つ図形 |
+    | `accent` | 塗りを持つ図形、または線 |
+    | `divider` | 線（`isLineElement` + 描画可能な長さ。h = 0 / w = 0 を許す） |
+    | `staticIndexes` | 制限なし（元デザインとして残すため） |
+
+    ここで見るのは**客観的な描画可能性だけ**です。「要素 6 は label *らしい* か」は
+    判定しません（それは Interpretation の責務）。`"30%"` を label と解釈しても
+    text である以上通します。
+
+16-c-3. **Schema が表現できるものは Compiler が忠実に描けること**
+    `divider` は最新スキーマ（1.1）で **単数役割 `dividerIndex?: number`** です。
+    Compiler が 1 本しか描けないのにスキーマが配列を許すと、
+    「valid なのに黙って捨てられる」指定が生まれます。
+    Compiler に「複数から 1 件を選ぶ」コードを戻さないでください。
+    旧 1.0 の `dividerIndexes` は読み込み時に移行しますが、
+    複数指定は先頭を採らず**明示エラー**にします。
 
 16-d. **Interpretation を presentation.json や Renderer へ持ち込まない**
     Interpretation は Capture の中だけの概念です。意味モデル（`presentation.json`）にも
