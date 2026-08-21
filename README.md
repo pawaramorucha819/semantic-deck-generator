@@ -602,11 +602,11 @@ cells[1].decoration.dividerIndex: 要素 13 (text "開発スピードの向上")
 
 | source | 使い方 | 状態 |
 | --- | --- | --- |
-| `heuristic` | 既定。幾何とフォントサイズだけを見る決定論的推定 | 実装済み |
+| `heuristic` | 既定。明白な反復規則だけを高 Precision で推定し、曖昧なら abstain する | 実装済み |
 | `human` | `--interpretation` で解釈 JSON を渡す | 実装済み |
 | `ai` | LLM に解釈させる | **未実装**（拡張点だけ用意） |
 
-既定のヒューリスティクスは以下だけを見ます。
+既定のヒューリスティクスは、まずスライド全体の役割を幾何とフォントサイズだけで推定します。
 
 | 推定 | 根拠 |
 | --- | --- |
@@ -617,21 +617,47 @@ cells[1].decoration.dividerIndex: 要素 13 (text "開発スピードの向上")
 | 反復項目（items） | 同じ大きさの図形が横に 2 つ以上並んでいる領域 |
 | 固定デザイン | 上記以外（ロゴ・装飾・固定ラベル） |
 
+さらに反復カードの中身については、**セルを横断した強い規則**だけを根拠に役割を決めます
+（`src/patterns/capture/heuristic-roles.ts`）。単独の要素だけを見て意味を決めることはしません。
+
+| 役割 | 採用する根拠（すべて全セルで揃っていること） |
+| --- | --- |
+| `index` | 数字だけの短いテキストで、セル順に並べた値が **1, 2, 3 …** になる。桁の書式・相対位置・フォントも一致 |
+| `metric` | 数値が主役の短いテキスト（`30%` `−25%` `2.4×`）。候補が複数なら最大フォントの行だけ |
+| `label` / `description` | label が description より**明確に大きいフォント**で、かつ**上に**ある |
+| `divider` | 各セルに 1 本ずつある水平／垂直の線。相対位置・長さ・色も一致 |
+| `accent` | 各セルの縁に接した細長い帯。相対位置・大きさ・塗りも一致 |
+| `background` | SlotInferencer が見つけたカード背景（`canRenderAsBackground()` を満たすもの） |
+
+**根拠が弱ければ推定しません（abstain）。** 曖昧なまま「多分 label」と割り当てるより、
+役割を付けずに固定デザインとして残す方を選びます。判断の根拠も abstain の理由も notes に残ります。
+
+```text
+- 01 / 02 / 03 が同じ相対位置に並ぶ連番だったため index と推定しました
+- 各セルの縁にある細い装飾を accent と推定しました
+- label と description のフォント階層が不明確なため（14pt と 14pt）、反復セルの役割推定を中止しました
+```
+
+これは**意味理解ではありません**。認識できるのは「人が見てもまず迷わない」
+強い反復規則を持つケースだけで、`10% / 20% / 30%` や `2024 / 2025 / 2026` を連番と誤認したり、
+斜めのコネクタを区切り線と誤認したりしないことを優先しています。
+一般的なスライドの解釈は将来の AI 解釈（**未実装**）の役割です。
+
 ヒューリスティクスの結果は `interpretFromSlotInference()` で Interpretation へ変換されるので、
 **Compiler から見えるのは常に Interpretation だけ**です。推定器を差し替えても Compiler は変わりません。
 
-ただしヒューリスティクスは意味までは分かりません（"01" を連番と見抜けない、
-accent / divider を装飾と判定できない）。正しく解釈させたいときは
-`capture-report.json` の **inventory** を見て、人が解釈 JSON を書きます。
+推定が違っていた場合や、ヒューリスティクスが abstain した場合は、
+`capture-report.json` の **inventory** を見て人が解釈 JSON を書きます。
 
 ```bash
-# 1) まず取り込んで inventory を見る
+# 1) まず取り込んで inventory と推定の根拠（notes）を見る
 npm run sdg -- pattern import sample.pptx --slide 3 --id x
 
 # 2) 解釈 JSON を書いて、解釈どおりに取り込み直す
 npm run sdg -- pattern import sample.pptx --slide 3 --id x \
   --interpretation interpretation.json
 ```
+
 
 inventory は人がレビューするための要素一覧です。
 

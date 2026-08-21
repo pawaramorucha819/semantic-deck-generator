@@ -178,6 +178,18 @@ generation.config ─┘   決定論的       manual/assist/auto   表現の確�
     推定器（`SlotInferencer`）を差し替えても Compiler が変わらない状態を保ってください。
     **Compiler から見えるのは常に Interpretation だけ**です。
 
+16-b-1. **ヒューリスティクスは高 Precision・abstain 優先**
+    `src/patterns/capture/heuristic-roles.ts` は「人が見てもまず迷わない」
+    強い反復規則だけを扱います。Recall を上げるために規則を緩めないでください。
+
+    - **単独の要素だけを見て意味を決めない**。"01" 1 つで index と決めず、
+      反復セルを横断して連番の系列・相対位置・フォント階層が揃うことを根拠にする
+    - **根拠が弱ければ推定しない（abstain）**。曖昧なまま役割を割り当てるより、
+      固定デザインとして残す方を選ぶ。判断の根拠も abstain の理由も notes に残す
+    - 閾値は `HEURISTIC_THRESHOLDS` に集約する。各所へ数値を埋め込まない
+    - 決定論であること（乱数・現在時刻・ネットワーク・LLM は使わない）
+    - 一般的なスライドの意味理解はここでやらない。それは AI 解釈（未実装）の領域
+
 16-c. **Interpretation JSON は untrusted input**
     `parseAndValidateCaptureInterpretation()` を必ず通します。これが
     **Compiler へ渡してよい解釈を作る唯一の入口**で、human / heuristic /

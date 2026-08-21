@@ -27,6 +27,7 @@ npm run sdg -- template import verification/semantic-deck-v2-import-test.pptx \
   --organization "SDG V2 検証用サンプル" --confidential "CONFIDENTIAL"
 
 # 2) スライド 2 を Pattern として取り込む（出力は必ず draft）
+#    Phase 3 以降、このスライドは --interpretation 無しでも同じ役割を認識できる。
 #    --interpretation を付けると、各要素の意味を人が指定した解釈で取り込む
 npm run sdg -- pattern import verification/semantic-deck-v2-import-test.pptx \
   --slide 2 --id test-three-column --out-dir verification/captured-patterns --scope company \
@@ -60,6 +61,14 @@ Phase 2 / 2.1 で追加した回帰:
 - セルごとに Visual Role 構成が違う解釈を拒否すること
 - 旧 1.0 形式（`dividerIndexes`）を読めること / 複数指定は明示エラーになること
 
+Phase 3 で追加した回帰:
+
+- `--interpretation` 無しのヒューリスティクスが、人手の解釈と同じ役割割り当てになること
+- ヒューリスティクスだけで取り込んだ Pattern から再利用しても
+  `01 / 02 / 03` と label / metric / description が正しく入ること
+- 推定の根拠が capture-report.json の notes に残ること
+- 同じ PPTX からは必ず同じ解釈になること（決定論的）
+
 ## 解釈 JSON（interpretation-slide2.json）
 
 `capture-report.json` の inventory を見て人が書いた、Slide 2 の要素の意味です。
@@ -80,12 +89,22 @@ Phase 2 / 2.1 で追加した回帰:
 ## 既知の未対応（後続 Phase）
 
 Phase 1 は「客観的に読み取れる幾何・重なり順・種別を失わない」こと、
-Phase 2 は「正しい解釈を与えれば、そのとおりの Pattern が出てくる」ことが対象です。
-**解釈そのものの精度向上（heuristic の改善 / AI 解釈）は Phase 3 です。**
+Phase 2 は「正しい解釈を与えれば、そのとおりの Pattern が出てくる」こと、
+Phase 3 は「明白な反復規則なら解釈も自動で作れる」ことが対象です。
 
-既定のヒューリスティクスは以下をまだ判定できません（`--interpretation` を使えば回避できます）。
+Phase 3 以降、このスライドは **`--interpretation` を指定しなくても**
+`interpretation-slide2.json` と同じ役割割り当てになります
+（index / label / metric / description / accent / divider / background すべて一致）。
 
-- `01 / 02 / 03` のような連番を index として認識しない
-- 見出しと説明の区別が付かず、両方が description に入る
-- accent / divider を装飾として認識せず、固定デザイン扱いになる
+ただしこれは**一般的なスライドの意味理解ではありません**。認識できるのは
+「3 枚のカードが同じ相対位置に同じ種類の要素を持つ」ような強い反復規則だけです。
+判断根拠が弱い場合はヒューリスティクスが推定を中止（abstain）し、要素を固定デザインとして残します。
+そのときは `capture-report.json` の notes に理由が出るので、人が解釈 JSON を書いてください。
+
+まだ扱えないもの（Phase 4 の AI 解釈の領域）:
+
+- before / after、比較表、チャート、図解、タイムライン
+- 同じフォントサイズで並ぶテキストの label / description 区別
+- アイコンや画像の意味理解
+- 入れ子の反復構造
 - 色を Theme トークンへ寄せる際の近似（青いアクセントが別トークンへ寄る等）
