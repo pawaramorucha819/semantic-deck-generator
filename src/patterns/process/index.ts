@@ -4,9 +4,13 @@ import type { RenderContext, TextRun } from "../../render/context.js";
 import { columns, inset, splitTop, type Rect } from "../../render/geometry.js";
 import type { MatchResult, VisualPattern } from "../pattern.js";
 import { centerBlockY, drawFooter, drawHeader } from "../shared/layout.js";
-import { buildSourceText, roleLabel, truncate } from "../shared/semantics.js";
+import { buildSourceText, roleLabel } from "../shared/semantics.js";
 
 export interface ProcessStepBinding {
+  /** Traceability metadata; rendering does not reinterpret these fields. */
+  nodeId?: string;
+  evidenceRefs?: string[];
+  members?: string[];
   index: number;
   label: string;
   description?: string;
@@ -31,6 +35,9 @@ export const ProcessBindingsSchema: z.ZodType<ProcessBindings> = z
       .array(
         z
           .object({
+            nodeId: z.string().min(1).max(120).optional(),
+            evidenceRefs: z.array(z.string().min(1).max(120)).min(1).max(8).optional(),
+            members: z.array(z.string().min(1).max(120)).max(1000).optional(),
             index: z.number().int().positive(),
             label: z.string().min(1),
             description: z.string().min(1).optional(),
@@ -134,8 +141,11 @@ export const processPattern: VisualPattern<ProcessBindings> = {
       subline: slide.supportingMessage,
       stepPrefix: slide.logicalRelation === "timeline" ? "" : "STEP",
       steps: sequence.steps.map((step, i) => ({
+        ...(step.id !== undefined ? { nodeId: step.id } : {}),
+        ...(step.evidenceRefs !== undefined ? { evidenceRefs: [...step.evidenceRefs] } : {}),
+        ...(step.members !== undefined ? { members: [...step.members] } : {}),
         index: i + 1,
-        label: truncate(step.label, 14),
+        label: step.label,
         description: step.description,
       })),
       sourceText: buildSourceText(slide),

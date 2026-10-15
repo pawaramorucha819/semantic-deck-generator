@@ -21,3 +21,4 @@ export * from "./shared/semantics.js";
 export * from "./shared/layout.js";
 export * from "./declarative/index.js";
 export * from "./capture/index.js";
+export * from "./relationships/index.js";

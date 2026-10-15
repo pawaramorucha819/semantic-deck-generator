@@ -1,0 +1,346 @@
+{
+  "title": "災害画像向けVLMをSE・PMの視点で読む",
+  "subtitle": "NECの2026年10月14日発表：事実・試算・導入提案を区別する",
+  "slides": [
+    {
+      "id": "nec-01-technologies",
+      "keyMessage": "災害画像検索を2つの技術で支える",
+      "supportingMessage": "出典事実｜NECと東北大学の共同研究。2027年度中の実用化を目指す。",
+      "slideRole": "context",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "局所領域理解",
+            "description": "小さく写る被害を捉える",
+            "evidenceRefs": [
+              "nec-01-local"
+            ],
+            "id": "nec-01-technologies-items-1"
+          },
+          {
+            "label": "継続学習",
+            "description": "既存能力の低下を抑え、新たな事象を追加する",
+            "evidenceRefs": [
+              "nec-01-continual"
+            ],
+            "id": "nec-01-technologies-items-2"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "NECが2026年10月14日に発表した災害画像向けVLMの2技術",
+        "criterion": "各技術が対応する課題",
+        "rationale": "発表の特長1・2に沿った並列整理。細部の理解と新しい事象の追加は工程ではなく、技術を区別する観点である。製品機能全体の網羅性や意味上のMECEは保証しない。",
+        "exclusions": [
+          "製品全体の構成",
+          "他社技術との比較",
+          "提供開始の確約"
+        ],
+        "unresolvedQuestions": [
+          "実用化時の提供形態・対象業務・導入条件は何か"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "nec-01-local",
+          "type": "text",
+          "statement": "NECは、対象物の領域情報を特徴抽出に反映して画像内の小さな被害を扱うVLM局所領域理解技術を発表した。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-01-continual",
+          "type": "text",
+          "statement": "NECは、既存の事象を認識する能力の低下を抑えながら新たな被災事象を追加するVLM継続学習技術を発表した。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-01-target",
+          "type": "text",
+          "statement": "発表は東北大学岡谷研究室との共同研究成果で、実用化目標は2027年度中。目標の表明であり、提供開始済み・提供開始の確約とは解釈しない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像向けVLM技術の開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "日本電気株式会社（NEC）",
+          "date": "2026-10-14",
+          "locator": "冒頭、本技術の特長1・2、注3",
+          "accessedAt": "2026-10-15"
+        }
+      ]
+    },
+    {
+      "id": "nec-02-learning-inputs",
+      "keyMessage": "新データと更新前モデルの説明文を併用する",
+      "supportingMessage": "出典事実｜継続学習に使う2種類の入力。忘却を完全になくすとは述べていない。",
+      "slideRole": "analysis",
+      "logicalRelation": "convergence",
+      "content": {
+        "kind": "convergence",
+        "inputs": [
+          {
+            "label": "追加学習データ",
+            "description": "新しい被災事象を学ぶためのデータ",
+            "evidenceRefs": [
+              "nec-02-inputs"
+            ],
+            "id": "nec-02-learning-inputs-inputs-1"
+          },
+          {
+            "label": "更新前VLMの説明文",
+            "description": "更新前モデルが生成した多様な説明文",
+            "evidenceRefs": [
+              "nec-02-inputs"
+            ],
+            "id": "nec-02-learning-inputs-inputs-2"
+          }
+        ],
+        "outcome": {
+          "label": "併せて学習",
+          "description": "新たな事象を学び、既存能力の低下を抑える",
+          "evidenceRefs": [
+            "nec-02-retention"
+          ],
+          "id": "nec-02-learning-inputs-outcome"
+        }
+      },
+      "decomposition": {
+        "scope": "発表本文が示す継続学習への入力と、その学習の目的",
+        "criterion": "学習入力の由来（追加データ／更新前モデルの生成説明文）",
+        "rationale": "2入力を同じ学習へ使うという記述に基づく合流。矢印は学習への入力を示し、入力間の順序・独立性・内容の非重複を保証しない。",
+        "exclusions": [
+          "モデルの全アーキテクチャ",
+          "損失関数・重み付け",
+          "忘却ゼロの保証"
+        ],
+        "unresolvedQuestions": [
+          "実環境での追加学習後に、既存事象の性能をどう再評価するか"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "nec-02-inputs",
+          "type": "text",
+          "statement": "継続学習では、追加学習データと、追加学習前のVLM自身が生成した多様な説明文を併せて学習する。2入力が学習に寄与する合流として表し、逐次工程や因果の独立性までは主張しない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-02-retention",
+          "type": "text",
+          "statement": "NECは、新しい事象の認識を学びつつ従来認識できた事象の精度低下を抑えると説明している。注2には公開データセットで忘却抑制を確認した旨があるが、全条件で忘却がないとは述べていない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像向けVLM技術の開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "日本電気株式会社（NEC）",
+          "date": "2026-10-14",
+          "locator": "本技術の特長2、注2",
+          "accessedAt": "2026-10-15"
+        }
+      ]
+    },
+    {
+      "id": "nec-03-confirmation-workload",
+      "keyMessage": "目視確認の候補を平均544枚に絞る",
+      "supportingMessage": "出典事実・試算｜12事象の平均。1枚5秒の目視換算で約7時間→約45分。",
+      "slideRole": "evidence",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "label": "検索対象5,035枚",
+            "description": "記録映像から抽出した車載画像",
+            "evidenceRefs": [
+              "nec-03-dataset"
+            ],
+            "id": "nec-03-confirmation-workload-steps-1"
+          },
+          {
+            "label": "VLMで絞り込み",
+            "description": "文章で被災状況を検索",
+            "evidenceRefs": [
+              "nec-03-candidates"
+            ],
+            "id": "nec-03-confirmation-workload-steps-2"
+          },
+          {
+            "label": "確認候補・平均544枚",
+            "description": "人による最終確認へ",
+            "evidenceRefs": [
+              "nec-03-candidates",
+              "nec-03-time"
+            ],
+            "id": "nec-03-confirmation-workload-steps-3"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "NEC検証での検索対象から人の最終確認候補まで",
+        "criterion": "画像の扱われる順序（対象集合→検索→確認候補）",
+        "rationale": "本文と注4が説明する絞り込みを工程として要約する。544枚は12事象の平均で、全事象に共通する固定件数や正解画像数ではない。入力と候補は包含関係にあるため、集合の互いに排他的な分割とは扱わない。",
+        "exclusions": [
+          "現場で実測した業務全体の時間短縮",
+          "金銭的なROI",
+          "候補に残らなかった画像の正解・不正解判定"
+        ],
+        "unresolvedQuestions": [
+          "被災事象別の候補件数と再現率はどう分布するか",
+          "システム処理と最終確認を含む実運用の総時間はいくらか"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "nec-03-dataset",
+          "type": "text",
+          "statement": "NECの検証は、東日本大震災の記録映像から抽出した車載カメラ画像5,035枚を対象に、12種類の被災事象について行われた。5,035枚はこの検証の検索対象数であり、実運用全体の画像数ではない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-03-candidates",
+          "type": "text",
+          "statement": "文章による画像検索を使い、人の最終確認が必要な画像を5,035枚から平均544枚へ絞り込んだとNECは報告している。平均は12種類の被災事象に関するもの。544枚を正解画像数や各事象共通の件数と解釈しない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-03-time",
+          "type": "text",
+          "statement": "注4は1枚5秒の目視を仮定する。5,035×5秒＝25,175秒＝6時間59分35秒、544×5秒＝2,720秒＝45分20秒。この確認時間の換算が約7時間→約45分であり、現場で実測した業務全体の短縮時間やROIではない。式には検索処理などの所要時間を含まない。候補数の減少率は約89.2％と計算できるが、検索精度・再現率・見逃し率はこの件数から算出できない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-03-quality-boundary",
+          "type": "text",
+          "statement": "2026年10月15日に確認した当該プレスリリースの本文・注記には再現率の数値がない。関連論文全体に再現率がないと断定するものではなく、候補削減が見逃しの許容条件を満たすことも、この発表だけでは判断できない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像向けVLM技術の開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "日本電気株式会社（NEC）",
+          "date": "2026-10-14",
+          "locator": "提供価値、本技術の特長2、注4",
+          "accessedAt": "2026-10-15"
+        }
+      ]
+    },
+    {
+      "id": "nec-04-adoption-review",
+      "keyMessage": "見逃しと運用負荷を導入前に検証する",
+      "supportingMessage": "SE・PMの解釈・提案。今回の発表には再現率の数値がない。",
+      "slideRole": "recommendation",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "検索品質",
+            "description": "地域・事象別の再現率と候補件数を測る",
+            "evidenceRefs": [
+              "nec-04-recall-gap"
+            ],
+            "id": "nec-04-adoption-review-items-1"
+          },
+          {
+            "label": "業務設計",
+            "description": "人の最終確認と判断責任を定める",
+            "evidenceRefs": [
+              "nec-04-human-review"
+            ],
+            "id": "nec-04-adoption-review-items-2"
+          },
+          {
+            "label": "導入効果",
+            "description": "処理・確認・運用の総時間と費用を測る",
+            "evidenceRefs": [
+              "nec-04-measurement-gap"
+            ],
+            "id": "nec-04-adoption-review-items-3"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "この発表を読むSE・PMが導入検討時に追加確認したい観点",
+        "criterion": "導入判断の観点（検索品質・判断責任・総負荷）",
+        "rationale": "根拠の限界から作成した執筆者の提案であり、NECの主張や実施済み手順ではない。候補件数は検索品質と業務負荷の両方に関わるため、観点は完全に排他的ではない。全導入要件を網羅するMECE分解とは主張しない。",
+        "exclusions": [
+          "法務・調達・情報管理を含む導入要件全体",
+          "実施が決定したPoC計画",
+          "地域を横断した性能保証"
+        ],
+        "unresolvedQuestions": [
+          "見逃しの許容基準を誰が決めるか",
+          "比較対象の業務手順と総費用をどう定義するか",
+          "この案件固有の未記載要件は何か"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "nec-04-recall-gap",
+          "type": "text",
+          "statement": "発表本文・注記には再現率の数値がない。この未記載を導入検証の論点としたのは執筆者の解釈であり、NECが特定の検証計画を提案したという意味ではない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-04-human-review",
+          "type": "text",
+          "statement": "NECは人による最終確認が必要な候補画像数を報告している。そこから最終確認と判断責任の設計が必要だと考えるのは執筆者の提案であり、この発表が実運用の責任分担を定めているとは扱わない。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        },
+        {
+          "id": "nec-04-measurement-gap",
+          "type": "text",
+          "statement": "約7時間から約45分という値は1枚5秒の確認時間換算であり、導入・処理・保守の費用を含むROIではない。総時間と費用の測定を導入判断に加えるのは執筆者の提案。",
+          "sourceIds": [
+            "nec-release"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像向けVLM技術の開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "日本電気株式会社（NEC）",
+          "date": "2026-10-14",
+          "locator": "本技術の特長2、注4、本文・注記全体の記載範囲",
+          "accessedAt": "2026-10-15"
+        }
+      ]
+    }
+  ]
+}

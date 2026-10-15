@@ -215,9 +215,18 @@ export const midnightTheme: PresentationTheme = {
   },
 };
 
+/** Explicit Japanese font for portable sample rendering; install Noto CJK on the viewing host. */
+export const portableTheme: PresentationTheme = {
+  ...defaultTheme,
+  id: "portable",
+  name: "Portable Japanese (Noto CJK)",
+  fonts: { heading: "Noto Sans CJK JP", body: "Noto Sans CJK JP", numeric: "Noto Sans" },
+};
+
 export const builtinThemes: Record<string, PresentationTheme> = {
   [defaultTheme.id]: defaultTheme,
   [midnightTheme.id]: midnightTheme,
+  [portableTheme.id]: portableTheme,
 };
 
 export function getTheme(id: string | undefined): PresentationTheme {

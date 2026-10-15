@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRelationshipContent } from "../../domain/content.js";
 import type { SlideSpec } from "../../domain/types.js";
 import type { RenderContext } from "../../render/context.js";
 import { columnsWeighted, splitBottom, splitTop, type Rect } from "../../render/geometry.js";
@@ -70,6 +71,9 @@ export const bigNumberPattern: VisualPattern<BigNumberBindings> = {
   bindingsSchema: BigNumberBindingsSchema,
 
   match(slide: SlideSpec): MatchResult {
+    if (isRelationshipContent(slide.content)) {
+      return { compatible: false, score: 0, reason: `content.${slide.content.kind} の構造は単一の数値へ置き換えられない` };
+    }
     const metric = extractHeadlineMetric(slide);
     if (!metric) {
       return {
@@ -100,6 +104,9 @@ export const bigNumberPattern: VisualPattern<BigNumberBindings> = {
   },
 
   buildBindings(slide: SlideSpec): BigNumberBindings {
+    if (isRelationshipContent(slide.content)) {
+      throw new Error(`[big-number] buildBindings: content.${slide.content.kind} の関係構造を保持できません (slide=${slide.id})`);
+    }
     const metric = extractHeadlineMetric(slide);
     if (!metric) {
       throw new Error(`[big-number] buildBindings: metric を抽出できません (slide=${slide.id})`);

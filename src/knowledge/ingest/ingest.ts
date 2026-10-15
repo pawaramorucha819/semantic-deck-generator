@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { contentItems } from "../../domain/content.js";
 import type { LogicalRelation, PresentationSpec, SlideRole } from "../../domain/types.js";
 import type { VisualPlan } from "../../plan/visual-plan.js";
 import { readDeck } from "../../pptx/extract.js";
@@ -207,21 +208,17 @@ export function ingestDeckFromGeneration(
 
   const entries: DeckKnowledgeEntry[] = plan.slides.map((planSlide) => {
     const slide = specById.get(planSlide.slideId);
-    const contentItems = slide?.content
-      ? slide.content.kind === "sequence"
-        ? slide.content.steps
-        : slide.content.items
-      : [];
+    const nodes = contentItems(slide?.content);
     const text = [
       slide?.keyMessage ?? "",
       slide?.supportingMessage ?? "",
-      ...contentItems.map((i) => `${i.label} ${i.description ?? ""}`),
+      ...nodes.map((i) => `${i.label} ${i.description ?? ""}`),
       ...(slide?.evidence ?? []).map((e) => e.statement),
     ]
       .join("\n")
       .trim();
 
-    const elementCount = contentItems.length + (slide?.evidence.length ?? 0);
+    const elementCount = nodes.length + (slide?.evidence.length ?? 0);
     const density: DeckDensity =
       elementCount <= 2 ? "sparse" : elementCount >= 6 ? "dense" : "medium";
 
@@ -250,7 +247,7 @@ export function ingestDeckFromGeneration(
         ...(plan.templateId ? { templateId: plan.templateId } : {}),
         density,
       },
-      content: { text: text.slice(0, 20000), bulletCount: contentItems.length },
+      content: { text: text.slice(0, 20000), bulletCount: nodes.length },
       source: {
         file: sourceLabel,
         slideNumber: planSlide.slideNumber,

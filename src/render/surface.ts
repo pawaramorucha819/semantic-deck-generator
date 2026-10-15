@@ -180,6 +180,7 @@ export class SlideSurface implements RenderContext {
         color: this.color(style.line.color),
         width: style.line.width ?? this.theme.shape.borderWidth,
         dashType: style.line.dashType ?? "solid",
+        ...(style.line.endArrowType ? { endArrowType: style.line.endArrowType } : {}),
       };
     }
 

@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "日次リサーチ資料の人手レビュー記録。生成入力ではなく、CLIへの自動反映は行わない。",
+  "deckPath": "examples/research/nec-disaster-vlm-2026-10-14.json",
+  "reviewedAt": null,
+  "reviewer": null,
+  "artifacts": {
+    "visualPlanPath": null,
+    "renderReportPath": null,
+    "structureReviewPath": null,
+    "renderedPagesPath": null
+  },
+  "machineChecks": {
+    "schemaAndReferences": "not-run",
+    "duplicateLabels": "not-run",
+    "relationshipEdges": "not-run",
+    "layoutReport": "not-run",
+    "fallbackSelection": "not-run",
+    "findings": []
+  },
+  "humanReview": {
+    "sourceFactsAndAssumptions": "unreviewed",
+    "relationshipFaithfulness": "unreviewed",
+    "semanticMECE": "unverified",
+    "semanticMECERationale": null,
+    "scopeExclusionsAndUnknowns": "unreviewed",
+    "projectedReadability": "unreviewed",
+    "notesAndSourceLinks": "unreviewed",
+    "reviewPrompts": [
+      "544枚の平均と12事象の範囲が読み取れるか",
+      "約7時間→約45分が1枚5秒の換算で、実測ROIではないと読み取れるか",
+      "2027年度中を実用化目標として扱っているか",
+      "再現率の未記載を、このプレスリリースの範囲に限定しているか",
+      "SE・PMの提案とNECの出典事実が区別できるか",
+      "合流・工程・並列の図が、原文にない因果や循環を示していないか",
+      "分解基準に対する意味の重複・抜けと、除外範囲を説明できるか"
+    ]
+  },
+  "slideFeedback": [
+    {
+      "slideId": "nec-01-technologies",
+      "status": "unreviewed",
+      "finding": null,
+      "requestedChange": null,
+      "reasonOrSource": null,
+      "verifiedAfterChange": false
+    },
+    {
+      "slideId": "nec-02-learning-inputs",
+      "status": "unreviewed",
+      "finding": null,
+      "requestedChange": null,
+      "reasonOrSource": null,
+      "verifiedAfterChange": false
+    },
+    {
+      "slideId": "nec-03-confirmation-workload",
+      "status": "unreviewed",
+      "finding": null,
+      "requestedChange": null,
+      "reasonOrSource": null,
+      "verifiedAfterChange": false
+    },
+    {
+      "slideId": "nec-04-adoption-review",
+      "status": "unreviewed",
+      "finding": null,
+      "requestedChange": null,
+      "reasonOrSource": null,
+      "verifiedAfterChange": false
+    }
+  ],
+  "decision": "awaiting-human-review",
+  "nextRevisionGoal": null,
+  "revisionEffortMinutes": null,
+  "revisionEffortNote": "実測した場合のみ記入。未計測を0として扱わない。"
+}

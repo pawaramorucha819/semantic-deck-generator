@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRelationshipContent } from "../../domain/content.js";
 import { isMetric, type ContentItem, type Evidence, type SlideSpec } from "../../domain/types.js";
 import type { RenderContext } from "../../render/context.js";
 import { columns, splitTop, type Rect } from "../../render/geometry.js";
@@ -13,6 +14,10 @@ import {
 } from "../shared/semantics.js";
 
 export interface ReasonBinding {
+  /** Traceability metadata; rendering does not reinterpret these fields. */
+  nodeId?: string;
+  evidenceRefs?: string[];
+  members?: string[];
   index: number;
   label: string;
   description?: string;
@@ -37,6 +42,9 @@ export const ThreeReasonsBindingsSchema: z.ZodType<ThreeReasonsBindings> = z
       .array(
         z
           .object({
+            nodeId: z.string().min(1).max(120).optional(),
+            evidenceRefs: z.array(z.string().min(1).max(120)).min(1).max(8).optional(),
+            members: z.array(z.string().min(1).max(120)).max(1000).optional(),
             index: z.number().int().positive(),
             label: z.string().min(1),
             description: z.string().min(1).optional(),
@@ -56,6 +64,7 @@ type ReasonSource =
 
 /** 並列カードの素材。content.points があればそれを優先し、無ければ evidence を使う。 */
 function reasonSource(slide: SlideSpec): ReasonSource | undefined {
+  if (isRelationshipContent(slide.content)) return undefined;
   if (slide.content?.kind === "points") {
     const items = slide.content.items;
     if (items.length >= 2 && items.length <= 4) return { origin: "points", items };
@@ -163,6 +172,9 @@ export const threeReasonsPattern: VisualPattern<ThreeReasonsBindings> = {
               .filter(isMetric)
               .map((e) => formatValue(e.data.value, e.data.unit))[0];
             return {
+              ...(item.id !== undefined ? { nodeId: item.id } : {}),
+              ...(item.evidenceRefs !== undefined ? { evidenceRefs: [...item.evidenceRefs] } : {}),
+              ...(item.members !== undefined ? { members: [...item.members] } : {}),
               index: i + 1,
               label: item.label,
               description: item.description,

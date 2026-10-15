@@ -1,3 +1,4 @@
+import { builtinPatterns } from "../src/patterns/registry.js";
 import { describe, expect, it } from "vitest";
 import { beforeAfterPattern } from "../src/patterns/before-after/index.js";
 import { messageOnlyPattern } from "../src/patterns/message-only/index.js";
@@ -79,7 +80,7 @@ describe("Visual Pattern Selector", () => {
   it("全候補がスコア降順で返る", async () => {
     const spec = await loadExample();
     const { candidates } = selectPattern(spec.slides[1]!);
-    expect(candidates.length).toBe(6);
+    expect(candidates.length).toBe(builtinPatterns.length);
     for (let i = 1; i < candidates.length; i += 1) {
       expect(candidates[i - 1]!.score).toBeGreaterThanOrEqual(candidates[i]!.score);
     }

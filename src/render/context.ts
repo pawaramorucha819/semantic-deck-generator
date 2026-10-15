@@ -71,6 +71,8 @@ export interface ShapeStyle {
     /** pt */
     width?: number;
     dashType?: "solid" | "dash" | "lgDash" | "sysDot";
+    /** Native editable connector direction, used for semantic relationships. */
+    endArrowType?: "triangle";
   };
   /** 0.0 - 1.0（roundRect のみ） */
   cornerRadius?: number;

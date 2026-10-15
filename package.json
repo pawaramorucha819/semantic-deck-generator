@@ -8,14 +8,18 @@
     "node": ">=20"
   },
   "scripts": {
-    "generate": "tsx src/cli/generate.ts",
-    "sdg": "tsx src/cli/main.ts",
-    "example": "tsx src/cli/generate.ts examples/inventory-system.json",
-    "example:enterprise": "tsx src/cli/main.ts generate examples/enterprise/presentation.json --config examples/enterprise/generation.config.json",
+    "generate": "node --import tsx src/cli/generate.ts",
+    "sdg": "node --import tsx src/cli/main.ts",
+    "example": "node --import tsx src/cli/generate.ts examples/inventory-system.json",
+    "example:enterprise": "node --import tsx src/cli/main.ts generate examples/enterprise/presentation.json --config examples/enterprise/generation.config.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "example:relationships": "node --import tsx src/cli/main.ts generate examples/relationships/six-relationships.json --no-title-slide --report --strict --theme portable",
+    "example:research": "node --import tsx src/cli/main.ts generate examples/research/nec-disaster-vlm-2026-10-14.json --no-title-slide --report --strict --theme portable",
+    "preview": "node scripts/preview-pptx.mjs",
+    "check": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "jszip": "^3.10.1",

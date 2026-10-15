@@ -24,6 +24,7 @@ import {
   type SlideRenderReport,
 } from "./render/renderer.js";
 import type { LayoutIssue } from "./render/validate.js";
+import { buildStructureReview } from "./review/structure.js";
 import {
   defaultTemplateRegistry,
   type TemplateRegistry,
@@ -88,6 +89,8 @@ export interface GenerateFilesResult extends GenerateResult {
   planPath: string;
   /** --report 指定時のみ */
   reportPath?: string;
+  /** --report also records semantic decomposition and relationship review. */
+  structureReviewPath?: string;
   /** --advisor-report 指定時のみ */
   advisorReportPath?: string;
 }
@@ -216,9 +219,12 @@ export async function generateFromFile(
   await writeFile(planPath, serializeVisualPlan(result.plan), "utf8");
 
   let reportPath: string | undefined;
+  let structureReviewPath: string | undefined;
   if (options.writeReport) {
     reportPath = join(outDir, `${stem}.render-report.json`);
     await writeFile(reportPath, serializeRenderReport(result.renderReport), "utf8");
+    structureReviewPath = join(outDir, `${stem}.structure-review.json`);
+    await writeFile(structureReviewPath, `${JSON.stringify(buildStructureReview(spec, result.plan), null, 2)}\n`, "utf8");
   }
 
   let advisorReportPath: string | undefined;
@@ -233,6 +239,7 @@ export async function generateFromFile(
     pptxPath,
     planPath,
     ...(reportPath ? { reportPath } : {}),
+    ...(structureReviewPath ? { structureReviewPath } : {}),
     ...(advisorReportPath ? { advisorReportPath } : {}),
   };
 }

@@ -45,6 +45,12 @@ AI は「安全と分かっている候補の中から推薦する」役割だ�
                       PPTX
 ```
 
+## ボディ分解と六つの情報関係
+
+`npm run example:relationships` で六関係のPPTX、`npm run example:research` で出典付きの実資料を生成できます。
+分解の対象範囲・軸・未確認事項、任意の有限集合による重複/漏れの検査を追加しました。
+意味上のMECEは自動認定しません。詳しくは [実行・レビュー手順](docs/semantic-body-workflow.md) と [学びの反映状況](docs/learning-coverage.json) を参照してください。
+
 ---
 
 ## 目次
@@ -179,7 +185,7 @@ LLM に PPTX を直接書かせると、次の問題がまとめて発生しま�
 }
 ```
 
-`content.kind` は `sequence`（順序あり）と `points`（並列）の 2 種。
+`content.kind` は `sequence`（順序あり）、`points`（並列）、`distribution`（一対多）、`convergence`（多対一）、`cycle`（閉じた反復）、`context`（共通の環境）の6種。
 各項目は `evidenceRefs` で `evidence[].id` を参照でき（未定義参照は検証エラー）、
 「見せる項目」と「それを裏付ける根拠」を分離したまま接続できます。
 

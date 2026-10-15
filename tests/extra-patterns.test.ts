@@ -113,7 +113,7 @@ describe("ChartWithMessage", () => {
     expect(result.compatible).toBe(false);
   });
 
-  it("buildBindings がカテゴリ・系列・変化量を作る", () => {
+  it("buildBindings がカテゴリ・系列を作り、時系列指定なしでは変化量を推測しない", () => {
     const bindings = chartWithMessagePattern.buildBindings(
       comparisonSlide,
       "standard",
@@ -125,7 +125,7 @@ describe("ChartWithMessage", () => {
     // 系列名は凡例に収まるよう切り詰められる
     expect(bindings.chart.series[0]!.name).toBe("コストは3,800万円から4,800万円へ増加…");
     expect(bindings.chart.unit).toBe("万円");
-    expect(bindings.changeText).toBe("3,800万円 → 4,800万円 (+26.3%)");
+    expect(bindings.changeText).toBeUndefined();
   });
 });
 
@@ -153,6 +153,7 @@ describe("ネイティブグラフの出力", () => {
     const { pptx } = renderVisualPlan(plan);
     const { slideXmls } = await readPptx(await toPptxBuffer(pptx));
     const texts = extractTexts(slideXmls[1]!).join("\n");
-    expect(texts).toContain("3,800万円 → 4,800万円 (+26.3%)");
+    expect(texts).toContain("在庫管理関連コストは2022年度の3,800万円から2024年度は4,800万円へ増加している");
+    expect(texts).not.toContain("3,800万円 → 4,800万円 (+26.3%)");
   });
 });

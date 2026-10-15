@@ -1,9 +1,18 @@
 import { z } from "zod";
-import type { SlideSpec } from "../../domain/types.js";
+import { contentItemEntries, isRelationshipContent } from "../../domain/content.js";
+import { LOGICAL_RELATIONS, type ContentItem, type SemanticContent, type SlideSpec } from "../../domain/types.js";
 import type { RenderContext } from "../../render/context.js";
 import { splitBottom, splitTop, type Rect } from "../../render/geometry.js";
 import type { MatchResult, VisualPattern } from "../pattern.js";
 import { buildSourceText, evidenceDetail, roleLabel, truncate } from "../shared/semantics.js";
+
+export interface StructureNodeBinding {
+  /** Original path relative to content; retained only for traceability. */
+  path: Array<string | number>;
+  nodeId?: string;
+  evidenceRefs?: string[];
+  members?: string[];
+}
 
 export interface MessageOnlyBindings {
   eyebrow?: string;
@@ -12,6 +21,9 @@ export interface MessageOnlyBindings {
   /** 補足として並べる短い一文（最大 3 件） */
   points?: string[];
   sourceText?: string;
+  /** Explicit text representation of semantic content; contains all nodes without truncation. */
+  structureText?: string;
+  structureNodes?: StructureNodeBinding[];
 }
 
 export const MessageOnlyBindingsSchema: z.ZodType<MessageOnlyBindings> = z
@@ -21,6 +33,13 @@ export const MessageOnlyBindingsSchema: z.ZodType<MessageOnlyBindings> = z
     subline: z.string().min(1).optional(),
     points: z.array(z.string().min(1)).min(1).max(3).optional(),
     sourceText: z.string().min(1).optional(),
+    structureText: z.string().min(1).optional(),
+    structureNodes: z.array(z.object({
+      path: z.array(z.union([z.string().min(1), z.number().int().nonnegative()])).min(1).max(2),
+      nodeId: z.string().min(1).max(120).optional(),
+      evidenceRefs: z.array(z.string().min(1).max(120)).min(1).max(8).optional(),
+      members: z.array(z.string().min(1).max(120)).max(1000).optional(),
+    }).strict()).min(1).max(6).optional(),
   })
   .strict();
 
@@ -41,19 +60,7 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
   fallback: true,
 
   compatibility: {
-    logicalRelations: [
-      "claim_evidence",
-      "comparison",
-      "before_after",
-      "cause_effect",
-      "process",
-      "timeline",
-      "hierarchy",
-      "composition",
-      "correlation",
-      "problem_solution",
-      "pros_cons",
-    ],
+    logicalRelations: [...LOGICAL_RELATIONS],
   },
 
   bindingsSchema: MessageOnlyBindingsSchema,
@@ -83,6 +90,9 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
       reasons.push("keyMessage が短く大きく見せられる");
     }
 
+    if (slide.content && requiresFullContentText(slide.content)) {
+      reasons.push(`content.${slide.content.kind} は図解ではなく全項目を保持した構造のテキスト表示へ退避する。長文は縮小され、可読性は Render Report で検査する`);
+    }
     if (reasons.length === 0) reasons.push("常に適用可能な既定表現");
 
     return {
@@ -93,6 +103,16 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
   },
 
   buildBindings(slide: SlideSpec): MessageOnlyBindings {
+    if (slide.content && requiresFullContentText(slide.content)) {
+      return {
+        eyebrow: roleLabel(slide.slideRole),
+        headline: slide.keyMessage,
+        subline: slide.supportingMessage,
+        structureText: describeContent(slide.content),
+        structureNodes: structureNodes(slide.content),
+        sourceText: buildSourceText(slide),
+      };
+    }
     // 補足行: content があれば content を、無ければ evidence の要約を使う
     const contentItems =
       slide.content?.kind === "points"
@@ -104,7 +124,6 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
     const points =
       contentItems.length > 0
         ? contentItems
-            .slice(0, 3)
             .map((item) =>
               item.description ? `${item.label}：${item.description}` : item.label,
             )
@@ -118,11 +137,17 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
       headline: slide.keyMessage,
       subline: slide.supportingMessage,
       points: points.length > 0 ? points : undefined,
+      ...(slide.content && contentItems.some((item) => item.id !== undefined || item.evidenceRefs !== undefined || item.members !== undefined)
+        ? { structureNodes: structureNodes(slide.content) } : {}),
       sourceText: buildSourceText(slide),
     };
   },
 
   render(b: MessageOnlyBindings, ctx: RenderContext): void {
+    if (b.structureText) {
+      renderStructureText(b, ctx);
+      return;
+    }
     const { theme, frame } = ctx;
 
     // 出典行を先に確保
@@ -260,3 +285,61 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
     });
   },
 };
+
+function requiresFullContentText(content?: SemanticContent): boolean {
+  return isRelationshipContent(content) || contentItemEntries(content).length > 3;
+}
+
+function structureNodes(content: SemanticContent): StructureNodeBinding[] {
+  return contentItemEntries(content).map(({ item, path }) => ({
+    path: [...path],
+    ...(item.id !== undefined ? { nodeId: item.id } : {}),
+    ...(item.evidenceRefs !== undefined ? { evidenceRefs: [...item.evidenceRefs] } : {}),
+    ...(item.members !== undefined ? { members: [...item.members] } : {}),
+  }));
+}
+
+/** Full-content emergency expression; small legacy point summaries retain their original layout. */
+function describeContent(content: SemanticContent): string {
+  const describe = (item: ContentItem): string =>
+    item.description ? `${item.label}：${item.description}` : item.label;
+  const list = (items: ContentItem[], ordered = false): string =>
+    items.map((item, index) => `${ordered ? `${index + 1}.` : "•"} ${describe(item)}`).join("\n");
+  switch (content.kind) {
+    case "points":
+      return `構造のテキスト表示：並列項目（順序を意味しない）\n${list(content.items)}`;
+    case "sequence":
+      return `構造のテキスト表示：順序（この順番で進む）\n${list(content.steps, true)}`;
+    case "distribution":
+      return `構造のテキスト表示：分配（1 対多）\n起点：${describe(content.center)}\n分配先（すべて同じ起点から）：\n${list(content.items)}`;
+    case "convergence":
+      return `構造のテキスト表示：集約（多対 1）\n入力（すべて同じ到達点へ）：\n${list(content.inputs)}\n到達点：${describe(content.outcome)}`;
+    case "cycle":
+      return `構造のテキスト表示：循環（この順番で進み、最終工程から最初へ戻る）\n${list(content.steps, true)}`;
+    case "context":
+      return `構造のテキスト表示：共有環境\n環境：${describe(content.environment)}\nこの環境を共有する項目（順序・因果は意味しない）：\n${list(content.items)}`;
+  }
+}
+
+/** Bounded boxes keep every character; unusually dense text is flagged by layout validation. */
+function renderStructureText(b: MessageOnlyBindings, ctx: RenderContext): void {
+  const { frame, theme } = ctx;
+  const gap = Math.min(theme.spacing.sm, frame.h * 0.02);
+  let remaining = frame;
+  if (b.sourceText) {
+    const [footer, rest] = splitBottom(remaining, frame.h * 0.1, gap);
+    ctx.text(footer, b.sourceText, { role: "caption", color: "mutedText", shrink: true, name: "source" });
+    remaining = rest;
+  }
+  const [headline, afterHeadline] = splitTop(remaining, frame.h * 0.18, gap);
+  ctx.text(headline, b.headline, { role: "keyMessage", color: "text", bold: true, shrink: true, name: "key-message" });
+  remaining = afterHeadline;
+  if (b.subline) {
+    const [subline, rest] = splitTop(remaining, frame.h * 0.15, gap);
+    ctx.text(subline, b.subline, { role: "body", color: "mutedText", shrink: true, name: "supporting-message" });
+    remaining = rest;
+  }
+  ctx.text(remaining, b.structureText!, {
+    role: "body", color: "text", lineHeight: 1.25, shrink: true, name: "relationship-text-fallback",
+  });
+}

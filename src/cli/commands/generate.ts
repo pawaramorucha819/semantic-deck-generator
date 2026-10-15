@@ -38,7 +38,7 @@ Options
   --section <slideId>   そのスライドを章扉 (section master) にする (複数可)
   --no-title-slide      表紙を付けない
   --no-candidates       Visual Plan に候補一覧を含めない
-  --report              Render Report を書き出す
+  --report              配置と意味構造の Review Report を書き出す
   --advisor-report      Advisor Report（候補・参照・AI 推薦の詳細）を書き出す
   --strict              レイアウト警告が 1 件でもあれば終了コード 1
   --quiet               ログを最小限にする
@@ -213,6 +213,7 @@ export async function runGenerate(argv: readonly string[]): Promise<number> {
   console.log(`生成: ${rel(result.pptxPath)} (${(result.pptxBuffer.length / 1024).toFixed(1)} KB)`);
   console.log(`生成: ${rel(result.planPath)}`);
   if (result.reportPath) console.log(`生成: ${rel(result.reportPath)}`);
+  if (result.structureReviewPath) console.log(`生成: ${rel(result.structureReviewPath)}`);
   if (result.advisorReportPath) console.log(`生成: ${rel(result.advisorReportPath)}`);
 
   if (errors.length > 0) return 1;
