@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "sourceHash": "534852a463461724a9184daa06d40c292b595bbf4af5838c6c1f88cef4b4a39c",
+  "draftHash": "429291f7a53713b65841aa19e7ce07a9ede85983aea8ca45d78d3423b934551f",
+  "decision": "approve",
+  "actor": {
+    "kind": "assistant",
+    "id": "independent-assistant-review"
+  },
+  "rationale": "固定した調査メモ、分解候補、各引用と関係、対象外事項を独立したアシスタントが確認した。これは限定された構造化案のコンパイル許可であり、ユーザー承認・原典の逐語一致・意味上のMECEの認証ではない。",
+  "dispositions": [
+    {
+      "id": "semantic-support",
+      "decision": "accepted-limitation",
+      "reason": "各ラベルと要旨は固定した調査メモの意味を保つ。合流は二つの情報の共通の学習先を示す解釈であり、効果の証明やNEC原文の逐語引用という主張ではない。"
+    },
+    {
+      "id": "semantic-mece",
+      "decision": "accepted-limitation",
+      "reason": "対象文に明記された二つの入力種別だけを整理する。学習入力全体の網羅性や意味上の排他性は保証しない。"
+    },
+    {
+      "id": "gap:69:72",
+      "decision": "accepted-limitation",
+      "reason": "「では、」は文法上の接続で、relation.spansとmessageSourcesの引用に残っている。別の概念ノードとしては表示しない。"
+    },
+    {
+      "id": "gap:87:89",
+      "decision": "accepted-limitation",
+      "reason": "「と、」は二つの情報の並列を示す接続詞であり、図の二入力として表現している。"
+    },
+    {
+      "id": "gap:106:110",
+      "decision": "accepted-limitation",
+      "reason": "「を使う。」という利用関係は要旨・継続学習ノードの説明・関係選択理由に保持している。独立した入力ノードにはしない。"
+    },
+    {
+      "id": "question:1",
+      "decision": "accepted-limitation",
+      "reason": "具体的な学習手順と精度は未確認のまま残し、この図で保証しない。対象外の発表概要・実用化目標についても達成済みとは解釈しない。"
+    }
+  ]
+}

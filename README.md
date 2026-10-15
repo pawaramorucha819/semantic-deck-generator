@@ -51,6 +51,13 @@ AI は「安全と分かっている候補の中から推薦する」役割だ�
 分解の対象範囲・軸・未確認事項、任意の有限集合による重複/漏れの検査を追加しました。
 意味上のMECEは自動認定しません。詳しくは [実行・レビュー手順](docs/semantic-body-workflow.md) と [学びの反映状況](docs/learning-coverage.json) を参照してください。
 
+### 原文からレビュー可能な分解候補へ
+
+`structure prepare/import/replay/review/compile` で、固定した本文・各ノードの引用・分解理由・明示レビューを一組として検査できます。
+`npm run example:decomposition` はNECの調査メモと保存済みのアシスタント分解案を、APIキーなしで再生しPPTXにします。
+自然文の意味判断は人/アシスタントの担当で、CLIが自動理解したとは扱いません。新しい入口は単一階層の説明ボディ（`evidence: []`）に限定します。
+詳細とレビューの境界は [原文→分解→レビューの手順](docs/body-decomposition.md) を参照してください。
+
 ---
 
 ## 目次

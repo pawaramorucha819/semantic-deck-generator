@@ -18,6 +18,7 @@
     "build": "tsc -p tsconfig.build.json",
     "example:relationships": "node --import tsx src/cli/main.ts generate examples/relationships/six-relationships.json --no-title-slide --report --strict --theme portable",
     "example:research": "node --import tsx src/cli/main.ts generate examples/research/nec-disaster-vlm-2026-10-14.json --no-title-slide --report --strict --theme portable",
+    "example:decomposition": "node scripts/example-decomposition.mjs",
     "preview": "node scripts/preview-pptx.mjs",
     "check": "npm run typecheck && npm test && npm run build"
   },
