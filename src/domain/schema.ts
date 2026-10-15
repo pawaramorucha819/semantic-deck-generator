@@ -201,6 +201,7 @@ export const SlideExplanationSchema = z.object({
   sections: z.array(z.object({
     heading: nonEmpty("explanation.heading", 80),
     body: nonEmpty("explanation.body", 1200),
+    nodeRefs: z.array(nonEmpty("explanation.nodeRefs[]", 120)).min(1).max(12).refine(refs => new Set(refs).size === refs.length, "説明の参照は重複できません").optional(),
   }).strict()).min(1).max(3),
 }).strict();
 
@@ -241,6 +242,14 @@ export const SlideSpecSchema = z
             message: `未定義の sourceId を参照しています: ${ref}`,
           });
         }
+      }
+    });
+
+    const explicitNodeIds = new Set(contentItemEntries(slide.content).map(({ item }) => item.id).filter(Boolean));
+    slide.explanation?.sections.forEach((section, index) => {
+      for (const ref of section.nodeRefs ?? []) {
+        if (!explicitNodeIds.has(ref)) ctx.addIssue({ code: z.ZodIssueCode.custom,
+          path: ["explanation", "sections", index, "nodeRefs"], message: `未定義の説明対象 node ID: ${ref}` });
       }
     });
 

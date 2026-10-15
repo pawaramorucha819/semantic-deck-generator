@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "実在する公式発表を用いた資料のアシスタント評価記録。ユーザーのフィードバック・品質承認ではない。",
+  "deckPath": "examples/research/github-security-explained-2026-10-16.json",
+  "reviewedAt": "2026-10-16",
+  "reviewer": "authoring assistant and independent reader assistant",
+  "artifacts": {
+    "visualPlanPath": "examples/research/generated/github-security-explained-2026-10-16.visual-plan.json",
+    "renderReportPath": "examples/research/generated/github-security-explained-2026-10-16.render-report.json",
+    "structureReviewPath": "examples/research/generated/github-security-explained-2026-10-16.structure-review.json",
+    "renderedPagesPath": ".preview/github-security-explained-2026-10-16/",
+    "pdfPath": ".preview/github-security-explained-2026-10-16/github-security-explained-2026-10-16.pdf"
+  },
+  "machineChecks": {
+    "schemaAndReferences": "passed",
+    "duplicateLabels": "passed",
+    "relationshipEdges": "passed",
+    "layoutReport": "passed: zero issues",
+    "fallbackSelection": "none",
+    "findings": [
+      "8ページを --ai-mode off --strict で生成。",
+      "エンジンのコード変更なし。保存前の型検査と651テスト（27ファイル）が成功。"
+    ]
+  },
+  "humanReview": {
+    "sourceFactsAndAssumptions": "assistant-reviewed",
+    "relationshipFaithfulness": "assistant-reviewed",
+    "semanticMECE": "unverified",
+    "semanticMECERationale": "二つの製品の役割を並列に示し、それぞれの入力・処理・人の判断を独立した工程にする。セキュリティ業務全体の網羅は主張しない。",
+    "scopeExclusionsAndUnknowns": "assistant-reviewed",
+    "projectedReadability": "PDF/PNG inspected, physical projection unverified",
+    "notesAndSourceLinks": "visible announcement and core Docs URLs checked; notes include detailed sources",
+    "reviewPrompts": [
+      "AI ScanとAgentic autofixを直接接続する誤解がないか。",
+      "PRだけの指摘・助言・取り込み非阻止が説明できるか。",
+      "検証できるルール群と、人が残す確認の違いが説明できるか。",
+      "個人非公開リポジトリの除外と費用条件が分かるか。",
+      "組織単位の有効化が個別除外より先に費用を生み得ると分かるか。",
+      "PDFだけで公式の詳細条件へたどれるか。"
+    ]
+  },
+  "slideFeedback": [
+    {
+      "slideId": "github-07 / github-08",
+      "status": "resolved",
+      "finding": "初版PDFには詳細Docsへの可視URLがなく、PPTXノートだけに依存していた。",
+      "requestedChange": "可読性を保った出典付録を追加する。",
+      "reasonOrSource": "Independent assistant reader review of the PDF",
+      "verifiedAfterChange": true
+    },
+    {
+      "slideId": "github-06",
+      "status": "resolved",
+      "finding": "組織全体へのAI Scanの即時適用と、個別除外前の費用発生を明記する必要があった。",
+      "requestedChange": "有効化前の管理者による適用範囲・請求・除外手順の確認を可視本文に追加する。",
+      "reasonOrSource": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections#enabling-ai-scan",
+      "verifiedAfterChange": true
+    }
+  ],
+  "decision": "passed-independent-assistant-rereview; not-user-approval",
+  "nextRevisionGoal": null,
+  "revisionEffortMinutes": null,
+  "revisionEffortNote": "修正時間は未計測。",
+  "limitations": [
+    "PowerPointネイティブ表示、実機投影は未確認。",
+    "LibreOfficeでPDF化し、全8ページを画像で確認。",
+    "PDFの出典URLはコピー可能だがクリック用注釈はない。",
+    "利用者のリポジトリの適格性・設定・実費は未確認。製品機能の有効化・試用は実施していない。",
+    "初稿の7ページから、PDF単独で出典を読めるよう8ページへ増やした。"
+  ],
+  "futureImprovements": [
+    {
+      "proposal": "出典URLをPDFでもクリックできるリンクとして生成し、リンクと可視ラベルが保持される回帰テストを追加する。",
+      "basis": "今回のPDFはURLコピーに対応するがリンク注釈がない。",
+      "status": "proposed; not implemented"
+    },
+    {
+      "proposal": "設定の適用範囲・課金開始点・除外手順を調査資料のレビュー項目へ追加する。",
+      "basis": "単一リポジトリ試行のつもりでも組織全体に設定が適用されるという読み落としを読者レビューで検出した。",
+      "status": "proposed; not implemented"
+    }
+  ]
+}

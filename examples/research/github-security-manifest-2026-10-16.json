@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "inputPath": "examples/research/github-security-explained-2026-10-16.json",
+  "inputSha256": "aa6eaf839b61e536d67fa2e1f4095406a5178f3356d3c32947aed69d81328b71",
+  "generatorRevision": "9eec8ed36ba11511e3386ef6608f24c7c80e0ecc",
+  "generatorRevisionScope": "PR #1 feature branch; main not merged",
+  "pageCount": 8,
+  "generationCommand": "npm run sdg -- generate examples/research/github-security-explained-2026-10-16.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated",
+  "previewCommand": "npm run preview -- examples/research/generated/github-security-explained-2026-10-16.pptx .preview/github-security-explained-2026-10-16",
+  "referenceArtifacts": [
+    {
+      "path": "examples/research/generated/github-security-explained-2026-10-16.pptx",
+      "bytes": 205007,
+      "sha256": "774df53fc5d3a7b8a8c69a028da4c69dfcb65c8f25c58b02bb67a66c17936950"
+    },
+    {
+      "path": ".preview/github-security-explained-2026-10-16/github-security-explained-2026-10-16.pdf",
+      "bytes": 256373,
+      "sha256": "e66c148f404685657666c09fad7dfa7f86c3ab348df09227caad69539b9fb165"
+    }
+  ],
+  "hashNote": "Reference hashes identify reviewed exports. Regenerated archives may differ in metadata; no byte-for-byte reproducibility claim."
+}

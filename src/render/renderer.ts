@@ -256,7 +256,7 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
     if (planSlide.explanation) {
       surface.layoutBody = (body) => {
         if (++explanationCompositions !== 1) throw new Error("Pattern composed visible explanation more than once");
-        try { return drawExplanation(surface, body, planSlide.explanation!); }
+        try { return drawExplanation(surface, body, planSlide.explanation!, ["process", "three-reasons", "message-only"].includes(pattern.id)); }
         catch (error) { throw new Error(`Slide '${planSlide.slideId}': ${error instanceof Error ? error.message : String(error)}`); }
       };
     }

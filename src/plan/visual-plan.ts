@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveExplanationLinks } from "./explanation-links.js";
 import { SourceSchema, SlideExplanationSchema } from "../domain/schema.js";
 import type { PresentationSpec, SlideSpec, SlideExplanation, Source } from "../domain/types.js";
 import type { AnyVisualPattern } from "../patterns/pattern.js";
@@ -196,6 +197,7 @@ function planSlideFromDecision(
   includeCandidates: boolean,
   decision: SlideDecision,
 ): VisualPlanSlide {
+  slide = resolveExplanationLinks(slide);
   const notes: string[] = [];
 
   let patternId = decision.patternId;

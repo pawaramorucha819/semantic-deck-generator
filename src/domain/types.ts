@@ -214,7 +214,7 @@ export interface Decomposition {
 /** Visible, reader-facing explanations. Facts and interpretations remain author responsibility. */
 export interface SlideExplanation {
   readerQuestion: string;
-  sections: Array<{ heading: string; body: string }>;
+  sections: Array<{ heading: string; body: string; nodeRefs?: string[] }>;
 }
 
 export interface SlideSpec {
