@@ -18,3 +18,13 @@ jobs:
       - run: npm run check
       - run: npm run example:relationships
       - run: npm run example:research
+      - name: Upload reproducible sample decks and reports
+        if: matrix.node == 20
+        uses: actions/upload-artifact@v4
+        with:
+          name: semantic-deck-samples
+          path: |
+            examples/relationships/generated/
+            examples/research/generated/
+          if-no-files-found: error
+          retention-days: 14

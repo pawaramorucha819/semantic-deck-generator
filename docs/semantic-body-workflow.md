@@ -77,6 +77,10 @@ npm run preview -- examples/research/generated/nec-disaster-vlm-2026-10-14.pptx 
 Windows + PowerPoint では既存の `scripts/preview-pptx.ps1` も使える。
 このマイルストーンの画像確認は LibreOffice 出力で行った。PowerPoint ネイティブ表示は別途確認が必要。
 
+GitHub Actions の成功した実行には `semantic-deck-samples` Artifact を14日間保存する。
+中身は同じ入力から生成した編集可能な PPTX と各 JSON レポート。リポジトリへのアクセス権がある人がダウンロードできる。
+CI にはプレビュー用の外部ソフトを追加していないため、PDF は含まない。
+
 `--report` は以下を出力する。
 
 - `.pptx`: 編集可能な図形・テキスト。根拠全文と URL はスピーカーノート
