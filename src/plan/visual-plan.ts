@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { SourceSchema } from "../domain/schema.js";
-import type { PresentationSpec, SlideSpec, Source } from "../domain/types.js";
+import { SourceSchema, SlideExplanationSchema } from "../domain/schema.js";
+import type { PresentationSpec, SlideSpec, SlideExplanation, Source } from "../domain/types.js";
 import type { AnyVisualPattern } from "../patterns/pattern.js";
 import { defaultRegistry, PatternRegistry } from "../patterns/registry.js";
 import { selectPattern, type PatternEvaluation } from "../selector/selector.js";
@@ -57,6 +57,8 @@ export interface VisualPlanSlide {
    * 形は各 Pattern の `bindingsSchema` が定義し、生成時・再生時の両方で検証される。
    */
   bindings: unknown;
+  /** Visible reading content, composed outside the selected diagram. */
+  explanation?: SlideExplanation;
   /** 出典・根拠の構造化された記録（→ スピーカーノート / 検証用） */
   provenance?: SlideProvenance;
   /** デバッグ用: 全 Pattern の評価結果（スコア降順） */
@@ -253,6 +255,7 @@ function planSlideFromDecision(
     reason: decision.reason,
     fallbackUsed,
     bindings,
+    ...(slide.explanation ? { explanation: SlideExplanationSchema.parse(slide.explanation) } : {}),
     ...(provenance ? { provenance } : {}),
     ...(includeCandidates ? { candidates: decision.candidates } : {}),
     ...(notes.length > 0 ? { notes } : {}),
@@ -375,6 +378,7 @@ const VisualPlanSlideShape = z
     reason: z.string(),
     fallbackUsed: z.boolean(),
     bindings: z.unknown(),
+    explanation: SlideExplanationSchema.optional(),
     provenance: z
       .object({
         sources: z.array(SourceSchema),
@@ -480,6 +484,9 @@ export function parseVisualPlan(
       );
     }
 
+    if (slide.explanation && !pattern.supportsExplanatoryLayout) {
+      throw new VisualPlanValidationError(`slide ${slide.slideId}: Pattern '${slide.patternId}' does not support visible explanation; choose a supported pattern`);
+    }
     const bindings = pattern.bindingsSchema.safeParse(slide.bindings);
     if (!bindings.success) {
       const issues = bindings.error.issues

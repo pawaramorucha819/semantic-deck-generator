@@ -45,6 +45,7 @@ export const BigNumberBindingsSchema: z.ZodType<BigNumberBindings> = z
  * 「metric が 1 件しかない」＝ 図解する構造が無いが数字は強い、という意味構造に対応する。
  */
 export const bigNumberPattern: VisualPattern<BigNumberBindings> = {
+  supportsExplanatoryLayout: true,
   id: "big-number",
   version: "1.0.0",
   description: "1 つの重要な数値を巨大に見せ、右側に読み取り方を添える。",

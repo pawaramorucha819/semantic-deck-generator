@@ -4,6 +4,7 @@ import { LOGICAL_RELATIONS, type ContentItem, type SemanticContent, type SlideSp
 import type { RenderContext } from "../../render/context.js";
 import { splitBottom, splitTop, type Rect } from "../../render/geometry.js";
 import type { MatchResult, VisualPattern } from "../pattern.js";
+import { drawHeader, drawFooter } from "../shared/layout.js";
 import { buildSourceText, evidenceDetail, roleLabel, truncate } from "../shared/semantics.js";
 
 export interface StructureNodeBinding {
@@ -53,6 +54,7 @@ const STRONG_ROLES = new Set(["recommendation", "decision", "summary", "insight"
  * render() 側がフォントサイズを段階的に下げて必ず収める。
  */
 export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
+  supportsExplanatoryLayout: true,
   id: "message-only",
   version: "1.1.0",
   description: "KeyMessage を大きく主役として見せる。適合する Pattern がない場合の受け皿。",
@@ -90,7 +92,7 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
       reasons.push("keyMessage が短く大きく見せられる");
     }
 
-    if (slide.content && requiresFullContentText(slide.content)) {
+    if (slide.content && (slide.explanation || requiresFullContentText(slide.content))) {
       reasons.push(`content.${slide.content.kind} は図解ではなく全項目を保持した構造のテキスト表示へ退避する。長文は縮小され、可読性は Render Report で検査する`);
     }
     if (reasons.length === 0) reasons.push("常に適用可能な既定表現");
@@ -103,7 +105,7 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
   },
 
   buildBindings(slide: SlideSpec): MessageOnlyBindings {
-    if (slide.content && requiresFullContentText(slide.content)) {
+    if (slide.content && (slide.explanation || requiresFullContentText(slide.content))) {
       return {
         eyebrow: roleLabel(slide.slideRole),
         headline: slide.keyMessage,
@@ -128,8 +130,8 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
               item.description ? `${item.label}：${item.description}` : item.label,
             )
         : slide.evidence
-            .slice(0, 2)
-            .map((e) => truncate(evidenceDetail(e), 60))
+            .slice(0, slide.explanation ? undefined : 2)
+            .map((e) => slide.explanation ? evidenceDetail(e) : truncate(evidenceDetail(e), 60))
             .filter((p) => p.length > 0);
 
     return {
@@ -144,6 +146,18 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
   },
 
   render(b: MessageOnlyBindings, ctx: RenderContext): void {
+    if (ctx.layoutBody) {
+      const body = drawFooter(ctx, drawHeader(ctx, b), b.sourceText);
+      const text = b.structureText ?? (b.points ?? []).join("\n\n");
+      if (text) {
+        const fontSize = Math.max(14, ctx.theme.fontSizes.body);
+        if (ctx.measureText(text, { widthIn: body.w, fontSize, lineHeight: 1.3 }) > body.h) {
+          throw new Error("Explanatory fallback body overflows; split the slide");
+        }
+        ctx.text(body, text, { fontSize, lineHeight: 1.3, shrink: false, name: "explanatory-body" });
+      }
+      return;
+    }
     if (b.structureText) {
       renderStructureText(b, ctx);
       return;

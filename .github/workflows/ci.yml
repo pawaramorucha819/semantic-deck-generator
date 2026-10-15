@@ -18,6 +18,7 @@ jobs:
       - run: npm run check
       - run: npm run example:relationships
       - run: npm run example:research
+      - run: npm run example:explanatory
       - run: npm run example:decomposition
       - name: Upload reproducible sample decks and reports
         if: matrix.node == 20

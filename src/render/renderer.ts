@@ -25,6 +25,7 @@ import {
 } from "../templates/template.js";
 import { getTheme, normalizeHex, resolveTheme, type PresentationTheme, type ResolvedTheme } from "../theme/theme.js";
 import { rect, type Rect } from "./geometry.js";
+import { drawExplanation } from "./explanation.js";
 import { SlideSurface, type Placement } from "./surface.js";
 import { validatePlacements, type LayoutIssue } from "./validate.js";
 
@@ -251,7 +252,23 @@ export function renderVisualPlan(plan: VisualPlan, options: RenderOptions = {}):
       ...(assets ? { assets } : {}),
     });
 
+    let explanationCompositions = 0;
+    if (planSlide.explanation) {
+      surface.layoutBody = (body) => {
+        if (++explanationCompositions !== 1) throw new Error("Pattern composed visible explanation more than once");
+        try { return drawExplanation(surface, body, planSlide.explanation!); }
+        catch (error) { throw new Error(`Slide '${planSlide.slideId}': ${error instanceof Error ? error.message : String(error)}`); }
+      };
+    }
     pattern.render(planSlide.bindings, surface);
+    if (planSlide.explanation) {
+      if (explanationCompositions !== 1) throw new Error(`Pattern '${pattern.id}' did not render visible explanation`);
+      const failures = validatePlacements(surface.placements, {
+        slideId: planSlide.slideId, slideNumber: planSlide.slideNumber,
+        patternId: planSlide.patternId, canvas, frame: opened.frame,
+      }).filter(issue => issue.severity === "error" || ["text-overflow", "text-shrink-below-min", "out-of-frame"].includes(issue.code));
+      if (failures.length) throw new Error(`Explanatory slide '${planSlide.slideId}' failed layout validation: ${failures.map(issue => issue.message).join("; ")}`);
+    }
 
     // Template 使用時のページ番号は Slide Master 側（PowerPoint のページ番号
     // フィールド）が担当するため、ここでは描かない。

@@ -143,6 +143,8 @@ export interface RenderContext {
   readonly variantId: string;
   readonly slideNumber: number;
   readonly totalSlides: number;
+  /** Optional renderer-owned composition of visible explanation and diagram body. */
+  layoutBody?(area: Rect): Rect;
 
   text(box: Rect, content: TextContent, style?: TextStyle): void;
   shape(kind: ShapeKind, box: Rect, style?: ShapeStyle): void;

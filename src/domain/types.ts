@@ -211,6 +211,12 @@ export interface Decomposition {
   universe?: string[];
 }
 
+/** Visible, reader-facing explanations. Facts and interpretations remain author responsibility. */
+export interface SlideExplanation {
+  readerQuestion: string;
+  sections: Array<{ heading: string; body: string }>;
+}
+
 export interface SlideSpec {
   id: string;
   /** そのスライドで最も伝えたい 1 文 */
@@ -223,6 +229,7 @@ export interface SlideSpec {
   content?: SemanticContent;
   /** 分解対象・軸・境界・未解決点。意味の妥当性は人によるレビューが必要。 */
   decomposition?: Decomposition;
+  explanation?: SlideExplanation;
   /** 主張を裏付ける根拠。スライドに載せる情報の容器ではない。 */
   evidence: Evidence[];
   sources?: Source[];

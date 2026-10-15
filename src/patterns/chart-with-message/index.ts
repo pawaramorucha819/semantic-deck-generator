@@ -76,6 +76,7 @@ export const ChartWithMessageBindingsSchema: z.ZodType<ChartWithMessageBindings>
  * （＝編集可能な）グラフとして描き、右側に読み取り方を添える。
  */
 export const chartWithMessagePattern: VisualPattern<ChartWithMessageBindings> = {
+  supportsExplanatoryLayout: true,
   id: "chart-with-message",
   version: "1.0.0",
   description: "編集可能なネイティブグラフ + 読み取り文。同一軸に並ぶ 2 値以上が必要。",

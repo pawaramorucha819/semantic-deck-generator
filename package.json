@@ -20,7 +20,8 @@
     "example:research": "node --import tsx src/cli/main.ts generate examples/research/nec-disaster-vlm-2026-10-14.json --no-title-slide --report --strict --theme portable",
     "example:decomposition": "node scripts/example-decomposition.mjs",
     "preview": "node scripts/preview-pptx.mjs",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "example:explanatory": "node --import tsx src/cli/main.ts generate examples/research/nec-explained-2026-10-15.json --no-title-slide --ai-mode off --report --strict --theme portable"
   },
   "dependencies": {
     "jszip": "^3.10.1",

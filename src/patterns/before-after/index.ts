@@ -68,6 +68,7 @@ export const BeforeAfterBindingsSchema: z.ZodType<BeforeAfterBindings> = z
  * 項目数や配列順序だけから時間順序を作らない。
  */
 export const beforeAfterPattern: VisualPattern<BeforeAfterBindings> = {
+  supportsExplanatoryLayout: true,
   id: "before-after",
   version: "1.0.0",
   description: "導入前後・状態変化を 2 枚のカードと矢印で対比する。",

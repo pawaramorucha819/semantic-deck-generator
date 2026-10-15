@@ -1421,3 +1421,7 @@ examples/
 - Variant の拡充（compact / detailed など）
 - Render Report を使った AI Visual Review
 - Pattern preview 画像の自動生成
+
+### 補足説明なしで読む解説資料
+
+`explanation` に読者の問いと説明セクションを持たせ、図と同じ紙面に表示できます。`npm run example:explanatory` は背景・用語・仕組み・評価条件・限界・導入判断を含む8ページのNEC解説版を生成します。詳細と品質基準は [説明型資料の手順](docs/standalone-explanatory-decks.md) を参照してください。

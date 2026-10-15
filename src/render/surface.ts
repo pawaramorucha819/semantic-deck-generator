@@ -57,6 +57,7 @@ export class SlideSurface implements RenderContext {
   readonly variantId: string;
   readonly slideNumber: number;
   readonly totalSlides: number;
+  layoutBody?: (area: Rect) => Rect;
   private readonly assets: AssetResolver | undefined;
 
   constructor(options: SlideSurfaceOptions) {

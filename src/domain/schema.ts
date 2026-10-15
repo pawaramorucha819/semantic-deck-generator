@@ -196,6 +196,14 @@ export const DecompositionSchema = z
   })
   .strict();
 
+export const SlideExplanationSchema = z.object({
+  readerQuestion: nonEmpty("explanation.readerQuestion", 160),
+  sections: z.array(z.object({
+    heading: nonEmpty("explanation.heading", 80),
+    body: nonEmpty("explanation.body", 1200),
+  }).strict()).min(1).max(3),
+}).strict();
+
 export const SlideSpecSchema = z
   .object({
     id: nonEmpty("slide.id", 120),
@@ -205,6 +213,7 @@ export const SlideSpecSchema = z
     logicalRelation: z.enum(LOGICAL_RELATIONS),
     content: SemanticContentSchema.optional(),
     decomposition: DecompositionSchema.optional(),
+    explanation: SlideExplanationSchema.optional(),
     evidence: z.array(EvidenceSchema).max(12, "evidence は 12 件までです"),
     sources: z.array(SourceSchema).max(12).optional(),
   })

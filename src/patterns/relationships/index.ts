@@ -62,6 +62,7 @@ function connect(ctx: RenderContext, from: Rect, to: Rect, name: string, arrow =
 }
 
 export const radialPattern: VisualPattern<z.infer<typeof radialSchema>> = {
+  supportsExplanatoryLayout: true,
   id: "radial", version: "1.0.0", description: "一つの中心から複数の対象へ向かう関係を放射図にする。", variants: ["standard"],
   compatibility: { logicalRelations: ["distribution"] }, bindingsSchema: radialSchema,
   match: s => ({ compatible: s.content?.kind === "distribution", score: s.content?.kind === "distribution" ? 1 : 0, reason: "distribution の中心と送り先を外向き矢印で保持" }),
@@ -79,6 +80,7 @@ export const radialPattern: VisualPattern<z.infer<typeof radialSchema>> = {
 };
 
 export const convergencePattern: VisualPattern<z.infer<typeof convergenceSchema>> = {
+  supportsExplanatoryLayout: true,
   id: "convergence", version: "1.0.0", description: "複数の入力が一つの成果へ合流する関係を描く。", variants: ["standard"],
   compatibility: { logicalRelations: ["convergence"] }, bindingsSchema: convergenceSchema,
   match: s => ({ compatible: s.content?.kind === "convergence", score: s.content?.kind === "convergence" ? 1 : 0, reason: "convergence の入力から共通の成果への方向を保持" }),
@@ -94,6 +96,7 @@ export const convergencePattern: VisualPattern<z.infer<typeof convergenceSchema>
 };
 
 export const cyclePattern: VisualPattern<z.infer<typeof cycleSchema>> = {
+  supportsExplanatoryLayout: true,
   id: "cycle", version: "1.0.0", description: "順序を持つ工程を、最終工程から最初へ戻る閉路として描く。", variants: ["standard"],
   compatibility: { logicalRelations: ["cycle"] }, bindingsSchema: cycleSchema,
   match: s => ({ compatible: s.content?.kind === "cycle", score: s.content?.kind === "cycle" ? 1 : 0, reason: "cycle の順序と最後から最初への戻りを保持" }),
@@ -116,6 +119,7 @@ export const cyclePattern: VisualPattern<z.infer<typeof cycleSchema>> = {
 };
 
 export const backgroundPattern: VisualPattern<z.infer<typeof backgroundSchema>> = {
+  supportsExplanatoryLayout: true,
   id: "background", version: "1.0.0", description: "共通の環境・基盤と、その上にある要素を描く。因果矢印は追加しない。", variants: ["standard"],
   compatibility: { logicalRelations: ["context"] }, bindingsSchema: backgroundSchema,
   match: s => ({ compatible: s.content?.kind === "context", score: s.content?.kind === "context" ? 1 : 0, reason: "context の共通基盤への所属を面で保持。因果や順番は推定しない" }),
