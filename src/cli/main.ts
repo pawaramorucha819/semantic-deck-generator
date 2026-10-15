@@ -5,6 +5,7 @@ import { runGenerate, GENERATE_USAGE } from "./commands/generate.js";
 import { runKnowledge, KNOWLEDGE_USAGE } from "./commands/knowledge.js";
 import { runPattern, PATTERN_USAGE } from "./commands/pattern.js";
 import { runTemplate, TEMPLATE_USAGE } from "./commands/template.js";
+import { runStructure, STRUCTURE_USAGE } from "./commands/structure.js";
 
 /**
  * Semantic Deck Generator CLI（V2）。
@@ -22,6 +23,7 @@ Semantic Deck Generator — 意味構造から決定論的に PowerPoint を生�
 
 Commands
   generate <presentation.json>   PowerPoint を生成する
+  structure <command>           原文から分解候補を検査・レビュー・コンパイルする（オフライン）
   template import <file.pptx>    既存 PPTX から企業テンプレートを取り込む
   template list                  テンプレート一覧
   pattern import <file.pptx>     PPTX の 1 スライドから Pattern 下書きを作る
@@ -46,6 +48,7 @@ const HELP_BY_COMMAND: Record<string, string> = {
   template: TEMPLATE_USAGE,
   pattern: PATTERN_USAGE,
   knowledge: KNOWLEDGE_USAGE,
+  structure: STRUCTURE_USAGE,
 };
 
 export async function main(argv: readonly string[]): Promise<number> {
@@ -60,6 +63,8 @@ export async function main(argv: readonly string[]): Promise<number> {
   switch (command) {
     case "generate":
       return runGenerate(argv.slice(1));
+    case "structure":
+      return runStructure(argv.slice(1));
     case "template":
       return runTemplate(argv.slice(1));
     case "pattern":

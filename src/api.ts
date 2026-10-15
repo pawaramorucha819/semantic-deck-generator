@@ -1,4 +1,6 @@
 import type { PatternAdvisor } from "./ai/pattern-advisor.js";
+import { BodyDecompositionAdvisor } from "./ai/body-decomposition-advisor.js";
+import { ScriptedAIProvider } from "./ai/provider.js";
 import type { SlideSpec } from "./domain/types.js";
 import type {
   KnowledgeQuery,
@@ -23,6 +25,16 @@ import {
 export { ingestDeckFromPptx as ingestDeck } from "./knowledge/ingest/ingest.js";
 export { loadTemplateFromDirectory as loadTemplate } from "./templates/loader.js";
 export { loadPatternPackage } from "./patterns/declarative/loader.js";
+export { prepareBodyDecompositionRequest } from "./ai/body-decomposition-advisor.js";
+
+/** Offline response replay only: no network, keys, or claim of prose understanding. */
+export async function replayBodyDecomposition(raw: unknown, response: unknown) {
+  const provider = new ScriptedAIProvider({
+    id: "offline-decomposition-replay",
+    responses: { "body-decomposition": () => response },
+  });
+  return new BodyDecompositionAdvisor(provider).advise(raw);
+}
 
 /** 過去スライドを検索する（`store.search` の別名） */
 export async function searchKnowledge(
