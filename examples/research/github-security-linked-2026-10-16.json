@@ -365,8 +365,8 @@
         ]
       },
       "decomposition": {
-        "scope": "利用可否・管理者設定・課金を先に確かめる",
-        "criterion": "適格性／設定／費用",
+        "scope": "両機能の利用可否と管理者設定",
+        "criterion": "適格性／有効化設定",
         "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
         "exclusions": [
           "導入済みという主張",
@@ -455,8 +455,8 @@
         ]
       },
       "decomposition": {
-        "scope": "利用可否・管理者設定・課金を先に確かめる",
-        "criterion": "適格性／設定／費用",
+        "scope": "従量費用と停止条件、組織有効化の注意",
+        "criterion": "消費する資源／組織適用範囲",
         "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
         "exclusions": [
           "導入済みという主張",
@@ -837,8 +837,8 @@
         ]
       },
       "decomposition": {
-        "scope": "二つの機能の詳細条件の出典",
-        "criterion": "出典事実／執筆者の判断",
+        "scope": "AI Scanの詳細条件の出典",
+        "criterion": "機能別の公式Docs",
         "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
         "exclusions": [
           "導入済みという主張",
@@ -898,8 +898,8 @@
         ]
       },
       "decomposition": {
-        "scope": "二つの機能の詳細条件の出典",
-        "criterion": "出典事実／執筆者の判断",
+        "scope": "Agentic autofixの詳細条件の出典",
+        "criterion": "機能別の公式Docs",
         "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
         "exclusions": [
           "導入済みという主張",
