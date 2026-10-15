@@ -97,7 +97,7 @@ export function drawHeader(ctx: RenderContext, header: HeaderBindings, area?: Re
 
 /** 出典行をフレーム下端に描画し、残りの本文領域を返す */
 export function drawFooter(ctx: RenderContext, body: Rect, sourceText?: string): Rect {
-  if (!sourceText) return body;
+  if (!sourceText) return ctx.layoutBody?.(body) ?? body;
   const h = Math.max(
     0.18,
     ctx.measureText(sourceText, { widthIn: body.w, role: "caption", lineHeight: 1.25 }),
@@ -111,7 +111,8 @@ export function drawFooter(ctx: RenderContext, body: Rect, sourceText?: string):
     layer: "content",
     name: "source",
   });
-  return { x: body.x, y: body.y, w: body.w, h: Math.max(0, y - body.y - ctx.theme.spacing.sm) };
+  const remaining = { x: body.x, y: body.y, w: body.w, h: Math.max(0, y - body.y - ctx.theme.spacing.sm) };
+  return ctx.layoutBody?.(remaining) ?? remaining;
 }
 
 export interface CardStyle {

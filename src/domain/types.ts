@@ -34,6 +34,10 @@ export const LOGICAL_RELATIONS = [
   "correlation",
   "problem_solution",
   "pros_cons",
+  "distribution",
+  "convergence",
+  "cycle",
+  "context",
 ] as const;
 export type LogicalRelation = (typeof LOGICAL_RELATIONS)[number];
 
@@ -131,10 +135,16 @@ export type Evidence = MetricEvidence | CaseStudyEvidence | TextEvidence | Compa
  * 種類を追加する場合は (1) ここに interface を足し (2) union に加え
  * (3) schema.ts の SemanticContentSchema に 1 バリアント足します。
  */
-export const SEMANTIC_CONTENT_KINDS = ["sequence", "points"] as const;
+export const SEMANTIC_CONTENT_KINDS = [
+  "sequence", "points", "distribution", "convergence", "cycle", "context",
+] as const;
 export type SemanticContentKind = (typeof SEMANTIC_CONTENT_KINDS)[number];
 
 export interface ContentItem {
+  /** Optional stable semantic identity; unique within this slide. */
+  id?: string;
+  /** Declared members of a finite decomposition scope, for review only. */
+  members?: string[];
   /** 短い見出し語 */
   label: string;
   /** 説明文（任意） */
@@ -155,7 +165,57 @@ export interface PointsContent {
   items: ContentItem[];
 }
 
-export type SemanticContent = SequenceContent | PointsContent;
+/** One origin distributing to several recipients; no ordering between recipients is implied. */
+export interface DistributionContent {
+  kind: "distribution";
+  center: ContentItem;
+  items: ContentItem[];
+}
+
+/** Several distinct inputs contributing to one outcome. */
+export interface ConvergenceContent {
+  kind: "convergence";
+  inputs: ContentItem[];
+  outcome: ContentItem;
+}
+
+/** Ordered steps whose final step returns to the first. */
+export interface CycleContent {
+  kind: "cycle";
+  steps: ContentItem[];
+}
+
+/** Items sharing an environment; this does not imply sequence, causality or hierarchy. */
+export interface ContextContent {
+  kind: "context";
+  environment: ContentItem;
+  items: ContentItem[];
+}
+
+export type RelationshipContent =
+  | DistributionContent
+  | ConvergenceContent
+  | CycleContent
+  | ContextContent;
+
+export type SemanticContent = SequenceContent | PointsContent | RelationshipContent;
+
+/** Author-supplied decomposition rationale; this is not proof of semantic MECE. */
+export interface Decomposition {
+  scope: string;
+  criterion: string;
+  rationale: string;
+  exclusions?: string[];
+  unresolvedQuestions?: string[];
+  /** Explicit finite scope; overlap and coverage still require review. */
+  universe?: string[];
+}
+
+/** Visible, reader-facing explanations. Facts and interpretations remain author responsibility. */
+export interface SlideExplanation {
+  readerQuestion: string;
+  sections: Array<{ heading: string; body: string }>;
+}
 
 export interface SlideSpec {
   id: string;
@@ -167,6 +227,9 @@ export interface SlideSpec {
   logicalRelation: LogicalRelation;
   /** 見せる対象となる情報構造（工程・並列項目など）。根拠ではない。 */
   content?: SemanticContent;
+  /** 分解対象・軸・境界・未解決点。意味の妥当性は人によるレビューが必要。 */
+  decomposition?: Decomposition;
+  explanation?: SlideExplanation;
   /** 主張を裏付ける根拠。スライドに載せる情報の容器ではない。 */
   evidence: Evidence[];
   sources?: Source[];

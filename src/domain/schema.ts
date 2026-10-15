@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { contentItemEntries } from "./content.js";
 import {
   EVIDENCE_TYPES,
   LOGICAL_RELATIONS,
@@ -116,34 +117,92 @@ export const EvidenceSchema = z.discriminatedUnion("type", [
   ComparisonEvidenceSchema,
 ]);
 
-const ContentItemSchema = z
+export const ContentItemSchema = z
   .object({
+    id: nonEmpty("content item の id", 120).optional(),
+    members: z.array(nonEmpty("content item の members[]", 120)).max(1000).optional(),
     label: nonEmpty("content item の label", 120),
     description: z.string().trim().min(1).max(400).optional(),
     evidenceRefs: z.array(z.string().trim().min(1).max(120)).min(1).max(8).optional(),
   })
   .strict();
 
+export const SequenceContentSchema = z
+  .object({
+    kind: z.literal("sequence"),
+    steps: z.array(ContentItemSchema).min(2, "sequence には 2 件以上の step が必要です")
+      .max(6, "sequence の step は 6 件までです"),
+  })
+  .strict();
+
+export const PointsContentSchema = z
+  .object({
+    kind: z.literal("points"),
+    items: z.array(ContentItemSchema).min(1, "points には 1 件以上の item が必要です")
+      .max(6, "points の item は 6 件までです"),
+  })
+  .strict();
+
+export const DistributionContentSchema = z
+  .object({
+    kind: z.literal("distribution"),
+    center: ContentItemSchema,
+    items: z.array(ContentItemSchema).min(2).max(4),
+  })
+  .strict();
+
+export const ConvergenceContentSchema = z
+  .object({
+    kind: z.literal("convergence"),
+    inputs: z.array(ContentItemSchema).min(2).max(4),
+    outcome: ContentItemSchema,
+  })
+  .strict();
+
+export const CycleContentSchema = z
+  .object({
+    kind: z.literal("cycle"),
+    steps: z.array(ContentItemSchema).min(2).max(4),
+  })
+  .strict();
+
+export const ContextContentSchema = z
+  .object({
+    kind: z.literal("context"),
+    environment: ContentItemSchema,
+    items: z.array(ContentItemSchema).min(1).max(4),
+  })
+  .strict();
+
 export const SemanticContentSchema = z.discriminatedUnion("kind", [
-  z
-    .object({
-      kind: z.literal("sequence"),
-      steps: z
-        .array(ContentItemSchema)
-        .min(2, "sequence には 2 件以上の step が必要です")
-        .max(6, "sequence の step は 6 件までです"),
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal("points"),
-      items: z
-        .array(ContentItemSchema)
-        .min(1, "points には 1 件以上の item が必要です")
-        .max(6, "points の item は 6 件までです"),
-    })
-    .strict(),
+  SequenceContentSchema,
+  PointsContentSchema,
+  DistributionContentSchema,
+  ConvergenceContentSchema,
+  CycleContentSchema,
+  ContextContentSchema,
 ]);
+
+export const DecompositionSchema = z
+  .object({
+    scope: nonEmpty("decomposition.scope", 400),
+    criterion: nonEmpty("decomposition.criterion", 400),
+    rationale: nonEmpty("decomposition.rationale", 1200),
+    exclusions: z.array(nonEmpty("decomposition.exclusions[]", 400)).max(12).optional(),
+    unresolvedQuestions: z.array(nonEmpty("decomposition.unresolvedQuestions[]", 400)).max(12).optional(),
+    universe: z.array(nonEmpty("decomposition.universe[]", 120)).min(1).max(1000)
+      .refine((members) => new Set(members).size === members.length, "decomposition.universe は重複できません")
+      .optional(),
+  })
+  .strict();
+
+export const SlideExplanationSchema = z.object({
+  readerQuestion: nonEmpty("explanation.readerQuestion", 160),
+  sections: z.array(z.object({
+    heading: nonEmpty("explanation.heading", 80),
+    body: nonEmpty("explanation.body", 1200),
+  }).strict()).min(1).max(3),
+}).strict();
 
 export const SlideSpecSchema = z
   .object({
@@ -153,6 +212,8 @@ export const SlideSpecSchema = z
     slideRole: z.enum(SLIDE_ROLES),
     logicalRelation: z.enum(LOGICAL_RELATIONS),
     content: SemanticContentSchema.optional(),
+    decomposition: DecompositionSchema.optional(),
+    explanation: SlideExplanationSchema.optional(),
     evidence: z.array(EvidenceSchema).max(12, "evidence は 12 件までです"),
     sources: z.array(SourceSchema).max(12).optional(),
   })
@@ -185,14 +246,22 @@ export const SlideSpecSchema = z
 
     // content の evidenceRefs は evidence[].id を参照していなければならない
     if (slide.content) {
-      const items = slide.content.kind === "sequence" ? slide.content.steps : slide.content.items;
-      const itemsKey = slide.content.kind === "sequence" ? "steps" : "items";
-      items.forEach((item, i) => {
+      const contentIds = new Set<string>();
+      contentItemEntries(slide.content).forEach(({ item, path }) => {
+        const effectiveId = item.id ?? path.join(".");
+        if (contentIds.has(effectiveId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["content", ...path, "id"],
+            message: `content item の id が重複しています（省略時の path ID を含む）: ${effectiveId}`,
+          });
+        }
+        contentIds.add(effectiveId);
         for (const ref of item.evidenceRefs ?? []) {
           if (!evidenceIds.has(ref)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              path: ["content", itemsKey, i, "evidenceRefs"],
+              path: ["content", ...path, "evidenceRefs"],
               message: `未定義の evidence を参照しています: ${ref}`,
             });
           }

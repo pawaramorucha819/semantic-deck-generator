@@ -9,6 +9,7 @@ import type { PatternScope } from "./declarative/schema.js";
 import { messageOnlyPattern } from "./message-only/index.js";
 import type { AnyVisualPattern } from "./pattern.js";
 import { processPattern } from "./process/index.js";
+import { relationshipPatterns } from "./relationships/index.js";
 import { threeReasonsPattern } from "./three-reasons/index.js";
 
 /**
@@ -62,6 +63,7 @@ export interface PatternRegistryEntry {
  * 配列の順序はスコア同点時のタイブレークにしか影響しない（決定論性のため）。
  */
 export const builtinPatterns: AnyVisualPattern[] = [
+  ...relationshipPatterns,
   beforeAfterPattern,
   threeReasonsPattern,
   processPattern,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRelationshipContent } from "../../domain/content.js";
 import { isMetric, type ContentItem, type Evidence, type SlideSpec } from "../../domain/types.js";
 import {
   buildSourceText,
@@ -41,7 +42,15 @@ function itemsFromContent(slide: SlideSpec, kind: "points" | "sequence" | "any")
   if (!slide.content) return [];
   if (kind === "points") return slide.content.kind === "points" ? slide.content.items : [];
   if (kind === "sequence") return slide.content.kind === "sequence" ? slide.content.steps : [];
-  return slide.content.kind === "points" ? slide.content.items : slide.content.steps;
+  switch (slide.content.kind) {
+    case "points": return slide.content.items;
+    case "sequence": return slide.content.steps;
+    // The current item-slot contract cannot represent these relationships.
+    case "distribution":
+    case "convergence":
+    case "cycle":
+    case "context": return [];
+  }
 }
 
 function metricOf(item: ContentItem, byId: Map<string, Evidence>): string | undefined {
@@ -163,6 +172,16 @@ export function extractSlots(
   const bindings: DeclarativeBindings = {};
   const missing: string[] = [];
   const violations: string[] = [];
+
+  // A flat legacy slot cannot faithfully express a center, outcome, closure or environment.
+  // Reject even optional/contentOrEvidence slots rather than silently losing that structure.
+  if (isRelationshipContent(slide.content)) {
+    return {
+      bindings,
+      missing,
+      violations: [`content.kind=${slide.content.kind} requires a relationship-aware pattern; legacy declarative slots cannot preserve its structure`],
+    };
+  }
 
   for (const slot of doc.slots) {
     if (slot.type === "text") {

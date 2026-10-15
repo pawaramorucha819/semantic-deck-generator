@@ -45,6 +45,19 @@ AI は「安全と分かっている候補の中から推薦する」役割だ�
                       PPTX
 ```
 
+## ボディ分解と六つの情報関係
+
+`npm run example:relationships` で六関係のPPTX、`npm run example:research` で出典付きの実資料を生成できます。
+分解の対象範囲・軸・未確認事項、任意の有限集合による重複/漏れの検査を追加しました。
+意味上のMECEは自動認定しません。詳しくは [実行・レビュー手順](docs/semantic-body-workflow.md) と [学びの反映状況](docs/learning-coverage.json) を参照してください。
+
+### 原文からレビュー可能な分解候補へ
+
+`structure prepare/import/replay/review/compile` で、固定した本文・各ノードの引用・分解理由・明示レビューを一組として検査できます。
+`npm run example:decomposition` はNECの調査メモと保存済みのアシスタント分解案を、APIキーなしで再生しPPTXにします。
+自然文の意味判断は人/アシスタントの担当で、CLIが自動理解したとは扱いません。新しい入口は単一階層の説明ボディ（`evidence: []`）に限定します。
+詳細とレビューの境界は [原文→分解→レビューの手順](docs/body-decomposition.md) を参照してください。
+
 ---
 
 ## 目次
@@ -179,7 +192,7 @@ LLM に PPTX を直接書かせると、次の問題がまとめて発生しま�
 }
 ```
 
-`content.kind` は `sequence`（順序あり）と `points`（並列）の 2 種。
+`content.kind` は `sequence`（順序あり）、`points`（並列）、`distribution`（一対多）、`convergence`（多対一）、`cycle`（閉じた反復）、`context`（共通の環境）の6種。
 各項目は `evidenceRefs` で `evidence[].id` を参照でき（未定義参照は検証エラー）、
 「見せる項目」と「それを裏付ける根拠」を分離したまま接続できます。
 
@@ -1408,3 +1421,7 @@ examples/
 - Variant の拡充（compact / detailed など）
 - Render Report を使った AI Visual Review
 - Pattern preview 画像の自動生成
+
+### 補足説明なしで読む解説資料
+
+`explanation` に読者の問いと説明セクションを持たせ、図と同じ紙面に表示できます。`npm run example:explanatory` は背景・用語・仕組み・評価条件・限界・導入判断を含む8ページのNEC解説版を生成します。詳細と品質基準は [説明型資料の手順](docs/standalone-explanatory-decks.md) を参照してください。

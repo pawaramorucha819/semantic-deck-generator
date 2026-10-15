@@ -1,0 +1,433 @@
+{
+  "title": "災害画像VLM：仕組み・数字・導入判断を読む",
+  "subtitle": "説明なしで振り返るための解説版｜NEC 2026年10月14日発表",
+  "slides": [
+    {
+      "id": "read-01",
+      "keyMessage": "VLMは災害画像を文章で探し、人の確認を助ける",
+      "slideRole": "context",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "images",
+            "label": "現場画像",
+            "description": "自治体に多数集まる"
+          },
+          {
+            "id": "query",
+            "label": "文章で検索",
+            "description": "探す被害を指定する"
+          },
+          {
+            "id": "human",
+            "label": "候補を確認",
+            "description": "人が被災状況を判断"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "そもそも何を解決する技術か？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "VLM（視覚言語モデル）は画像と文章を対応づけるモデル。この事例では、「土砂で塞がれた道路」などの文章で指定し、確認する画像を絞る。\n全画像を一枚ずつ見る負担を減らし、救助・復旧の判断材料を早く集めることが狙い。図の最後には、人による確認が残る。\n【判断の限界】2027年度中の実用化が目標。研究発表であり、販売開始や提供形態は未確認。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "画像が集まってから候補を確認するまで",
+        "criterion": "画像の扱われる順序",
+        "rationale": "このページの問いに必要な要素と関係に限定する。完全なシステム構成や意味上のMECEを自動認定するものではない。",
+        "unresolvedQuestions": [
+          "研究成果の発表であり、販売開始の発表ではない。実用化目標は2027年度中で、提供形態はこの発表から確認できない。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "冒頭・背景・提供価値"
+        }
+      ]
+    },
+    {
+      "id": "read-02",
+      "keyMessage": "課題は「細部の見逃し」と「追加学習時の忘却」",
+      "slideRole": "problem",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "small",
+            "label": "微小な被害",
+            "description": "局所領域理解"
+          },
+          {
+            "id": "new",
+            "label": "未学習の事象",
+            "description": "継続学習"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "なぜ従来のVLMだけでは足りないか？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "画像全体を扱えても、小さく写る被害を捉えるとは限らない。また、新しい事象を追加学習すると、以前の認識精度が下がることがある。\n前者は「画像のどこを見るか」、後者は「モデルをどう更新するか」の問題。異なる課題に対応する技術なので並列に示す。\n【判断の限界】発表された二技術の整理であり、災害対応の全課題を網羅する分類ではない。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "発表された二つの技術が対応する課題",
+        "criterion": "画像の理解／モデルの更新",
+        "rationale": "このページの問いに必要な要素と関係に限定する。完全なシステム構成や意味上のMECEを自動認定するものではない。",
+        "unresolvedQuestions": [
+          "ここでの二分は発表された技術の整理であり、災害対応に必要な課題をすべて網羅した分類ではない。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "背景・本技術の特長1・2"
+        }
+      ]
+    },
+    {
+      "id": "read-03",
+      "keyMessage": "局所領域理解は、対象の位置を特徴抽出に反映する",
+      "slideRole": "analysis",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "region",
+            "label": "対象領域",
+            "description": "画像内の位置情報"
+          },
+          {
+            "id": "feature",
+            "label": "特徴抽出",
+            "description": "小さな部分にも注目"
+          },
+          {
+            "id": "description",
+            "label": "画像の理解",
+            "description": "被害の説明へ"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "小さな被害を扱う仕組みは何か？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "NECは対象物の領域情報を、VLMが画像から検索の手がかりを取り出す「特徴抽出」に反映する。画像全体だけでなく、小さな部分にも注目する方式である。\n図は領域情報が画像理解に使われる関係を示す。単に入力画像の解像度を上げるという説明ではない。\n【判断の限界】図は処理関係の簡略化。対象領域の取得方法や実運用の誤検出率は未確認。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "本文に記載された局所領域理解の処理関係",
+        "criterion": "情報が処理に反映される順序",
+        "rationale": "このページの問いに必要な要素と関係に限定する。完全なシステム構成や意味上のMECEを自動認定するものではない。",
+        "unresolvedQuestions": [
+          "図は本文の処理関係を簡略化したもの。対象領域の取得方法や実運用での誤検出率までは、この発表から判断できない。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "本技術の特長1・注1"
+        }
+      ]
+    },
+    {
+      "id": "read-04",
+      "keyMessage": "継続学習は、新データと更新前の説明文を併用する",
+      "slideRole": "analysis",
+      "logicalRelation": "convergence",
+      "content": {
+        "kind": "convergence",
+        "inputs": [
+          {
+            "id": "new-data",
+            "label": "追加データ",
+            "description": "新しい事象を学ぶ"
+          },
+          {
+            "id": "old-captions",
+            "label": "更新前の\n説明文",
+            "description": "従来の認識を\n手がかりに"
+          }
+        ],
+        "outcome": {
+          "id": "learning",
+          "label": "継続学習",
+          "description": "忘却を抑制"
+        }
+      },
+      "explanation": {
+        "readerQuestion": "追加学習で、なぜ以前の能力を失うのか？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "追加学習でモデルが変わり、以前認識できた事象の精度が下がることを「忘却」という。\nNECは新しい事象のデータと、更新前モデルが生成した説明文を併せて学習する。新知識の獲得と既存能力の維持を狙うため、二つの入力の合流として示す。\n【判断の限界】忘却ゼロの保証ではない。更新後は新旧両方の事象で性能を確認する必要がある（提案）。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "継続学習に利用する二種類の入力",
+        "criterion": "入力の由来",
+        "rationale": "このページの問いに必要な要素と関係に限定する。完全なシステム構成や意味上のMECEを自動認定するものではない。",
+        "unresolvedQuestions": [
+          "忘却を完全になくす保証ではない。追加学習後は、新しい事象と従来の事象の両方で性能を確認する必要がある（執筆者の提案）。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "本技術の特長2・注2"
+        }
+      ]
+    },
+    {
+      "id": "read-05",
+      "keyMessage": "約7時間→約45分は、候補枚数からの確認時間換算",
+      "slideRole": "evidence",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "all",
+            "label": "5,035枚",
+            "description": "検証の検索対象"
+          },
+          {
+            "id": "retrieval",
+            "label": "事象ごとに検索",
+            "description": "12種類の被災事象"
+          },
+          {
+            "id": "candidates",
+            "label": "平均544枚",
+            "description": "事象別の候補数の平均"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "数字は何を測り、何を仮定しているか？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "震災記録映像の車載画像5,035枚から、12種類の被災事象をそれぞれ検索した。544枚は事象別の候補数の平均であり、正解画像数ではない。\n1枚5秒の目視を仮定すると、全画像は約7時間、平均544枚の候補は約45分となる。検索処理や運用時間は含まれない。\n【限界】NEC自身の検証による換算であり、現場業務全体の実測時間やROIではない。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "発表の確認時間に関する検証条件と換算",
+        "criterion": "対象集合→検索→確認候補",
+        "rationale": "このページの問いに必要な要素と関係に限定する。完全なシステム構成や意味上のMECEを自動認定するものではない。",
+        "unresolvedQuestions": [
+          "NEC自身による検証である。自治体の現場業務全体で実測した短縮時間や、費用を含むROIとして読むことはできない。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "本技術の特長2・注4"
+        }
+      ]
+    },
+    {
+      "id": "read-06",
+      "keyMessage": "候補削減だけでは、見逃しが許容できるか判断できない",
+      "slideRole": "insight",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "recall",
+            "label": "検索品質",
+            "description": "正解を候補に残せるか"
+          },
+          {
+            "id": "transfer",
+            "label": "適用条件",
+            "description": "地域や撮影条件が違ってもよいか"
+          },
+          {
+            "id": "cost",
+            "label": "総負荷",
+            "description": "確認以外の時間・費用はどうか"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "導入判断のために、何がまだ足りないか？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "再現率は、探すべき画像のうち候補に残せた割合。候補が少なくても、重要な被害画像を落としていれば不十分である。\n発表本文・注記では再現率の数値を確認できない。品質、別条件への適用、総負荷を追加確認する（執筆者の解釈）。\n【判断の限界】関連論文に評価値がないとは断定しない。法務・情報管理なども別途検討が必要。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "発表だけでは決められない導入判断",
+        "criterion": "品質／適用条件／総負荷",
+        "rationale": "このページの問いに必要な要素と関係に限定する。完全なシステム構成や意味上のMECEを自動認定するものではない。",
+        "unresolvedQuestions": [
+          "関連論文に評価値がないとは断定しない。三つの観点は導入要件全体の網羅ではなく、法務・情報管理などは別途検討が必要。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "本文・注記全体の確認範囲"
+        }
+      ]
+    },
+    {
+      "id": "read-07",
+      "keyMessage": "SE・PMは、業務範囲・評価条件・中止条件を先に決める",
+      "slideRole": "recommendation",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "scope",
+            "label": "業務を限定",
+            "description": "誰が何を探すか"
+          },
+          {
+            "id": "evaluate",
+            "label": "対照比較",
+            "description": "人の確認を残して測る"
+          },
+          {
+            "id": "decision",
+            "label": "採否を判断",
+            "description": "基準未達なら停止"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "自分の案件では、次に何をすべきか？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "対象地域・被害・撮影条件と、画像を見て行う判断を定める。同じ評価画像を使い、現在の目視手順と検索後の手順を比較する。\n業務責任者と見逃しの許容基準、更新前後の性能、総時間・費用、障害時の目視復帰を合意する。基準未達なら範囲縮小や不採用を判断する。\n【判断の限界】執筆者の提案であり、実施決定やNEC推奨手順ではない。許容値は業務側と決める。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "小規模な導入検証の判断手順",
+        "criterion": "定義→測定→判断",
+        "rationale": "このページの問いに必要な要素と関係に限定する。完全なシステム構成や意味上のMECEを自動認定するものではない。",
+        "unresolvedQuestions": [
+          "これは執筆者が提案する検証の進め方。実施決定やNECの推奨手順ではなく、許容値をこの資料だけで決めてはいけない。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "注4の測定条件を踏まえた執筆者の提案"
+        }
+      ]
+    },
+    {
+      "id": "read-08",
+      "keyMessage": "一次情報と提案を区別して読む",
+      "slideRole": "summary",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "source",
+            "label": "一次情報",
+            "description": "NECによる研究発表"
+          },
+          {
+            "id": "author",
+            "label": "執筆者の提案",
+            "description": "導入判断に向けた検討観点"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "根拠は何か、どこまで確かか？",
+        "sections": [
+          {
+            "heading": "説明と確認事項",
+            "body": "NEC、2026年10月14日発表。本文・注1〜5を翌15日に確認。\nhttps://jpn.nec.com/press/202610/20261014_01.html\n図解・計算・導入検証案は執筆者による整理。NECの実施済み手順とは区別する。\n【次に確認する資料】論文の評価条件、実用化時の仕様、対象現場での試験結果を追加確認する。安全性・導入効果は未保証。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "資料の記述の由来",
+        "criterion": "一次発表／執筆者による整理と提案",
+        "rationale": "同じ資料に含まれる事実と解釈を区別する。"
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "nec-release",
+          "title": "NEC 災害画像VLM開発発表",
+          "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+          "publisher": "NEC",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-15",
+          "locator": "注4の測定条件を踏まえた執筆者の提案"
+        }
+      ]
+    }
+  ]
+}

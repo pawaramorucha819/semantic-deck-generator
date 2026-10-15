@@ -1,3 +1,4 @@
+import { builtinPatterns } from "../src/patterns/registry.js";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { PatternRegistry } from "../src/patterns/registry.js";
@@ -62,7 +63,7 @@ describe("Visual Plan 生成", () => {
 
   it("候補一覧をデバッグ用に保持できる / 省略もできる", async () => {
     const spec = await loadExample();
-    expect(buildVisualPlan(spec).slides[0]!.candidates).toHaveLength(6);
+    expect(buildVisualPlan(spec).slides[0]!.candidates).toHaveLength(builtinPatterns.length);
     expect(buildVisualPlan(spec, { includeCandidates: false }).slides[0]!.candidates).toBeUndefined();
   });
 

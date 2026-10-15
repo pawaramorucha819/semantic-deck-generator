@@ -62,6 +62,8 @@ export interface VisualPattern<TBindings = unknown> {
    *  - match() が compatible: false を返してはならない
    */
   readonly fallback?: boolean;
+  /** Must call ctx.layoutBody exactly once through shared footer composition. */
+  readonly supportsExplanatoryLayout?: boolean;
 
   readonly compatibility: PatternCompatibility;
   readonly constraints?: PatternConstraints;

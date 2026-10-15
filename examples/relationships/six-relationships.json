@@ -1,0 +1,214 @@
+{
+  "title": "情報の関係を六つの図で表す",
+  "slides": [
+    {
+      "id": "enumeration",
+      "keyMessage": "並列の判断項目",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "品質",
+            "description": "正しく検索できるか"
+          },
+          {
+            "label": "時間",
+            "description": "確認にかかる時間"
+          },
+          {
+            "label": "費用",
+            "description": "導入・運用の負担"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "導入判断の観点",
+        "criterion": "判断指標の種類",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "radial",
+      "keyMessage": "一つの決定を各担当へ伝える",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "distribution",
+      "content": {
+        "kind": "distribution",
+        "center": {
+          "label": "承認済み方針"
+        },
+        "items": [
+          {
+            "label": "開発",
+            "description": "実装へ反映"
+          },
+          {
+            "label": "運用",
+            "description": "手順へ反映"
+          },
+          {
+            "label": "利用部門",
+            "description": "業務へ反映"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "方針を受け取る担当",
+        "criterion": "受け手の担当領域",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "flow",
+      "keyMessage": "一度だけ進む確認工程",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "label": "受付",
+            "description": "対象を登録"
+          },
+          {
+            "label": "確認",
+            "description": "担当者が確認"
+          },
+          {
+            "label": "承認",
+            "description": "責任者が判断"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "受付から承認まで",
+        "criterion": "時間順の工程",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "background",
+      "keyMessage": "共通基盤の上で業務が動く",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "context",
+      "content": {
+        "kind": "context",
+        "environment": {
+          "label": "共通のアクセス管理",
+          "description": "各業務が同じ認証基盤を利用"
+        },
+        "items": [
+          {
+            "label": "検索",
+            "description": "情報を探す"
+          },
+          {
+            "label": "申請",
+            "description": "手続きを始める"
+          },
+          {
+            "label": "承認",
+            "description": "申請を判断"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "共通基盤上の業務",
+        "criterion": "業務機能",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "convergence",
+      "keyMessage": "二つの入力から一つの判断を作る",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "convergence",
+      "content": {
+        "kind": "convergence",
+        "inputs": [
+          {
+            "label": "技術評価",
+            "description": "品質と制約"
+          },
+          {
+            "label": "業務評価",
+            "description": "時間と費用"
+          }
+        ],
+        "outcome": {
+          "label": "導入判断",
+          "description": "両方の評価を確認"
+        }
+      },
+      "decomposition": {
+        "scope": "導入判断への入力",
+        "criterion": "評価対象",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": []
+    },
+    {
+      "id": "cycle",
+      "keyMessage": "運用を繰り返し改善する",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "cycle",
+      "content": {
+        "kind": "cycle",
+        "steps": [
+          {
+            "label": "計画",
+            "description": "評価基準を決める"
+          },
+          {
+            "label": "実行",
+            "description": "小さく試す"
+          },
+          {
+            "label": "評価",
+            "description": "結果を測る"
+          },
+          {
+            "label": "改善",
+            "description": "次の計画に戻す"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "改善を続ける工程",
+        "criterion": "反復内の順序",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": []
+    }
+  ]
+}

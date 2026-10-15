@@ -1,12 +1,17 @@
 import { z } from "zod";
+import { drawExplanatoryNodes } from "../shared/explanatory-nodes.js";
 import type { SequenceContent, SlideSpec } from "../../domain/types.js";
 import type { RenderContext, TextRun } from "../../render/context.js";
 import { columns, inset, splitTop, type Rect } from "../../render/geometry.js";
 import type { MatchResult, VisualPattern } from "../pattern.js";
 import { centerBlockY, drawFooter, drawHeader } from "../shared/layout.js";
-import { buildSourceText, roleLabel, truncate } from "../shared/semantics.js";
+import { buildSourceText, roleLabel } from "../shared/semantics.js";
 
 export interface ProcessStepBinding {
+  /** Traceability metadata; rendering does not reinterpret these fields. */
+  nodeId?: string;
+  evidenceRefs?: string[];
+  members?: string[];
   index: number;
   label: string;
   description?: string;
@@ -31,6 +36,9 @@ export const ProcessBindingsSchema: z.ZodType<ProcessBindings> = z
       .array(
         z
           .object({
+            nodeId: z.string().min(1).max(120).optional(),
+            evidenceRefs: z.array(z.string().min(1).max(120)).min(1).max(8).optional(),
+            members: z.array(z.string().min(1).max(120)).max(1000).optional(),
             index: z.number().int().positive(),
             label: z.string().min(1),
             description: z.string().min(1).optional(),
@@ -57,6 +65,7 @@ function sequenceOf(slide: SlideSpec): SequenceContent | undefined {
  * evidence は「根拠」であり、工程の格納場所として使ってはいけない。
  */
 export const processPattern: VisualPattern<ProcessBindings> = {
+  supportsExplanatoryLayout: true,
   id: "process",
   version: "1.1.0",
   description: "content.sequence の工程を左から右へのシェブロンで表現する。",
@@ -87,7 +96,7 @@ export const processPattern: VisualPattern<ProcessBindings> = {
       return {
         compatible: false,
         score: 0,
-        reason: `${count} 工程は横一列に収まらない（最大 ${MAX_STEPS} 工程）`,
+        reason: `${count} 工程は対応数の範囲外（最大 ${MAX_STEPS} 工程）`,
       };
     }
 
@@ -104,13 +113,13 @@ export const processPattern: VisualPattern<ProcessBindings> = {
 
     if (count >= 3 && count <= 4) {
       score += 0.08;
-      reasons.push(`${count} 工程で横一列に収まる`);
+      reasons.push(slide.explanation ? `${count} 工程の順序を説明文の横の縦配置で保持する（収まりは描画時に検査）` : `${count} 工程で横一列に収まる`);
     }
 
     const longest = Math.max(...sequence.steps.map((s) => s.label.length));
     if (longest > 16) {
       score -= 0.08;
-      reasons.push("工程名が長くシェブロン内が窮屈になる可能性");
+      reasons.push(slide.explanation ? "工程名が長くカード内の収まりを描画時に検査する" : "工程名が長くシェブロン内が窮屈になる可能性");
     }
 
     return {
@@ -134,8 +143,11 @@ export const processPattern: VisualPattern<ProcessBindings> = {
       subline: slide.supportingMessage,
       stepPrefix: slide.logicalRelation === "timeline" ? "" : "STEP",
       steps: sequence.steps.map((step, i) => ({
+        ...(step.id !== undefined ? { nodeId: step.id } : {}),
+        ...(step.evidenceRefs !== undefined ? { evidenceRefs: [...step.evidenceRefs] } : {}),
+        ...(step.members !== undefined ? { members: [...step.members] } : {}),
         index: i + 1,
-        label: truncate(step.label, 14),
+        label: step.label,
         description: step.description,
       })),
       sourceText: buildSourceText(slide),
@@ -150,6 +162,10 @@ export const processPattern: VisualPattern<ProcessBindings> = {
       subline: b.subline,
     });
     const body = drawFooter(ctx, afterHeader, b.sourceText);
+    if (ctx.layoutBody) {
+      drawExplanatoryNodes(ctx, body, b.steps.map(item => ({ ...item, label: `${b.stepPrefix ? b.stepPrefix + " " : ""}${item.index}　${item.label}`, name: `step-${item.index}` })), true);
+      return;
+    }
 
     const chevronHeight = Math.min(0.78, body.h * 0.32);
     const cellW = (body.w - theme.spacing.md * (b.steps.length - 1)) / b.steps.length;

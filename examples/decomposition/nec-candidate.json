@@ -1,0 +1,134 @@
+{
+  "schemaVersion": "1.0",
+  "id": "nec-learning-inputs-v1",
+  "status": "draft",
+  "sourceHash": "534852a463461724a9184daa06d40c292b595bbf4af5838c6c1f88cef4b4a39c",
+  "author": {
+    "kind": "assistant",
+    "id": "dot"
+  },
+  "slide": {
+    "id": "nec-body-learning",
+    "keyMessage": "二つの情報を併用して継続学習を行う",
+    "supportingMessage": "調査メモの構造化案｜入力の合流として整理。精度・実用化の達成を保証する図ではない。",
+    "slideRole": "analysis",
+    "logicalRelation": "convergence",
+    "content": {
+      "kind": "convergence",
+      "inputs": [
+        {
+          "id": "new-data",
+          "label": "新しい事象のデータ",
+          "description": "新たに学習する被災事象"
+        },
+        {
+          "id": "previous-descriptions",
+          "label": "更新前モデルの説明文",
+          "description": "既存モデルが生成した多様な説明文"
+        }
+      ],
+      "outcome": {
+        "id": "continual-learning",
+        "label": "継続学習",
+        "description": "二つの情報を学習に使う"
+      }
+    },
+    "decomposition": {
+      "scope": "調査メモの継続学習で使用する情報",
+      "criterion": "学習に入る情報と、その利用先",
+      "rationale": "二つの入力と共通の利用先を区別する。対象範囲の根を成果ノードに転用していない。",
+      "exclusions": [
+        "局所領域理解の技術概要",
+        "実用化目標と評価数値の未記載"
+      ],
+      "unresolvedQuestions": [
+        "この図は情報の入力関係を整理したもので、具体的な学習手順や精度は確定していない。"
+      ]
+    },
+    "evidence": [],
+    "sources": [
+      {
+        "id": "nec-release",
+        "title": "NEC 災害画像向けVLM技術の開発発表（本文は発表に基づく調査メモ）",
+        "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+        "publisher": "日本電気株式会社（NEC）",
+        "date": "2026-10-14",
+        "locator": "本技術の特長2と実用化目標。raw.bodyは原文の逐語引用ではなく調査メモ",
+        "accessedAt": "2026-10-15"
+      }
+    ]
+  },
+  "nodeSources": [
+    {
+      "nodeId": "new-data",
+      "spans": [
+        {
+          "start": 72,
+          "end": 87,
+          "quote": "新たに学習する被災事象のデータ"
+        }
+      ],
+      "origin": "source",
+      "rationale": "原文の情報種別を短く言い換えた"
+    },
+    {
+      "nodeId": "previous-descriptions",
+      "spans": [
+        {
+          "start": 89,
+          "end": 106,
+          "quote": "更新前モデルが生成した多様な説明文"
+        }
+      ],
+      "origin": "source",
+      "rationale": "生成元と情報種別を保持した"
+    },
+    {
+      "nodeId": "continual-learning",
+      "spans": [
+        {
+          "start": 65,
+          "end": 69,
+          "quote": "継続学習"
+        }
+      ],
+      "origin": "source",
+      "rationale": "二つの情報の利用先として記載された学習"
+    }
+  ],
+  "messageSources": [
+    {
+      "start": 65,
+      "end": 110,
+      "quote": "継続学習では、新たに学習する被災事象のデータと、更新前モデルが生成した多様な説明文を使う。"
+    }
+  ],
+  "relation": {
+    "rationale": "同じ継続学習に二つの情報を使うという調査メモから、入力の合流として整理した。効果や因果の証明ではない。",
+    "spans": [
+      {
+        "start": 65,
+        "end": 110,
+        "quote": "継続学習では、新たに学習する被災事象のデータと、更新前モデルが生成した多様な説明文を使う。"
+      }
+    ]
+  },
+  "excludedSpans": [
+    {
+      "span": {
+        "start": 0,
+        "end": 64,
+        "quote": "NECは、画像内の局所領域の理解と、既存の認識能力の低下を抑えながら新しい事象を学ぶ継続学習を組み合わせるVLM技術を発表した。"
+      },
+      "reason": "今回の1枚では技術概要の紹介を対象外にする"
+    },
+    {
+      "span": {
+        "start": 111,
+        "end": 156,
+        "quote": "実用化は2027年度中の目標であり、再現率の数値は今回の発表本文・注記には示されていない。"
+      },
+      "reason": "今回の1枚では実用化目標と評価指標の確認を対象外にする。達成済みという意味ではない"
+    }
+  ]
+}

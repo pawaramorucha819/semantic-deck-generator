@@ -57,6 +57,7 @@ export class SlideSurface implements RenderContext {
   readonly variantId: string;
   readonly slideNumber: number;
   readonly totalSlides: number;
+  layoutBody?: (area: Rect) => Rect;
   private readonly assets: AssetResolver | undefined;
 
   constructor(options: SlideSurfaceOptions) {
@@ -180,6 +181,7 @@ export class SlideSurface implements RenderContext {
         color: this.color(style.line.color),
         width: style.line.width ?? this.theme.shape.borderWidth,
         dashType: style.line.dashType ?? "solid",
+        ...(style.line.endArrowType ? { endArrowType: style.line.endArrowType } : {}),
       };
     }
 

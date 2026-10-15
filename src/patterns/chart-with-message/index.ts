@@ -25,7 +25,7 @@ export interface ChartWithMessageBindings {
   };
   /** グラフから読み取ってほしい一文 */
   readingText?: string;
-  /** 端から端への変化（あれば） */
+  /** 明示された時系列の端から端への変化（あれば） */
   changeText?: string;
   sourceText?: string;
 }
@@ -76,6 +76,7 @@ export const ChartWithMessageBindingsSchema: z.ZodType<ChartWithMessageBindings>
  * （＝編集可能な）グラフとして描き、右側に読み取り方を添える。
  */
 export const chartWithMessagePattern: VisualPattern<ChartWithMessageBindings> = {
+  supportsExplanatoryLayout: true,
   id: "chart-with-message",
   version: "1.0.0",
   description: "編集可能なネイティブグラフ + 読み取り文。同一軸に並ぶ 2 値以上が必要。",
@@ -85,8 +86,6 @@ export const chartWithMessagePattern: VisualPattern<ChartWithMessageBindings> = 
     logicalRelations: [
       "claim_evidence",
       "comparison",
-      "correlation",
-      "composition",
       "timeline",
     ],
     evidenceTypes: ["comparison", "metric"],
@@ -114,7 +113,7 @@ export const chartWithMessagePattern: VisualPattern<ChartWithMessageBindings> = 
 
     if (facts.categories.length >= 3) {
       score += 0.16;
-      reasons.push(`${facts.categories.length} 系列で推移・比較を読み取れる`);
+      reasons.push(`${facts.categories.length} 項目の${slide.logicalRelation === "timeline" ? "推移" : "比較"}を読み取れる`);
     } else {
       score += 0.06;
       reasons.push("2 項目の比較として読み取れる");
@@ -151,6 +150,7 @@ export const chartWithMessagePattern: VisualPattern<ChartWithMessageBindings> = 
     const first = facts.values[0];
     const last = facts.values[facts.values.length - 1];
     const change =
+      slide.logicalRelation === "timeline" &&
       facts.values.length >= 2 && first !== undefined && last !== undefined
         ? formatChangeRate(first, last)
         : undefined;

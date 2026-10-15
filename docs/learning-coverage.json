@@ -1,0 +1,309 @@
+{
+  "schemaVersion": "1.0",
+  "scope": "単一階層のボディ分解と六関係の忠実な描画",
+  "requirements": [
+    {
+      "id": "L01",
+      "title": "人を動かし、単独で読める資料",
+      "summary": "明確なメッセージ、一目で分かる構造、根拠、整理された情報、読者のアクションを品質基準とする。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L02",
+      "title": "高速化によって思考と改善の時間を確保",
+      "summary": "操作と仕事の進め方を合理化し、早く形にして考える時間を増やす。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L03",
+      "title": "目的を4観点で明確にする",
+      "summary": "相手、期待行動、自分がどう見られているか、伝えることを整理する。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L04",
+      "title": "構成→タイトル/メッセージ→タイプ",
+      "summary": "伝えることを分解し、背景→課題→解決策→効果という提案の流れを作ってから表現を決める。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L05",
+      "title": "背景に現状・ありたい姿・ギャップ",
+      "summary": "背景は読み手の問題認識を揃えるために、現状と目標、その差を示す。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L06",
+      "title": "課題はギャップを生む問題点",
+      "summary": "ギャップそのものと、そのギャップを生む原因・問題点を区別する。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L07",
+      "title": "解決策の3条件",
+      "summary": "課題に対応している、複数案から選ばれている、具体性がある。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L08",
+      "title": "効果・必要リソース・実行計画",
+      "summary": "効果に加え必要リソースとアクションプランを示す。定量効果をどう見積もるかはユーザーの質問であり、後続の計算例はアシスタント提案。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L09",
+      "title": "テーマのタイトルと主張のメッセージを分離",
+      "summary": "ユーザーは『スライドタイトルは主張しない』という本の流儀を新しく学んだ。アシスタントは他の流儀もあると説明した。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L10",
+      "title": "比較対象と差を明確にする",
+      "summary": "単独の数値にせず、何と比べてどれだけ違うかを主張と根拠に明示する。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L11",
+      "title": "資料の役割に応じた表現傾向",
+      "summary": "背景は箇条書き/図解/グラフ、課題は図解/グラフ、解決策は図解、効果は図解/グラフという対応を意識する。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L12",
+      "title": "情報収集と仮説検証の工程",
+      "summary": "未知分野は平易な入門情報から始める。ストーリー仮説を先に立てる順序にはユーザーが疑問を示し、その後、仕事全体のステップとして参考になると述べた。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L13",
+      "title": "詳細情報型と根拠型を区別",
+      "summary": "詳細情報型は情報構造を整理し、根拠型はメッセージ自体を結論としてロジックツリーに含める。",
+      "status": "partial",
+      "note": "単一階層の分解、明示した関係、宣言集合の検査を実装。自然文の自動分解と入れ子ツリーは未対応。"
+    },
+    {
+      "id": "L14",
+      "title": "読み順と1枚の焦点",
+      "summary": "左→右、上→下の読み順を保ち、伝えたい情報が複数ある場合はスライドを分ける。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L15",
+      "title": "グラフ見出しは下線、箇条書き見出しは箱",
+      "summary": "情報タイプに応じて小見出しの見た目を固定し、箱で注目すべきまとまりを分かりやすくする。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L16",
+      "title": "矢印に意味を持たせる",
+      "summary": "鍵線矢印と、大きな流れ・統合・合流を表す三角矢印を区別する。『鍵線』という原文だけから具体的なPowerPoint図形を断定しない。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L17",
+      "title": "図形の意味辞書",
+      "summary": "四角=具体物、楕円=抽象概念、ホームベース=工程、吹き出し=発言/注釈、メモ=書類/補足/訂正、星=注意。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L18",
+      "title": "角の形を統一し、爆発吹き出しを避ける",
+      "summary": "同じ資料で鋭角と丸角を無意味に混在させない。爆発吹き出しは本では非推奨。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L19",
+      "title": "収まりは内部余白から検討",
+      "summary": "文字が入らない場合は図形の内部余白を小さくする。フォント縮小を最後にする対応順は後続アシスタントの助言。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L20",
+      "title": "フラットで控えめな配色",
+      "summary": "フラットデザイン、ベースカラーとアクセントカラー、少ない色数、原色を避ける。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L21",
+      "title": "箇条書きの文章品質",
+      "summary": "主語を揃える、数字で具体化する、修飾語を近づける、3項目に整理する。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L22",
+      "title": "箇条書きの順序",
+      "summary": "重要度・時系列・種類によって順番を決める。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L23",
+      "title": "意味のある箇条書き階層",
+      "summary": "階層は因果・詳細・事例で意味づけし、下位要素が1つだけの階層は上に統合する意図。原文の『階層が一つ』は後続説明で単一子と解釈されている。",
+      "status": "partial",
+      "note": "単一階層の分解、明示した関係、宣言集合の検査を実装。自然文の自動分解と入れ子ツリーは未対応。"
+    },
+    {
+      "id": "L24",
+      "title": "基本図解6型",
+      "summary": "列挙、拡散、フロー、背景、合流、回転の6型を扱う。各型の詳細な意味対応は後続アシスタント説明で補われた。",
+      "status": "partial",
+      "note": "単一階層の分解、明示した関係、宣言集合の検査を実装。自然文の自動分解と入れ子ツリーは未対応。"
+    },
+    {
+      "id": "L25",
+      "title": "構造化→関係把握→可視化→強調",
+      "summary": "最重要の発見は、スライド情報を適切に分解してロジックツリーを作り、要素の関係から表現を選び、最後に強調すること。",
+      "status": "partial",
+      "note": "単一階層の分解、明示した関係、宣言集合の検査を実装。自然文の自動分解と入れ子ツリーは未対応。"
+    },
+    {
+      "id": "L26",
+      "title": "応用図解の適用条件",
+      "summary": "上昇=時間+向上。マトリックス=観点で整理。9要素以上=表。4象限=重要な比較軸2つに絞れる場合。ガント=フロー全体像の後の詳細工程。対比=比較関係の2対象。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L27",
+      "title": "主張と一致した強調",
+      "summary": "文字・見出し・範囲の3粒度で、スライドメッセージが主張する部分を強調する。○×やアクセント等は構造決定の後に用いる。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L28",
+      "title": "比較目的からグラフを選ぶ",
+      "summary": "構成要素、項目、時系列、頻度分布、相関という5種類の比較からグラフを選ぶ。具体的なグラフ例の対応表はアシスタント説明。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    },
+    {
+      "id": "L29",
+      "title": "読書の問いと実務への適用を閉じる",
+      "summary": "読書目的、事前の問いと回答、重要点、自分の理解、経験との接続、ITコンサルでの使い方、知識化、発信案、次の調査まで整理する。",
+      "status": "deferred",
+      "note": "第1段階の対象外。意味を誤らせる数値図の最低限のガードは別途実施。"
+    }
+  ],
+  "phase1Acceptance": [
+    {
+      "id": "C01",
+      "input": "Universe {a,b,c,d}; axis=business function; siblings {a,b} and {c,d}.",
+      "expected": "Declared-set partition checks pass; semantic correctness of the chosen axis remains a human/advisor judgment.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C02",
+      "input": "Universe {a,b,c}; siblings {a,b} and {b,c}.",
+      "expected": "Overlap report identifies b and both sibling node IDs.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C03",
+      "input": "Universe {a,b,c,d}; siblings {a,b} and {c}.",
+      "expected": "Coverage report identifies uncovered d. No automatic fabricated node or claim of full MECE.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C04",
+      "input": "Sibling labels only, without universe/member assignment.",
+      "expected": "Structure may render, but completeness is unverified; no 'MECE verified' badge.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C05",
+      "input": "Duplicate node ID, dangling relation target, self-parent or hierarchy cycle.",
+      "expected": "Validation fails with the exact affected paths/IDs before pattern matching.",
+      "status": "partial",
+      "verification": "重複ID・証拠参照を拒否。親子ツリー/任意エッジはスキーマに存在せず未対応。"
+    },
+    {
+      "id": "C06",
+      "input": "Same three content labels, explicitly modeled in each of the six relationship types with necessary origin/context/target nodes.",
+      "expected": "Six corresponding semantic topology/render results; pattern selection reason names the relation, not just item count.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C07",
+      "input": "Enumeration A/B/C, process A→B→C, cycle A→B→C→A.",
+      "expected": "No arrows in enumeration; ordered arrows in flow; visible closing arrow only in cycle. Invalid topology is not repaired silently.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C08",
+      "input": "Origin→{A,B,C} and {A,B,C}→result.",
+      "expected": "Divergence and convergence retain opposite direction and distinct origin/result roles.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C09",
+      "input": "Common platform/context supports A/B/C.",
+      "expected": "Semantic substrate is visible; neither slideRole nor a background fill is accepted as the relationship alone.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C10",
+      "input": "Explanatory structure with evidence=[] and argumentative structure with evidence refs.",
+      "expected": "Both modes keep their meanings; no fake evidence or inference from unlabeled content.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C11",
+      "input": "Singleton child with meaningful parent qualification, nested heterogeneous relations or long Japanese labels.",
+      "expected": "Advice is specific; any normalization keeps qualification and refs; insufficient visual capacity is disclosed rather than clipped or dropped.",
+      "status": "partial",
+      "verification": "長い日本語ラベルを保持、容量超過を明示。入れ子/単一子のツリー正規化は未対応。"
+    },
+    {
+      "id": "C12",
+      "input": "Saved visual plan replay for all new relation fixtures.",
+      "expected": "Bindings are revalidated and reproduce the same meaningful topology, source/focus IDs and node count.",
+      "status": "partial",
+      "verification": "六関係の保存/再生、明示nodeIdと根拠参照を保持。強調対象は未対応。"
+    },
+    {
+      "id": "C13",
+      "input": "AI or human override requests a pattern incompatible with the relation.",
+      "expected": "Existing deterministic gate rejects it with the same explanation used by automatic selection.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    },
+    {
+      "id": "C14",
+      "input": "Legacy points and sequence examples plus new semantic-body examples.",
+      "expected": "Existing meaning remains unchanged; typecheck, full tests and build pass; visual review checks every new relation including one dense Japanese fixture.",
+      "status": "implemented",
+      "verification": "tests/relationships.test.ts / tests/semantic-content.test.ts と既存の安全ゲートで検証。"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import {
   type SlideRole,
   type SlideSpec,
 } from "../../domain/types.js";
+import { isRelationshipContent } from "../../domain/content.js";
 
 /**
  * SlideSpec から Pattern 用の素材を取り出すためのヘルパ群。
@@ -103,6 +104,12 @@ export interface BeforeAfterFacts {
  * 抽出できない = BeforeAfter パターンが使えない、という判定にそのまま使う。
  */
 export function extractBeforeAfter(slide: SlideSpec): BeforeAfterFacts | undefined {
+  // 配列に 2 値あるだけでは時間順序は分からない。矢印・変化率を使うには
+  // 入力側で before_after と明示されている必要がある。
+  if (slide.logicalRelation !== "before_after" || isRelationshipContent(slide.content)) {
+    return undefined;
+  }
+
   const caseStudy = slide.evidence
     .filter(isCaseStudy)
     .find((e) => e.data.before !== undefined && e.data.after !== undefined);
@@ -142,6 +149,8 @@ export function extractBeforeAfter(slide: SlideSpec): BeforeAfterFacts | undefin
   const metrics = slide.evidence.filter(isMetric);
   if (metrics.length === 2) {
     const [first, second] = metrics as [(typeof metrics)[number], (typeof metrics)[number]];
+    // 異なる単位（片方だけ単位がある場合も含む）を 1 本の変化として扱わない。
+    if (first.data.unit !== second.data.unit) return undefined;
     return {
       before: { label: first.data.label ?? "変更前", value: first.data.value },
       after: { label: second.data.label ?? "変更後", value: second.data.value },
@@ -149,7 +158,7 @@ export function extractBeforeAfter(slide: SlideSpec): BeforeAfterFacts | undefin
         const rate = formatChangeRate(first.data.value, second.data.value);
         return rate ? { label: "変化", value: rate } : undefined;
       })(),
-      unit: first.data.unit ?? second.data.unit,
+      unit: first.data.unit,
       origin: "metricPair",
       sourceEvidenceIds: [first.id, second.id],
     };
@@ -181,6 +190,17 @@ export interface ChartFacts {
  * 「同じ軸で 2 つ以上の値が並んでいる」ことが条件で、抽出できなければグラフにしない。
  */
 export function extractChartSeries(slide: SlideSpec): ChartFacts | undefined {
+  // 同一軸の値だけでは part/whole・相関・分布は表現できない。
+  // 対応する意味モデルと描画が揃うまでは棒グラフで代用せず abstain する。
+  if (
+    isRelationshipContent(slide.content) ||
+    (slide.logicalRelation !== "claim_evidence" &&
+      slide.logicalRelation !== "comparison" &&
+      slide.logicalRelation !== "timeline")
+  ) {
+    return undefined;
+  }
+
   const comparison = slide.evidence
     .filter(isComparison)
     .find((e) => e.data.items.every((item) => typeof item.value === "number"));

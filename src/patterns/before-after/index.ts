@@ -64,17 +64,18 @@ export const BeforeAfterBindingsSchema: z.ZodType<BeforeAfterBindings> = z
 /**
  * BeforeAfter — 2 つの状態の変化を左右対比で見せる。
  *
- * 適用可否は logicalRelation だけでなく「before/after として読める 2 値が
- * 実際に取り出せるか」で決まる。取り出せなければ compatible: false。
+ * before_after が明示され、比較可能な 2 値を実際に取り出せる場合にのみ使う。
+ * 項目数や配列順序だけから時間順序を作らない。
  */
 export const beforeAfterPattern: VisualPattern<BeforeAfterBindings> = {
+  supportsExplanatoryLayout: true,
   id: "before-after",
   version: "1.0.0",
   description: "導入前後・状態変化を 2 枚のカードと矢印で対比する。",
   variants: ["standard"],
 
   compatibility: {
-    logicalRelations: ["before_after", "claim_evidence", "cause_effect", "problem_solution", "comparison"],
+    logicalRelations: ["before_after"],
     evidenceTypes: ["caseStudy", "comparison", "metric"],
   },
 
@@ -92,19 +93,12 @@ export const beforeAfterPattern: VisualPattern<BeforeAfterBindings> = {
       return {
         compatible: false,
         score: 0,
-        reason: "before / after として読める 2 値を evidence から抽出できない",
+        reason: "明示的な before_after 関係と比較可能な 2 値が必要",
       };
     }
 
-    let score = 0.62;
-    const reasons: string[] = [];
-
-    if (slide.logicalRelation === "before_after") {
-      score += 0.28;
-      reasons.push("logicalRelation が before_after");
-    } else {
-      reasons.push(`logicalRelation=${slide.logicalRelation} だが変化構造を含む`);
-    }
+    let score = 0.9;
+    const reasons: string[] = ["logicalRelation が before_after"];
 
     if (facts.origin === "caseStudy") {
       score += 0.08;

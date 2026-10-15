@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0",
+  "reviewedAt": "2026-10-15",
+  "reviewer": "assistant + independent code review",
+  "rendering": "LibreOffice PDF and PNG, not native PowerPoint",
+  "decks": [
+    "examples/relationships/six-relationships.json",
+    "examples/research/nec-disaster-vlm-2026-10-14.json"
+  ],
+  "semanticMECE": "unverified",
+  "reviewStatus": "awaiting-user-review",
+  "observations": [
+    {
+      "finding": "研究スライド2の説明文末尾が1文字だけ改行",
+      "action": "出典の意味を維持して表現を短縮",
+      "status": "fixed"
+    },
+    {
+      "finding": "5〜6件の既存列挙・6工程のfallbackが3件に省略",
+      "action": "全要素・順序・IDを保持するfallbackと回帰テスト",
+      "status": "fixed-and-independently-rechecked"
+    },
+    {
+      "finding": "固定ノード内の文字が枠外へ出ても全体配置検査を通る",
+      "action": "各ノードの必要高さを検査し、容量不足は明示エラー",
+      "status": "fixed"
+    },
+    {
+      "finding": "Windows向けフォント代替でPDF上の一部日本語が不可視になる",
+      "action": "サンプル専用portableテーマに明示的なNoto CJKフォントを指定して再描画",
+      "status": "fixed-in-sample-environment",
+      "limit": "閲覧先のフォント依存は残る。PowerPointでの目視検証は未実施。"
+    }
+  ],
+  "researchCaveats": [
+    "544枚は12事象の平均候補数",
+    "時間は1枚5秒の換算で実測ROIではない",
+    "2027年度中の実用化は目標",
+    "再現率の数値は今回の発表本文・注記にない",
+    "最終スライドはSE/PM向け提案"
+  ],
+  "revisionEffortMinutes": null,
+  "revisionEffortNote": "実作業時間を計測していないため未記入",
+  "remainingLimits": [
+    "自然文からの自動分解は未実装",
+    "単一階層のみ。任意の親子ツリー・混合関係は未対応",
+    "密な内容は短縮または分割を求める。自動ページ分割は未実装",
+    "PowerPointネイティブ表示とユーザーによる意味レビューは未確認"
+  ]
+}

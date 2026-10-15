@@ -71,6 +71,8 @@ export interface ShapeStyle {
     /** pt */
     width?: number;
     dashType?: "solid" | "dash" | "lgDash" | "sysDot";
+    /** Native editable connector direction, used for semantic relationships. */
+    endArrowType?: "triangle";
   };
   /** 0.0 - 1.0（roundRect のみ） */
   cornerRadius?: number;
@@ -141,6 +143,8 @@ export interface RenderContext {
   readonly variantId: string;
   readonly slideNumber: number;
   readonly totalSlides: number;
+  /** Optional renderer-owned composition of visible explanation and diagram body. */
+  layoutBody?(area: Rect): Rect;
 
   text(box: Rect, content: TextContent, style?: TextStyle): void;
   shape(kind: ShapeKind, box: Rect, style?: ShapeStyle): void;
