@@ -90,3 +90,15 @@ npm run preview -- examples/research/generated/live-decisions-boundary-2026-10-1
 ```
 
 `review-live-decisions-boundary-2026-10-16.json` に実際の修正と独立したアシスタント読者レビュー、`live-decisions-boundary-manifest-2026-10-16.json` に生成head・ハッシュ・再現条件を記録しています。コード追加なし。strict警告0・fallbackなし、全2枚をLibreOffice/Popplerで確認しました。PowerPointネイティブ表示とAPI操作試験は未実施。ユーザーの品質承認や意味上のMECE完全性は保証しません。PDF出典はコピー可能な文字で、クリック用注釈はありません。生成物は既存のignore対象に保存します。
+
+
+## OSSライセンス方針の事前照会とマージ条件（2026-10-17）
+
+`license-gate-2026-10-17.json` は、10月16日一般提供のライセンス適合機能を2枚で説明します。共通方針を依存追加前のAPI照会とPR差分検査へつなぐ運用案、Evaluate / Activeと既存ブランチ保護の違いを示します。API組込みは提案で、試験や有効化はしていません。検出範囲と法的保証の限界を紙面に残します。
+
+```sh
+npm run sdg -- generate examples/research/license-gate-2026-10-17.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated
+npm run preview -- examples/research/generated/license-gate-2026-10-17.pptx .preview/license-gate-2026-10-17
+```
+
+`license-gate-manifest-2026-10-17.json` と `review-license-gate-2026-10-17.json` に生成head・再現条件・独立アシスタント評価を記録。コード変更なし、708テスト、strict配置警告0。全2頁をLibreOfficeで目視しました。意味上のMECE・PowerPointネイティブ表示・API実試験は未検証。PDF出典は文字として表示し、クリック用注釈はありません。

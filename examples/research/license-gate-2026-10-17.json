@@ -1,0 +1,166 @@
+{
+  "title": "Coding Agentの依存追加とOSSライセンス方針",
+  "slides": [
+    {
+      "id": "license-policy-path",
+      "keyMessage": "依存追加の前とマージ前に、同じライセンス方針を確認できる",
+      "supportingMessage": "GitHub Enterprise Cloud（GHEC）のOSSライセンス適合機能：10月16日一般提供。図はAgentへのAPI組込案。",
+      "slideRole": "insight",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "policy",
+            "label": "企業方針",
+            "description": "企業が許容する\nライセンスを定義。\n共通の判定基準にする。",
+            "evidenceRefs": [
+              "policy-fact"
+            ]
+          },
+          {
+            "id": "precheck",
+            "label": "追加前に照会",
+            "description": "Agentが候補packageを\nAPIで確認するよう設計。\n不適合なら候補を見直す。",
+            "evidenceRefs": [
+              "api-fact"
+            ]
+          },
+          {
+            "id": "prcheck",
+            "label": "PR差分を検査",
+            "description": "追加・変更した依存を\n企業方針と照合。\n違反をPRへ注記する。",
+            "evidenceRefs": [
+              "enforce-fact"
+            ]
+          },
+          {
+            "id": "gate",
+            "label": "Activeで制御",
+            "description": "必須条件を有効にすると\n違反解消までマージ停止。\n差替えや承認済み例外で対応。",
+            "evidenceRefs": [
+              "enforce-fact"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "一つの依存追加について企業方針の設定からマージ可否確認まで",
+        "criterion": "依存を選定し変更を取り込むまでの時点",
+        "rationale": "方針設定・導入前照会・PR検査・取込制御を時系列に分ける。API照会の組込は執筆者の運用提案。全工程の自動連携や法的適合を保証しない。",
+        "exclusions": [
+          "既存全依存の是正",
+          "具体的API実装",
+          "ライセンス解釈の法的判断"
+        ],
+        "unresolvedQuestions": [
+          "実組織の契約・ルール設定・API応答は未検証"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "policy-fact",
+          "type": "text",
+          "statement": "企業共通のライセンス方針を定義し、rulesetと承認された例外で適用する。",
+          "sourceIds": [
+            "docs"
+          ]
+        },
+        {
+          "id": "api-fact",
+          "type": "text",
+          "statement": "GA発表はpackageの方針適合を照会する新APIを掲載。Coding Agentの推奨・追加前確認へ利用可能と説明する。",
+          "sourceIds": [
+            "release"
+          ]
+        },
+        {
+          "id": "enforce-fact",
+          "type": "text",
+          "statement": "PRで依存差分を検査。Active rulesetにライセンス適合結果必須条件を設定すると違反解消までマージをブロック。",
+          "sourceIds": [
+            "docs"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "release",
+          "title": "https://github.blog/changelog/2026-10-16-open-source-license-compliance-generally-available/",
+          "url": "https://github.blog/changelog/2026-10-16-open-source-license-compliance-generally-available/",
+          "publisher": "GitHub",
+          "date": "2026-10-16",
+          "accessedAt": "2026-10-17"
+        },
+        {
+          "id": "docs",
+          "title": "適用条件・動作の詳細は次頁GitHub Docs",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/supply-chain-security/open-source-license-compliance",
+          "publisher": "GitHub Docs",
+          "accessedAt": "2026-10-17"
+        }
+      ]
+    },
+    {
+      "id": "evaluate-active-boundary",
+      "keyMessage": "Evaluateで影響を確認し、Activeの停止条件を設計する",
+      "supportingMessage": "対象：GHECでCode Securityが有効なリポジトリ。検査は依存グラフの検出範囲内。法的保証はない。",
+      "slideRole": "recommendation",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "evaluate",
+            "label": "Evaluate：検査・注記",
+            "description": "検査し、PRへ違反を注記。\nモード自体はマージを止めない。\nただしコメント解決必須の\nブランチ保護で停止しうる。\n\n提案：まず既存保護への影響を確認。",
+            "evidenceRefs": [
+              "modes"
+            ]
+          },
+          {
+            "id": "active",
+            "label": "Active：違反で停止",
+            "description": "適合結果を必須に設定すると、\n違反解消までマージを停止。\n依存の差替えや承認済み例外で対処。\n例外申請は自動作成されない。\n\n提案：審査担当・基準を決めて有効化。",
+            "evidenceRefs": [
+              "modes"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "ライセンス適合必須条件を使うEvaluateとActiveの挙動",
+        "criterion": "rulesetの施行モード",
+        "rationale": "同一の検査・注記・マージ停止の軸で2モードを対照する。無効モードは比較対象外。",
+        "exclusions": [
+          "disabledモード",
+          "契約価格",
+          "法的評価の代替"
+        ],
+        "unresolvedQuestions": [
+          "対象repoの依存捕捉範囲",
+          "例外承認と既存ブランチ保護の運用影響"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "modes",
+          "type": "text",
+          "statement": "DocsはEvaluateは検査・注記のみ、Activeは必須条件でブロックと説明。コメント解決必須のブランチ保護はEvaluate注記にも適用される。例外申請は自動生成されず、管理者が審査する。",
+          "sourceIds": [
+            "docs"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "docs",
+          "title": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/supply-chain-security/open-source-license-compliance",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/supply-chain-security/open-source-license-compliance",
+          "publisher": "GitHub Docs",
+          "accessedAt": "2026-10-17"
+        }
+      ]
+    }
+  ]
+}
