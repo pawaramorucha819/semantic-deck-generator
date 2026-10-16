@@ -100,6 +100,9 @@ export class SlideSurface implements RenderContext {
   }
 
   text(box: Rect, content: TextContent, style: TextStyle = {}): void {
+    if (style.hyperlink && !["https:", "http:"].includes(new URL(style.hyperlink).protocol)) {
+      throw new Error("Text hyperlinks must use HTTP(S)");
+    }
     const role = style.role ?? "body";
     const fontSize = style.fontSize ?? this.fontSizeOf(role);
     const lineHeight = style.lineHeight ?? DEFAULT_LINE_HEIGHT;
@@ -125,6 +128,7 @@ export class SlideSurface implements RenderContext {
       wrap: style.wrap ?? true,
       isTextBox: true,
       objectName: name,
+      ...(style.hyperlink ? { hyperlink: { url: style.hyperlink } } : {}),
       ...(style.shrink ? { fit: "shrink" as const } : {}),
     };
 

@@ -42,6 +42,8 @@ export interface TextStyle {
   layer?: Layer;
   /** PowerPoint 上のオブジェクト名（デバッグ用） */
   name?: string;
+  /** Clickable source reference. Only HTTP(S) links are accepted; never fetched. */
+  hyperlink?: string;
 }
 
 export interface TextRun {

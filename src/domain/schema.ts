@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { contentItemEntries } from "./content.js";
+import { PartitionArgumentSchema, PartitionEvidenceSchema } from "./partition.js";
+export { PartitionArgumentSchema, PartitionEvidenceSchema } from "./partition.js";
 import {
   EVIDENCE_TYPES,
   LOGICAL_RELATIONS,
@@ -115,6 +117,7 @@ export const EvidenceSchema = z.discriminatedUnion("type", [
   CaseStudyEvidenceSchema,
   TextEvidenceSchema,
   ComparisonEvidenceSchema,
+  PartitionEvidenceSchema,
 ]);
 
 export const ContentItemSchema = z
@@ -215,11 +218,46 @@ export const SlideSpecSchema = z
     content: SemanticContentSchema.optional(),
     decomposition: DecompositionSchema.optional(),
     explanation: SlideExplanationSchema.optional(),
+    argument: PartitionArgumentSchema.optional(),
     evidence: z.array(EvidenceSchema).max(12, "evidence は 12 件までです"),
     sources: z.array(SourceSchema).max(12).optional(),
   })
   .strict()
   .superRefine((slide, ctx) => {
+    const partitions = slide.evidence.filter(e => e.type === "partition");
+    if (partitions.length > 0 || slide.argument) {
+      if (partitions.length !== 1 || slide.evidence.length !== 1) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["evidence"],
+          message: "partition argument requires exactly one partition evidence and no other evidence" });
+      }
+      if (!slide.argument) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["argument"],
+          message: "partition evidence requires an explicit partition argument" });
+      } else if (partitions.length !== 1 || slide.argument.evidenceId !== partitions[0]!.id) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["argument", "evidenceId"],
+          message: "partition argument evidenceId must reference its sole partition evidence" });
+      }
+      if (slide.content) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["content"],
+          message: "partition argument cannot coexist with content" });
+      }
+      if (slide.explanation) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["explanation"],
+          message: "partition argument cannot coexist with legacy explanation" });
+      }
+      if (slide.logicalRelation !== "composition" && slide.logicalRelation !== "claim_evidence") {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["logicalRelation"],
+          message: "partition argument requires composition or claim_evidence" });
+      }
+      const seenSources = new Set<string>();
+      (slide.sources ?? []).forEach((source, index) => {
+        if (seenSources.has(source.id)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["sources", index, "id"],
+            message: `partition source.id must be unique: ${source.id}` });
+        }
+        seenSources.add(source.id);
+      });
+    }
     const evidenceIds = new Set<string>();
     slide.evidence.forEach((e, i) => {
       if (evidenceIds.has(e.id)) {

@@ -1,0 +1,44 @@
+{
+  "title": "NEC被災画像検索：候補削減と見逃しの評価",
+  "slides": [{
+    "id": "nec-candidate-quality",
+    "keyMessage": "候補の約89%削減だけでは、見逃しの少なさは判断できない",
+    "supportingMessage": "候補数は確認量の代理指標。実業務の工数や検索品質は別に検証する。",
+    "slideRole": "insight",
+    "logicalRelation": "composition",
+    "evidence": [{
+      "id": "nec-partition",
+      "type": "partition",
+      "statement": "NECは固定の5,035枚を12種類の被災事象で検索し、候補が平均544枚になったと報告。確認した発表本文・注記では、候補内外の正解画像数と再現率の数値は未確認。",
+      "sourceIds": ["nec-release"],
+      "data": {
+        "whole": 5035,
+        "selected": 544,
+        "unit": "枚",
+        "population": "対象：東日本大震災の記録映像から抽出した車載画像",
+        "aggregation": {"kind": "mean", "eventCount": 12, "eventUnit": "事象", "wholeInvariant": true},
+        "labels": {"whole": "検索対象", "selected": "候補に残る", "remainder": "候補から外れる"},
+        "quality": {
+          "criterion": "正解画像＝探す被災事象が写る画像",
+          "unknownScope": "候補内外の正解数は、確認した発表本文・注記では未確認。見逃しの発生を示す図ではない。",
+          "selected": {"status": "unknown", "question": "残せた正解画像数"},
+          "remainder": {"status": "unknown", "question": "落とした正解画像数"}
+        }
+      }
+    }],
+    "argument": {
+      "kind": "partition-with-unknowns",
+      "evidenceId": "nec-partition",
+      "scope": "同じ検証画像に対する12事象の検索結果。個別画像の所属や事象別結果は未取得。",
+      "partitionAxis": "候補への採否。正解かどうかは別の分類軸。",
+      "inference": "候補平均544枚だけでは、再現率の分子・分母を埋められない",
+      "visualPurpose": "同じ母数に対する採否の量と、両側の品質内訳が未知であることを同時に示す。図がなければ、候補削減と見逃し評価の違いが読み取りにくい。",
+      "annotations": {
+        "quantity": {"text": "帯の幅は候補への採否のみ。平均の模式図で、単一検索の実測集合ではない。", "whyNeeded": "面積を正誤や一検索の画像所属と誤読しないため。"},
+        "quality": {"text": "下段は量を面積で示していない。", "whyNeeded": "正解数が不明なので、下段の文字領域の幅から割合を読ませないため。"},
+        "inference": {"text": "各検索の再現率＝候補に残った正解画像数 ÷ 正解画像の総数", "whyNeeded": "平均候補数だけで品質指標が求まらない理由を示すため。"}
+      }
+    },
+    "sources": [{"id":"nec-release","title":"NEC 被災状況の画像検索技術発表","publisher":"NEC","date":"2026-10-14","accessedAt":"2026-10-16","locator":"特長2・注4、発表本文と注記","url":"https://jpn.nec.com/press/202610/20261014_01.html"}]
+  }]
+}

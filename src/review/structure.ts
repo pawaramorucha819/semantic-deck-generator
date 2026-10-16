@@ -1,3 +1,4 @@
+import { buildArgumentReviewPacket, validateArgumentReview } from "./argument.js";
 import { contentItemEntries } from "../domain/content.js";
 import { parsePresentation } from "../domain/schema.js";
 import type { PresentationSpec, SemanticContent } from "../domain/types.js";
@@ -58,11 +59,12 @@ function membershipReview(slide: PresentationSpec["slides"][number]) {
 }
 
 /** Mechanical review is evidence for a human review, never a semantic MECE certificate. */
-export function buildStructureReview(spec: PresentationSpec, plan?: VisualPlan) {
+export function buildStructureReview(spec: PresentationSpec, plan?: VisualPlan, argumentReview?: unknown) {
   const validated = parsePresentation(spec);
   return {
     schemaVersion: "1.0" as const,
     title: validated.title,
+    ...(validated.slides.some(s => s.argument) ? { argumentReview: { ...buildArgumentReviewPacket(validated), ...(argumentReview !== undefined ? { status: "review-recorded", review: validateArgumentReview(validated, argumentReview) } : {}) } } : {}),
     assessment: "requires-human-review" as const,
     limitation: "ラベル重複・参照・方向は機械検査。意味上の重複や範囲の網羅性は、この報告だけでは判定できません。",
     slides: validated.slides.map(slide => {
@@ -79,7 +81,7 @@ export function buildStructureReview(spec: PresentationSpec, plan?: VisualPlan) 
       ];
       return {
         slideId: slide.id,
-        input: { keyMessage: slide.keyMessage, logicalRelation: slide.logicalRelation, content: slide.content, decomposition: slide.decomposition },
+        input: { keyMessage: slide.keyMessage, logicalRelation: slide.logicalRelation, content: slide.content, decomposition: slide.decomposition, argument: slide.argument },
         ...(graph ? { graph } : {}),
         mechanicalChecks: { schemaAndReferences: "passed", duplicateLabels, status: duplicateLabels.length ? "review-required" : "passed" },
         membershipChecks: membershipReview(slide),

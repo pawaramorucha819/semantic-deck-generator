@@ -22,3 +22,4 @@ export * from "./shared/layout.js";
 export * from "./declarative/index.js";
 export * from "./capture/index.js";
 export * from "./relationships/index.js";
+export * from "./partition-with-unknowns/index.js";
