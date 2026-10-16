@@ -1,0 +1,131 @@
+{
+  "schemaVersion": "1.0",
+  "sample": "live-decisions-boundary-2026-10-16.json",
+  "createdAt": "2026-10-16T21:39:00+09:00",
+  "generator": {
+    "repository": "https://github.com/pawaramorucha819/semantic-deck-generator",
+    "commit": "05dc0145ed3c503bd551a9d331e53afa5b069ac9",
+    "tree": "7ec1c1635482e627758c59e73b9c03bca4b95aa6",
+    "copiedTrackedBlobs": 197,
+    "blobHashMismatches": 0,
+    "existingCheckoutsModified": false,
+    "codeModified": false,
+    "pr": "https://github.com/pawaramorucha819/semantic-deck-generator/pull/3",
+    "prStateAtCheck": "open draft",
+    "mainAtCheck": "fc8db657d520ccbbf538a91ae06d024ae847334a",
+    "exactHeadCI": {
+      "url": "https://github.com/pawaramorucha819/semantic-deck-generator/actions/runs/38846143003",
+      "conclusion": "success"
+    }
+  },
+  "input": {
+    "path": "generator/examples/research/live-decisions-boundary-2026-10-16.json",
+    "sha256": "30e8e703bc321c3b481d9047e06c3b84c1a439afa394411fdeadf68090b02d64",
+    "bytes": 7941
+  },
+  "review": {
+    "path": "generator/examples/research/review-live-decisions-boundary-2026-10-16.json",
+    "sha256": "30633764f6fc0db4e9f5d1f8aa3bcef05cfd4af88ec5d6bbe69b43f05a68ec42",
+    "bytes": 5721
+  },
+  "artifacts": [
+    {
+      "path": "generated/live-decisions-boundary-2026-10-16.pptx",
+      "sha256": "9cfb163e2dee19e02ce7044f45e2319126e1d74a5100f6b230bae2fc65212657",
+      "bytes": 88561
+    },
+    {
+      "path": "generated/live-decisions-boundary-2026-10-16.visual-plan.json",
+      "sha256": "f8491cc81040002e75ba4d6d43fa58645f6dbde098715e1bb34ef665985db7f2",
+      "bytes": 15717
+    },
+    {
+      "path": "generated/live-decisions-boundary-2026-10-16.render-report.json",
+      "sha256": "e0cd179a13b5fe573eb4c23ab42ee9317b9b3d8a1e1af55882e40e4bc6a1b8db",
+      "bytes": 14480
+    },
+    {
+      "path": "generated/live-decisions-boundary-2026-10-16.structure-review.json",
+      "sha256": "6aba347d3473f2087872b46a4e002877d95a5b8eb99c07d91392f27db426125d",
+      "bytes": 10464
+    },
+    {
+      "path": "preview/live-decisions-boundary-2026-10-16.pdf",
+      "sha256": "302ca7a6a2687b50b3512769fe2c016149a9226368e3dd6f2f140416be27aa44",
+      "bytes": 126362
+    },
+    {
+      "path": "preview/live-decisions-boundary-2026-10-16-slide-1.png",
+      "sha256": "e606f15b6eb39b8638ef94133d9aa5295a11c16cf7ad7e4120611424126e45e3",
+      "bytes": 177648
+    },
+    {
+      "path": "preview/live-decisions-boundary-2026-10-16-slide-2.png",
+      "sha256": "dab240f0f1ef1a467dc7b57ea6325bf1c8788a513623eb808cdef3e9dc9f84b8",
+      "bytes": 186432
+    }
+  ],
+  "generationCommand": "npm run sdg -- generate examples/research/live-decisions-boundary-2026-10-16.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir ../generated",
+  "previewCommand": "PATH=/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:$PATH npm run preview -- ../generated/live-decisions-boundary-2026-10-16.pptx ../preview",
+  "verification": {
+    "command": "npm run check",
+    "typecheck": "passed",
+    "tests": "708 passed in 30 files",
+    "build": "passed",
+    "strictGeneration": "passed, zero issues, no fallback",
+    "finalVisibleTextPreservation": "All input headlines, supporting text, node labels and node descriptions found in PPTX XML",
+    "finalNativeObjectCheck": [
+      {
+        "slideId": "live-completion-boundary",
+        "nativeShapes": 20,
+        "nativeChevrons": 4,
+        "rasterPictures": 0,
+        "missingVisibleInputText": [],
+        "allSourceUrlsInNotes": true
+      },
+      {
+        "slideId": "reversible-operation-test",
+        "nativeShapes": 20,
+        "nativeChevrons": 4,
+        "rasterPictures": 0,
+        "missingVisibleInputText": [],
+        "allSourceUrlsInNotes": true
+      }
+    ],
+    "visualPagesInspected": 2,
+    "nativePowerPoint": "unverified",
+    "independentFinalVisualReview": "Both final pages re-inspected and accepted by a separate assistant reader. User approval not implied."
+  },
+  "runtime": {
+    "node": "v24.19.0",
+    "renderer": "LibreOfficeDev 26.8.0.0.alpha0 2c87e51eeaa2b413ff4ae097b2705eea1995d8e5",
+    "poppler": "26.05.0",
+    "fonts": [
+      "Noto Sans CJK JP",
+      "Noto Sans"
+    ],
+    "paidAPIUsed": false,
+    "softwareInstalled": false
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/guides/decisions-voice",
+      "accessedAt": "2026-10-16",
+      "sections": [
+        "Native delegation",
+        "Choose when to decide",
+        "Let Live delegate",
+        "Run actions and report results"
+      ]
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/changelog",
+      "publishedEntry": "2026-10-15",
+      "accessedAt": "2026-10-16",
+      "entry": "native Decisions integration in GPT-Live, gpt-live-1 / gpt-6-luna / v1/live/sessions"
+    }
+  ],
+  "publishingStatus": "Generation only. Input, review and manifest are ready for authorized repository publication; PPTX/PDF are generated outputs.",
+  "reproductionCommand": "npm run sdg -- generate examples/research/live-decisions-boundary-2026-10-16.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated",
+  "reproductionPreviewCommand": "npm run preview -- examples/research/generated/live-decisions-boundary-2026-10-16.pptx .preview/live-decisions-boundary-2026-10-16"
+}

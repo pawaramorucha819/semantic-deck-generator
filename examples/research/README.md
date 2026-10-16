@@ -78,3 +78,15 @@ npm run preview -- examples/research/generated/github-security-linked-2026-10-16
 ```
 
 `review-github-security-linked-2026-10-16.json` はアシスタント検証の記録です。利用機能の有効化や性能の実測は行っていません。旧版は比較のため残しています。
+
+
+## GPT-LiveとDecisions：判断と操作完了（2026-10-16）
+
+`live-decisions-boundary-2026-10-16.json` は2枚の資料です。1枚目はnative delegationの判断・操作・実状態確認の責任を工程図で示し、2枚目は可逆操作を使う未実施の検証案を示します。GPT-Live-1.1のAPI提供済みや速度改善率は主張しません。
+
+```sh
+npm run sdg -- generate examples/research/live-decisions-boundary-2026-10-16.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated
+npm run preview -- examples/research/generated/live-decisions-boundary-2026-10-16.pptx .preview/live-decisions-boundary-2026-10-16
+```
+
+`review-live-decisions-boundary-2026-10-16.json` に実際の修正と独立したアシスタント読者レビュー、`live-decisions-boundary-manifest-2026-10-16.json` に生成head・ハッシュ・再現条件を記録しています。コード追加なし。strict警告0・fallbackなし、全2枚をLibreOffice/Popplerで確認しました。PowerPointネイティブ表示とAPI操作試験は未実施。ユーザーの品質承認や意味上のMECE完全性は保証しません。PDF出典はコピー可能な文字で、クリック用注釈はありません。生成物は既存のignore対象に保存します。
