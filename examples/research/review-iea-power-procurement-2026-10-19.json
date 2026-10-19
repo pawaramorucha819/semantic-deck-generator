@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "日次リサーチ資料の人手レビュー記録。生成入力ではなく、CLIへの自動反映は行わない。",
+  "deckPath": "examples/research/iea-power-procurement-2026-10-19.json",
+  "reviewedAt": "2026-10-19",
+  "reviewer": "parent assistant (self-review reported) + Codex assistant + independent assistant",
+  "artifacts": {
+    "visualPlanPath": "generated/iea-power-procurement-2026-10-19.visual-plan.json",
+    "renderReportPath": "generated/iea-power-procurement-2026-10-19.render-report.json",
+    "structureReviewPath": "generated/iea-power-procurement-2026-10-19.structure-review.json",
+    "renderedPagesPath": ".preview/iea-power-procurement-2026-10-19"
+  },
+  "machineChecks": {
+    "schemaAndReferences": "passed",
+    "duplicateLabels": "passed",
+    "relationshipEdges": "matched authored convergence/process",
+    "layoutReport": "strict: 0 issues",
+    "fallbackSelection": "none",
+    "findings": [],
+    "pages": 4,
+    "patterns": [
+      "convergence",
+      "three-reasons",
+      "process",
+      "three-reasons"
+    ],
+    "aiMode": "off",
+    "generatorHead": "3ee1b40b74dd9cb2c855d5a3d6668765f1e86bfb"
+  },
+  "humanReview": {
+    "sourceFactsAndAssumptions": "parent assistant reports overview/executive-summary verification; Codex and independent reviewer did not recheck primary source",
+    "relationshipFaithfulness": "assistant-reviewed: authored convergence on page 1 and ordered process on page 3 preserved",
+    "semanticMECE": "unverified",
+    "semanticMECERationale": "Not an exhaustive procurement framework or an IEA-defined framework",
+    "scopeExclusionsAndUnknowns": "visible on page 4",
+    "projectedReadability": "all 4 LibreOffice PNG pages inspected by Codex and independent assistant; no clipping or overlaps identified",
+    "notesAndSourceLinks": "visible source title/date and page 4 URL; no claim of clickable PDF links",
+    "nativePowerPoint": "unverified",
+    "userApproval": "not-claimed"
+  },
+  "slideFeedback": [
+    {
+      "slideId": "power-readiness",
+      "status": "assistant-reviewed",
+      "finding": "Three inputs converge; removing diagram loses joint-condition meaning",
+      "requestedChange": null,
+      "reasonOrSource": "Provided parent input and generated PNG; no new source research",
+      "verifiedAfterChange": true
+    },
+    {
+      "slideId": "power-details",
+      "status": "assistant-reviewed",
+      "finding": "Same three aspects and order as page 1; fact/inference labels visible",
+      "requestedChange": null,
+      "reasonOrSource": "Provided parent input and generated PNG; no new source research",
+      "verifiedAfterChange": true
+    },
+    {
+      "slideId": "procurement-actions",
+      "status": "assistant-reviewed",
+      "finding": "Ordered checks and SLA definition visible; proposal is explicitly not an IEA procedure",
+      "requestedChange": null,
+      "reasonOrSource": "Provided parent input and generated PNG; no new source research",
+      "verifiedAfterChange": true
+    },
+    {
+      "slideId": "source-limits",
+      "status": "assistant-reviewed",
+      "finding": "34 regions / ~90% are research scope, not effects; limits visible",
+      "requestedChange": null,
+      "reasonOrSource": "Provided parent input and generated PNG; no new source research",
+      "verifiedAfterChange": true
+    }
+  ],
+  "decision": "assistant-reviewed; awaiting parent PR review",
+  "nextRevisionGoal": "Stop at saved draft PR; resume parent review before any merge",
+  "revisionEffortMinutes": null,
+  "revisionEffortNote": "実測した場合のみ記入。未計測を0として扱わない。",
+  "parentReportedRevision": {
+    "actorKind": "assistant",
+    "notUserApproval": true,
+    "initialPages": 3,
+    "finalPages": 4,
+    "initialOverflow": {
+      "requiredHeightIn": 1.05,
+      "availableHeightIn": 0.66,
+      "independentlyReproduced": false
+    },
+    "changes": [
+      "Separate overview convergence from detailed evidence into two pages",
+      "Add fact/inference labels",
+      "Define SLA"
+    ],
+    "originalDraftAvailable": false
+  },
+  "independentReview": {
+    "actorKind": "assistant",
+    "pagesInspected": 4,
+    "blockingFindings": [],
+    "minorSuggestions": [
+      "IEA and date repeat in footer",
+      "Page 4 URL wraps; readable"
+    ],
+    "sourceReverification": "not-performed"
+  },
+  "inputProvenance": "Complete JSON supplied by parent delegation; semantic content retained, serialized with indentation and terminal newline; Library transfer not completed"
+}

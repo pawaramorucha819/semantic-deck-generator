@@ -40,4 +40,4 @@ npm run preview -- .preview/sequence-generated/sequence-relations.pptx .preview/
 
 親がIEA調査を4頁化。合流図の各入力に2文を入れると必要高1.05in/枠0.66inでstrictが拒否。入力ラベルを短くし、同じ順の根拠説明を次頁へ分離して解消、全4頁を親が目視済みとの報告。34地域/約90%は調査範囲であり効果値ではないと明記、事実と助手示唆も可視で分離したとのこと。
 
-確定Library JSONは未受領。資料・原典条件を当方が検証したとは扱わず、受領後にexamples/research規約とレビュー票に沿って保存・再現する。今回のエラー回避のために文字を自動削除したり関係を勝手に変更したりしない。
+その後、親から完全なJSONを受領し examples/research/iea-power-procurement-2026-10-19.json に保存。strict生成と全4頁の独立目視を再実施、警告0・切れや重なりなし。原典条件を当方が再検証したとは扱わない。詳細は同ディレクトリのreview-iea-power-procurement-2026-10-19.json。今回のエラー回避のために文字を自動削除したり関係を勝手に変更したりしない。

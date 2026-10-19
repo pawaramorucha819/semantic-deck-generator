@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "generatorHead": "3ee1b40b74dd9cb2c855d5a3d6668765f1e86bfb",
+  "mainHead": "a818355e486741248e81b6aa0999321189af2d2b",
+  "inputPath": "examples/research/iea-power-procurement-2026-10-19.json",
+  "inputSha256": "3677dad75ea99aae81b1991e5403cd101442ff885004e7db024da92640a9317a",
+  "commands": [
+    "npm run sdg -- generate examples/research/iea-power-procurement-2026-10-19.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated",
+    "npm run preview -- examples/research/generated/iea-power-procurement-2026-10-19.pptx .preview/iea-power-procurement-2026-10-19"
+  ],
+  "validation": {
+    "strictIssues": 0,
+    "fallback": false,
+    "pages": 4,
+    "assistantVisualReview": "all pages",
+    "nativePowerPoint": "unverified",
+    "semanticMECE": "unverified",
+    "sourceReverificationByCodex": "not-performed",
+    "librarySave": "not-completed"
+  },
+  "artifacts": {
+    "pptxSha256": "aac4ba51b025eec67a32529cb95f8bb23f8f351fe92670c0bed9dfeaeb6c602c",
+    "pdfSha256": "f5019d2ff8cbc71e2ab85a5ab45e2acf91db111a1f8cabd502e5cf122f27fca0"
+  }
+}

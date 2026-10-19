@@ -1,0 +1,260 @@
+{
+  "title": "AI基盤の電力接続を調達でどう見るか",
+  "slides": [
+    {
+      "id": "power-readiness",
+      "keyMessage": "AI基盤の稼働判断には、電力接続の条件も要る",
+      "supportingMessage": "IEAの整理に基づく助手の解釈。設備の投資予定と、業務に使える供給能力を区別する。",
+      "slideRole": "analysis",
+      "logicalRelation": "convergence",
+      "content": {
+        "kind": "convergence",
+        "inputs": [
+          {
+            "id": "start",
+            "label": "いつ使えるか",
+            "description": "接続時期と申請の確度",
+            "evidenceRefs": [
+              "basis"
+            ]
+          },
+          {
+            "id": "scale",
+            "label": "どこまで使えるか",
+            "description": "容量の段階的な立上り",
+            "evidenceRefs": [
+              "basis"
+            ]
+          },
+          {
+            "id": "operate",
+            "label": "どんな条件で使えるか",
+            "description": "供給制限と費用負担",
+            "evidenceRefs": [
+              "basis"
+            ]
+          }
+        ],
+        "outcome": {
+          "label": "稼働計画の判断",
+          "description": "3条件を性能・単価と合わせて判断"
+        }
+      },
+      "decomposition": {
+        "scope": "電力供給に関する調達判断への入力",
+        "criterion": "開始時期・利用可能容量・利用条件",
+        "rationale": "図は調達判断の入力を整理する助手の分析。IEA独自の枠組みや因果モデルとは扱わない。",
+        "exclusions": [
+          "AI基盤調達全体の網羅",
+          "個別契約や各国法令の評価"
+        ],
+        "unresolvedQuestions": [
+          "個別サービスの条件と業務側の遅延許容度を照合する必要がある。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "basis",
+          "type": "text",
+          "statement": "IEAは接続待ちの重複・投機的案件、建物・サーバー・需要の段階的な立上り、条件付き接続と費用負担を整理。個別クラウド契約の条件は未調査。",
+          "sourceIds": [
+            "iea"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "iea",
+          "title": "IEA · Powering Artificial Intelligence（2026-10-14）",
+          "url": "https://www.iea.org/reports/powering-artificial-intelligence/executive-summary",
+          "publisher": "IEA",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-19",
+          "locator": "Executive summary: demand visibility / connection strategies / affordability"
+        }
+      ]
+    },
+    {
+      "id": "power-details",
+      "keyMessage": "予定容量を、そのまま使える容量と見なさない",
+      "supportingMessage": "IEAが示す制約と、そこから導く確認の問い（助手の解釈）。前ページと同じ3観点で示す。",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "start",
+            "label": "いつ使えるか",
+            "description": "事実：接続待ちには重複・投機的案件がある。\n示唆：接続申請の量だけで稼働日を確定しない。",
+            "evidenceRefs": [
+              "basis"
+            ]
+          },
+          {
+            "id": "scale",
+            "label": "どこまで使えるか",
+            "description": "事実：建物・サーバー・需要は段階的に立ち上がる。\n示唆：予定容量と利用可能容量を分ける。",
+            "evidenceRefs": [
+              "basis"
+            ]
+          },
+          {
+            "id": "operate",
+            "label": "どんな条件で使えるか",
+            "description": "事実：条件付き接続や供給制限の方式もある。\n示唆：制限条件と費用負担を確認する。",
+            "evidenceRefs": [
+              "basis"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "電力供給に関する調達判断への入力",
+        "criterion": "開始時期・利用可能容量・利用条件",
+        "rationale": "図は調達判断の入力を整理する助手の分析。IEA独自の枠組みや因果モデルとは扱わない。",
+        "exclusions": [
+          "AI基盤調達全体の網羅",
+          "個別契約や各国法令の評価"
+        ],
+        "unresolvedQuestions": [
+          "個別サービスの条件と業務側の遅延許容度を照合する必要がある。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "basis",
+          "type": "text",
+          "statement": "IEAは接続待ちの重複・投機的案件、建物・サーバー・需要の段階的な立上り、条件付き接続と費用負担を整理。個別クラウド契約の条件は未調査。",
+          "sourceIds": [
+            "iea"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "iea",
+          "title": "IEA · Powering Artificial Intelligence（2026-10-14）",
+          "url": "https://www.iea.org/reports/powering-artificial-intelligence/executive-summary",
+          "publisher": "IEA",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-19",
+          "locator": "Executive summary: demand visibility / connection strategies / affordability"
+        }
+      ]
+    },
+    {
+      "id": "procurement-actions",
+      "keyMessage": "調達時に「約束」と「実負荷の検証」を分ける",
+      "supportingMessage": "助手の提案・未実施。矢印は確認の順序であり、IEAが指定した手順ではない。",
+      "slideRole": "analysis",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "requirements",
+            "label": "業務条件を決める",
+            "description": "処理の締切と遅延許容度を整理。\n止められる処理と止められない処理を分ける。"
+          },
+          {
+            "id": "contract",
+            "label": "供給条件を照合",
+            "description": "開始日・増設条件・制限時のサービス保証水準（SLA）を確認。\n代替拠点や復旧方法も合わせる。"
+          },
+          {
+            "id": "acceptance",
+            "label": "受入で確かめる",
+            "description": "設備確保と実負荷での運用を別に確認。\n制限や再開を想定した試験条件を決める。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "AI基盤調達の条件確認から受入まで",
+        "criterion": "確認の段階",
+        "rationale": "図は調達判断の入力を整理する助手の分析。IEA独自の枠組みや因果モデルとは扱わない。",
+        "exclusions": [
+          "AI基盤調達全体の網羅",
+          "個別契約や各国法令の評価"
+        ],
+        "unresolvedQuestions": [
+          "個別サービスの条件と業務側の遅延許容度を照合する必要がある。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "basis",
+          "type": "text",
+          "statement": "IEAは接続待ちの重複・投機的案件、建物・サーバー・需要の段階的な立上り、条件付き接続と費用負担を整理。個別クラウド契約の条件は未調査。",
+          "sourceIds": [
+            "iea"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "iea",
+          "title": "IEA · Powering Artificial Intelligence（2026-10-14）",
+          "url": "https://www.iea.org/reports/powering-artificial-intelligence/executive-summary",
+          "publisher": "IEA",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-19",
+          "locator": "Executive summary: demand visibility / connection strategies / affordability"
+        }
+      ]
+    },
+    {
+      "id": "source-limits",
+      "keyMessage": "この資料は政策比較を調達の問いに翻訳したもの",
+      "supportingMessage": "発表：2026-10-14 ／ 確認：2026-10-19。今日の新発表や実測ROIの報告ではない。",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "一次情報の範囲",
+            "description": "国際エネルギー機関（IEA）の概要・要旨を確認。\n34政策地域、世界DC容量約90%を対象。\n調査範囲の数値で、効果の大きさではない。\n出典：iea.org/reports/powering-artificial-intelligence"
+          },
+          {
+            "label": "未確認・適用の限界",
+            "description": "全文・政策データセット・各国法令・個別契約は未確認。\n全クラウドが供給制限されるとは言えない。\n個別業務に適用する前に契約と実負荷を確認する。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "今回の出典範囲と適用上の制約",
+        "criterion": "確認済みの範囲と未確認の範囲",
+        "rationale": "図は調達判断の入力を整理する助手の分析。IEA独自の枠組みや因果モデルとは扱わない。",
+        "exclusions": [
+          "AI基盤調達全体の網羅",
+          "個別契約や各国法令の評価"
+        ],
+        "unresolvedQuestions": [
+          "個別サービスの条件と業務側の遅延許容度を照合する必要がある。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "basis",
+          "type": "text",
+          "statement": "IEAは接続待ちの重複・投機的案件、建物・サーバー・需要の段階的な立上り、条件付き接続と費用負担を整理。個別クラウド契約の条件は未調査。",
+          "sourceIds": [
+            "iea"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "iea",
+          "title": "IEA · Powering Artificial Intelligence（2026-10-14）",
+          "url": "https://www.iea.org/reports/powering-artificial-intelligence/executive-summary",
+          "publisher": "IEA",
+          "date": "2026-10-14",
+          "accessedAt": "2026-10-19",
+          "locator": "Executive summary: demand visibility / connection strategies / affordability"
+        }
+      ]
+    }
+  ]
+}
