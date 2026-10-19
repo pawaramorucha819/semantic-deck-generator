@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { drawExplanatoryNodes } from "../shared/explanatory-nodes.js";
-import { isRelationshipContent } from "../../domain/content.js";
 import { isMetric, type ContentItem, type Evidence, type SlideSpec } from "../../domain/types.js";
 import type { RenderContext } from "../../render/context.js";
 import { columns, splitTop, type Rect } from "../../render/geometry.js";
@@ -63,9 +62,9 @@ type ReasonSource =
   | { origin: "points"; items: ContentItem[] }
   | { origin: "evidence"; items: Evidence[] };
 
-/** 並列カードの素材。content.points があればそれを優先し、無ければ evidence を使う。 */
+/** 並列カードの素材。content.points を使い、content 自体が無ければ evidence を使う。 */
 function reasonSource(slide: SlideSpec): ReasonSource | undefined {
-  if (isRelationshipContent(slide.content)) return undefined;
+  if (slide.content && slide.content.kind !== "points") return undefined;
   if (slide.content?.kind === "points") {
     const items = slide.content.items;
     if (items.length >= 2 && items.length <= 4) return { origin: "points", items };
@@ -107,7 +106,9 @@ export const threeReasonsPattern: VisualPattern<ThreeReasonsBindings> = {
       return {
         compatible: false,
         score: 0,
-        reason: "並列表示できる 2〜4 件の content.points または evidence が存在しない",
+        reason: slide.content && slide.content.kind !== "points"
+          ? `content.${slide.content.kind} は根拠の並列カードへ置き換えられない。関係に合う Pattern を使うかページを分けてください`
+          : "並列表示できる 2〜4 件の content.points または evidence が存在しない",
       };
     }
 
@@ -158,7 +159,7 @@ export const threeReasonsPattern: VisualPattern<ThreeReasonsBindings> = {
     const source = reasonSource(slide);
     if (!source) {
       throw new Error(
-        `[three-reasons] buildBindings: 並列表示できる素材がありません (slide=${slide.id})`,
+        `[three-reasons] buildBindings: content.${slide.content?.kind ?? "none"} に対して並列表示できる素材がありません。関係に合う Pattern を使うかページを分けてください (slide=${slide.id})`,
       );
     }
 

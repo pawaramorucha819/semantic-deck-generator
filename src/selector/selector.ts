@@ -230,6 +230,12 @@ export function checkSelectable(
  * 意味的に不適合な Pattern が scope の力で選ばれることはない。
  */
 export function selectPattern(slide: SlideSpec, options: SelectorOptions = {}): PatternSelection {
+  // This conflicting declaration has historically replaced steps with evidence
+  // cards. Do not silently reinterpret it or conceal the conflict in fallback.
+  // Policy modes also enter here before consulting AI or human overrides.
+  if (slide.content?.kind === "sequence" && slide.logicalRelation === "claim_evidence") {
+    throw new Error(`Slide '${slide.id}': content.sequence と logicalRelation=claim_evidence は同じ図として選択できません。工程なら process、時系列なら timeline を著者が指定するか、主張の根拠と工程を別ページに分けてください。入力・根拠は変更していません。`);
+  }
   const registry = options.registry ?? defaultRegistry;
   const minimumScore = options.minimumScore ?? 0;
   const patterns = registry.all();
