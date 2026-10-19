@@ -1,3 +1,4 @@
+import { drawExplanatoryNodes } from "../shared/explanatory-nodes.js";
 import { z } from "zod";
 import { contentItemEntries, isRelationshipContent } from "../../domain/content.js";
 import { LOGICAL_RELATIONS, type ContentItem, type SemanticContent, type SlideSpec } from "../../domain/types.js";
@@ -25,6 +26,7 @@ export interface MessageOnlyBindings {
   /** Explicit text representation of semantic content; contains all nodes without truncation. */
   structureText?: string;
   structureNodes?: StructureNodeBinding[];
+  explanatoryItems?: Array<{ label: string; description?: string }>;
 }
 
 export const MessageOnlyBindingsSchema: z.ZodType<MessageOnlyBindings> = z
@@ -35,6 +37,7 @@ export const MessageOnlyBindingsSchema: z.ZodType<MessageOnlyBindings> = z
     points: z.array(z.string().min(1)).min(1).max(3).optional(),
     sourceText: z.string().min(1).optional(),
     structureText: z.string().min(1).optional(),
+    explanatoryItems: z.array(z.object({ label: z.string().min(1), description: z.string().min(1).optional() }).strict()).min(1).max(6).optional(),
     structureNodes: z.array(z.object({
       path: z.array(z.union([z.string().min(1), z.number().int().nonnegative()])).min(1).max(2),
       nodeId: z.string().min(1).max(120).optional(),
@@ -111,6 +114,7 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
         headline: slide.keyMessage,
         subline: slide.supportingMessage,
         structureText: describeContent(slide.content),
+        ...(slide.explanation && slide.content.kind === "points" ? { explanatoryItems: slide.content.items.map(({ label, description }) => ({ label, ...(description ? { description } : {}) })) } : {}),
         structureNodes: structureNodes(slide.content),
         sourceText: buildSourceText(slide),
       };
@@ -148,6 +152,10 @@ export const messageOnlyPattern: VisualPattern<MessageOnlyBindings> = {
   render(b: MessageOnlyBindings, ctx: RenderContext): void {
     if (ctx.layoutBody) {
       const body = drawFooter(ctx, drawHeader(ctx, b), b.sourceText);
+      if (b.explanatoryItems) {
+        drawExplanatoryNodes(ctx, body, b.explanatoryItems.map((item, i) => ({ ...item, name: `item-${i + 1}` })), false);
+        return;
+      }
       const text = b.structureText ?? (b.points ?? []).join("\n\n");
       if (text) {
         const fontSize = Math.max(14, ctx.theme.fontSizes.body);

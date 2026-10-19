@@ -11,6 +11,7 @@ import type { AnyVisualPattern } from "./pattern.js";
 import { processPattern } from "./process/index.js";
 import { relationshipPatterns } from "./relationships/index.js";
 import { threeReasonsPattern } from "./three-reasons/index.js";
+import { partitionWithUnknownsPattern } from "./partition-with-unknowns/index.js";
 
 /**
  * Pattern レジストリ。
@@ -63,6 +64,7 @@ export interface PatternRegistryEntry {
  * 配列の順序はスコア同点時のタイブレークにしか影響しない（決定論性のため）。
  */
 export const builtinPatterns: AnyVisualPattern[] = [
+  partitionWithUnknownsPattern,
   ...relationshipPatterns,
   beforeAfterPattern,
   threeReasonsPattern,

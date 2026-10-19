@@ -54,3 +54,51 @@ npm run sdg -- generate examples/research/nec-disaster-vlm-2026-10-14.json \
 ## フォントと確認環境
 
 サンプルは `portable` テーマ（Noto Sans CJK JP / Noto Sans）を使用します。編集・再描画する環境にもこのフォントが必要です。添付PDFは確認済み表示ですが、PPTXはOSとフォントにより改行や表示が変わります。今回の目視確認はLibreOfficeで行い、PowerPointネイティブ表示は未確認です。
+
+## GitHub AI Scan / Agentic autofix 解説（2026-10-16）
+
+`github-security-explained-2026-10-16.json` は、GitHubの2026年10月15日の一般提供発表と公式Docsを使った8ページの解説です。検出と修正を別の入口として示し、用語・仕組み・対象条件・課金・限界・提案を可視本文に置きました。二つの発表URLと主要DocsのURLはPDFでも読めます。
+
+```sh
+npm run sdg -- generate examples/research/github-security-explained-2026-10-16.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated
+npm run preview -- examples/research/generated/github-security-explained-2026-10-16.pptx .preview/github-security-explained-2026-10-16
+```
+
+`review-github-security-2026-10-16.json` は実施したアシスタント読者レビューと修正の記録です。ユーザーの品質承認ではありません。PDF内のDocs出典不足と組織単位の有効化範囲の説明不足を修正し、全8ページの再確認を通過しました。`github-security-manifest-2026-10-16.json` に生成リビジョン・入力ハッシュ・再生成コマンドを記録しています。
+
+Strict生成は配置警告0・fallbackなし。LibreOffice出力を確認し、PowerPointネイティブ表示は未確認です。PDFのURLはコピー可能ですが、クリック用注釈はありません。AI機能の有効化・実測評価は行っていません。生成物は既存のignore対象に保存します。
+
+## オブジェクトと説明を対応させる改良版
+
+`github-security-linked-2026-10-16.json` は上記8ページの内容を10ページに再構成し、同じ番号・名称で図と説明を対応づけた版です。`nodeRefs` は意味を確認して明示指定します。費用と長い出典は別ページに分けました。発表日10月15日と確認日10月16日（JST）を区別します。
+
+```sh
+npm run sdg -- generate examples/research/github-security-linked-2026-10-16.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated
+npm run preview -- examples/research/generated/github-security-linked-2026-10-16.pptx .preview/linked
+```
+
+`review-github-security-linked-2026-10-16.json` はアシスタント検証の記録です。利用機能の有効化や性能の実測は行っていません。旧版は比較のため残しています。
+
+
+## GPT-LiveとDecisions：判断と操作完了（2026-10-16）
+
+`live-decisions-boundary-2026-10-16.json` は2枚の資料です。1枚目はnative delegationの判断・操作・実状態確認の責任を工程図で示し、2枚目は可逆操作を使う未実施の検証案を示します。GPT-Live-1.1のAPI提供済みや速度改善率は主張しません。
+
+```sh
+npm run sdg -- generate examples/research/live-decisions-boundary-2026-10-16.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated
+npm run preview -- examples/research/generated/live-decisions-boundary-2026-10-16.pptx .preview/live-decisions-boundary-2026-10-16
+```
+
+`review-live-decisions-boundary-2026-10-16.json` に実際の修正と独立したアシスタント読者レビュー、`live-decisions-boundary-manifest-2026-10-16.json` に生成head・ハッシュ・再現条件を記録しています。コード追加なし。strict警告0・fallbackなし、全2枚をLibreOffice/Popplerで確認しました。PowerPointネイティブ表示とAPI操作試験は未実施。ユーザーの品質承認や意味上のMECE完全性は保証しません。PDF出典はコピー可能な文字で、クリック用注釈はありません。生成物は既存のignore対象に保存します。
+
+
+## OSSライセンス方針の事前照会とマージ条件（2026-10-17）
+
+`license-gate-2026-10-17.json` は、10月16日一般提供のライセンス適合機能を2枚で説明します。共通方針を依存追加前のAPI照会とPR差分検査へつなぐ運用案、Evaluate / Activeと既存ブランチ保護の違いを示します。API組込みは提案で、試験や有効化はしていません。検出範囲と法的保証の限界を紙面に残します。
+
+```sh
+npm run sdg -- generate examples/research/license-gate-2026-10-17.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated
+npm run preview -- examples/research/generated/license-gate-2026-10-17.pptx .preview/license-gate-2026-10-17
+```
+
+`license-gate-manifest-2026-10-17.json` と `review-license-gate-2026-10-17.json` に生成head・再現条件・独立アシスタント評価を記録。コード変更なし、708テスト、strict配置警告0。全2頁をLibreOfficeで目視しました。意味上のMECE・PowerPointネイティブ表示・API実試験は未検証。PDF出典は文字として表示し、クリック用注釈はありません。

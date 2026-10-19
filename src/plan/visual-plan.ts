@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveExplanationLinks } from "./explanation-links.js";
 import { SourceSchema, SlideExplanationSchema } from "../domain/schema.js";
 import type { PresentationSpec, SlideSpec, SlideExplanation, Source } from "../domain/types.js";
 import type { AnyVisualPattern } from "../patterns/pattern.js";
@@ -196,11 +197,16 @@ function planSlideFromDecision(
   includeCandidates: boolean,
   decision: SlideDecision,
 ): VisualPlanSlide {
+  slide = resolveExplanationLinks(slide);
   const notes: string[] = [];
 
   let patternId = decision.patternId;
   let fallbackUsed = decision.fallbackUsed;
   let pattern = registry.get(patternId);
+
+  if (slide.argument && !pattern.supportedArgumentKinds?.includes(slide.argument.kind)) {
+    throw new Error(`Slide ${slide.id}: no pattern supports explicit argument ${slide.argument.kind}; refusing lossy fallback`);
+  }
 
   // variant を先に確定してから bindings を作る。
   // これにより buildBindings には必ず実装済みの variant だけが渡り、
@@ -213,6 +219,7 @@ function planSlideFromDecision(
     // Pattern 実装のバグ（schema と実装のずれ）をここで検出する。
     bindings = pattern.bindingsSchema.parse(pattern.buildBindings(slide, variantId));
   } catch (error) {
+    if (slide.argument) throw new Error(`Slide ${slide.id}: explicit argument bindings failed; refusing lossy fallback`, { cause: error });
     // Pattern 側の想定外（match は通ったが bindings を作れない/契約違反）→ fallback へ退避
     notes.push(
       `${patternId} の bindings 生成に失敗したため fallback へ切り替えました: ${

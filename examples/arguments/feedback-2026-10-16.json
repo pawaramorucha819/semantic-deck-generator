@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-16",
+  "sample": "nec-candidate-quality-2026-10-16.json",
+  "audience": "Japanese SE / PM learning evidence-led technical explanation",
+  "sourceVerification": {
+    "url": "https://jpn.nec.com/press/202610/20261014_01.html",
+    "accessedAt": "2026-10-16",
+    "scope": "Release body and notes; linked papers and image-contained evaluations were not inspected"
+  },
+  "reviewActor": {
+    "kind": "assistant",
+    "id": "independent-semantic-reader-review"
+  },
+  "userApproval": false,
+  "relationFidelity": {
+    "assessment": "accepted for this one-page example",
+    "encoding": "Inclusion quantity only in proportional band; separately labeled, non-causal references to unknown relevance counts",
+    "semanticMECE": "unverified",
+    "membershipSet": "not acquired; mean schematic only"
+  },
+  "readerChecks": {
+    "mainClaim": "Candidate reduction alone does not establish low missed positives",
+    "reportedVsCalculated": "5035 and mean544 over12events reported;4491 and percentages calculated",
+    "unknownValues": "No numeric recall or invented correct/incorrect ratio",
+    "scope": "Unknown numerical quality is limited to checked body/notes, not all publications"
+  },
+  "layoutDefects": [],
+  "revisionEffort": {
+    "reviewDrivenFixes": 4,
+    "changes": [
+      "Preserve mean qualifier in final inference",
+      "Quote verbal segment labels in their breakdown headings",
+      "Expose supportingMessage in semantic review packet",
+      "Render empty partition as no applicable members, without inventing quality values"
+    ],
+    "timeTracked": false
+  },
+  "verification": {
+    "aggregateCommand": "npm run check",
+    "tests": 708,
+    "testFiles": 30,
+    "typecheck": "passed",
+    "build": "passed",
+    "strictSampleGeneration": "passed, zero issues",
+    "existingExampleWorkflows": "all six CI generation workflows passed locally",
+    "visualPagesReviewed": 1,
+    "viewer": "LibreOffice PDF/PNG",
+    "nativePowerPoint": "not inspected",
+    "nativeEditableObjects": 25,
+    "bandFractionAbsoluteError": 1.82e-06,
+    "PPTXAndPDFSourceHyperlink": "verified"
+  },
+  "nextImprovements": [
+    {
+      "priority": "high",
+      "action": "Define a general body-preservation contract before allowing mixed content and numeric evidence",
+      "acceptance": "Every declared node survives selection or generation fails explicitly"
+    },
+    {
+      "priority": "medium",
+      "action": "Add event-level known relevance counts only with matching population provenance",
+      "acceptance": "No average-recall derivation from average candidate count; denominators and zero cases validated"
+    },
+    {
+      "priority": "medium",
+      "action": "Link commentary to semantic relations as well as objects",
+      "acceptance": "Reader can locate which relation each explanation justifies"
+    }
+  ],
+  "limitations": [
+    "Structured author interpretation is still required",
+    "Only one invariant corpus with a single selected quantity and unknown quality cells",
+    "Semantic review actor is self-declared; no authentication or MECE proof",
+    "Noto fonts required for matching editable PPTX appearance; PDF is the fixed checked preview"
+  ]
+}

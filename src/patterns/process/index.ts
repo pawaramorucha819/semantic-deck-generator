@@ -163,7 +163,7 @@ export const processPattern: VisualPattern<ProcessBindings> = {
     });
     const body = drawFooter(ctx, afterHeader, b.sourceText);
     if (ctx.layoutBody) {
-      drawExplanatoryNodes(ctx, body, b.steps.map(item => ({ ...item, label: `${b.stepPrefix ? b.stepPrefix + " " : ""}${item.index}　${item.label}`, name: `step-${item.index}` })), true);
+      drawExplanatoryNodes(ctx, body, b.steps.map(item => ({ ...item, label: item.label.startsWith("[") ? item.label : `${b.stepPrefix ? b.stepPrefix + " " : ""}${item.index}　${item.label}`, name: `step-${item.index}` })), true);
       return;
     }
 

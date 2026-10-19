@@ -83,6 +83,11 @@ function scoreCompatibility(
 export function evaluatePattern(pattern: AnyVisualPattern, slide: SlideSpec): PatternEvaluation {
   const base = { patternId: pattern.id, version: pattern.version };
 
+  if (slide.argument && !pattern.supportedArgumentKinds?.includes(slide.argument.kind) && !pattern.fallback) {
+    return { ...base, compatible: false, score: 0, matchScore: 0, compatibilityScore: 0,
+      reason: `Explicit argument ${slide.argument.kind} is not supported`, rejectedAt: "compatibility" };
+  }
+
   const compat = scoreCompatibility(pattern, slide);
   if (!compat.ok) {
     return {

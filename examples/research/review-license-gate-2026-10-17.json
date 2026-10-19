@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "1.0",
+  "reviewer": "assistant + independent assistant",
+  "reviewedAt": "2026-10-17",
+  "deckPath": "examples/research/license-gate-2026-10-17.json",
+  "decision": "assistant-reviewed",
+  "machineChecks": {
+    "tests": 708,
+    "testFiles": 30,
+    "typecheck": "pass",
+    "build": "pass",
+    "strictLayoutIssues": 0,
+    "fallback": false,
+    "pages": 2,
+    "renderer": "LibreOffice + Poppler, Noto Sans CJK JP, Node 24.19.0",
+    "nativePowerPoint": "unverified",
+    "semanticMECE": "unverified",
+    "liveAPItrial": "not-run",
+    "userApproval": "not-claimed",
+    "pdfSourceLinks": "visible text; no clickable annotations"
+  },
+  "humanReview": {
+    "sourceFactsAndAssumptions": "pass",
+    "relationshipFaithfulness": "pass",
+    "semanticMECE": "unverified",
+    "projectedReadability": "pass",
+    "notesAndSourceLinks": "URLs visible; no click annotations",
+    "scopeExclusionsAndUnknowns": "scope and limitations stated"
+  },
+  "slideFeedback": [
+    {
+      "slideId": "license-policy-path",
+      "finding": "Ambiguous unimplemented wording and unnamed feature",
+      "change": "Name OSS license compliance, distinguish authors API integration proposal",
+      "verifiedAfterChange": true
+    },
+    {
+      "slideId": "evaluate-active-boundary",
+      "finding": "Eligibility needed repository-level clarity; orphan final characters",
+      "change": "State Code Security enabled repo; shorten supporting sentence preserving graph boundary and lack of legal guarantee",
+      "verifiedAfterChange": true
+    }
+  ],
+  "inputToDiagram": [
+    {
+      "slideId": "license-policy-path",
+      "claim": "Same policy before package addition and before merge",
+      "decomposition": "Four stages: policy, precheck, PR inspection, enforcement",
+      "relation": "ordered process; arrows denote proposed operational order, not automatic API wiring",
+      "visualPurpose": "Shows where one governance policy affects selection and integration decisions"
+    },
+    {
+      "slideId": "evaluate-active-boundary",
+      "claim": "Evaluate and Active need different rollout decisions",
+      "decomposition": "Two enabled enforcement modes; disabled excluded",
+      "relation": "parallel comparison",
+      "visualPurpose": "Shows different blocking outcomes against the same type of license violation"
+    }
+  ],
+  "changesBeforeReview": [
+    "Separate explanatory layout overflowed; use native two-column comparison without truncating conditions",
+    "Strict sizing warning from additional line resolved by preserving legal caveat in subline"
+  ],
+  "explicitUserFeedback": null,
+  "nextRevisionGoal": "Consider native comparison rows and source hyperlinks when separately scoped; no generator code change in this run",
+  "revisionEffortMinutes": null
+}

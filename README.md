@@ -1425,3 +1425,9 @@ examples/
 ### 補足説明なしで読む解説資料
 
 `explanation` に読者の問いと説明セクションを持たせ、図と同じ紙面に表示できます。`npm run example:explanatory` は背景・用語・仕組み・評価条件・限界・導入判断を含む8ページのNEC解説版を生成します。詳細と品質基準は [説明型資料の手順](docs/standalone-explanatory-decks.md) を参照してください。
+
+### 主張を支える採否の量と未知の品質内訳
+
+`npm run example:partition` は、NECの平均候補544/5,035枚を比例帯にし、両側の正解数は「未確認」として示す1枚を生成します。数値の差分・比率は計算として追跡し、主張・分解軸・図の役割・必要な解説を明示します。未知の再現率は計算しません。記録済みassistantレビューは入力変更で失効します。従来の根拠付き入力経路を使い、evidence=[]の原文分解経路の制限は維持します。
+
+入力、レビュー、再現コマンドと限界: [docs/partition-argument.md](docs/partition-argument.md)。

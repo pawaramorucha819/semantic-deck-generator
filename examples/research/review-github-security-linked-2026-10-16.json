@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "deckPath": "examples/research/github-security-linked-2026-10-16.json",
+  "reviewer": "assistant",
+  "userFeedbackSummary": "Explanations became clearer, but mapping between diagram objects and the explanations was unclear.",
+  "changes": [
+    "Explicit stable nodeRefs validated against content IDs",
+    "Identical numbered object names on cards and explanatory headings",
+    "Global context marked separately",
+    "Costs and source URLs split into separate pages to preserve readability"
+  ],
+  "machineChecks": {
+    "typecheck": "passed",
+    "tests": "654 passed across 28 files",
+    "build": "passed",
+    "strictRender": "zero issues"
+  },
+  "visualReview": {
+    "pages": 10,
+    "viewer": "LibreOffice PDF and PNG",
+    "status": "all 10 pages independently inspected; date correction on pages 8–10 rechecked"
+  },
+  "humanApproval": "not requested or inferred for final output",
+  "semanticMECE": "unverified",
+  "nextRevisionGoal": "Consider object-aligned paragraph placement and typed edge explanations; no invented causality",
+  "revisionEffortMinutes": null,
+  "publication": "proposed pull request; not merged",
+  "sourceDateNote": "Announcement 2026-10-15; primary verification 2026-10-16 07:55–08:02 JST.",
+  "artifacts": {
+    "pptx": {
+      "sha256": "eb5a8617d756d91de598a6636862d1ee561a2c363a91faf7a614c1218f5b3f69",
+      "bytes": 252004
+    },
+    "pdf": {
+      "sha256": "dc72257ec1808bd30ab9750f5255350b1511108a88091bce4138576c847bd86f",
+      "bytes": 276198
+    }
+  }
+}

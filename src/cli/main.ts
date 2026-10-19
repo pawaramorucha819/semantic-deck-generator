@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { runArgumentReview, ARGUMENT_USAGE } from "./commands/argument.js";
 import { PresentationValidationError } from "../domain/schema.js";
 import { CliArgumentError } from "./args.js";
 import { runGenerate, GENERATE_USAGE } from "./commands/generate.js";
@@ -23,6 +24,7 @@ Semantic Deck Generator — 意味構造から決定論的に PowerPoint を生�
 
 Commands
   generate <presentation.json>   PowerPoint を生成する
+  argument-review <file.json>    論拠設計の未承認レビュー票を出力する
   structure <command>           原文から分解候補を検査・レビュー・コンパイルする（オフライン）
   template import <file.pptx>    既存 PPTX から企業テンプレートを取り込む
   template list                  テンプレート一覧
@@ -45,6 +47,7 @@ Examples
 
 const HELP_BY_COMMAND: Record<string, string> = {
   generate: GENERATE_USAGE,
+  "argument-review": ARGUMENT_USAGE,
   template: TEMPLATE_USAGE,
   pattern: PATTERN_USAGE,
   knowledge: KNOWLEDGE_USAGE,
@@ -61,6 +64,8 @@ export async function main(argv: readonly string[]): Promise<number> {
   }
 
   switch (command) {
+    case "argument-review":
+      return runArgumentReview(argv.slice(1));
     case "generate":
       return runGenerate(argv.slice(1));
     case "structure":

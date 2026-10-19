@@ -1,0 +1,931 @@
+{
+  "title": "GitHub AI ScanとAgentic autofixの一般提供",
+  "subtitle": "2026年10月15日発表を読む｜SE・PM向け解説",
+  "slides": [
+    {
+      "id": "github-01",
+      "keyMessage": "GitHubのAI検出と修正支援は、別の入口で働く",
+      "slideRole": "context",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "s1-n1",
+            "label": "AI Scan",
+            "description": "PRの変更から脆弱性候補を探す",
+            "evidenceRefs": [
+              "s1-fact"
+            ]
+          },
+          {
+            "id": "s1-n2",
+            "label": "Agentic autofix",
+            "description": "既存アラートから修正PRを作る",
+            "evidenceRefs": [
+              "s1-fact"
+            ]
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "10月15日の一般提供で、何が変わった？",
+        "sections": [
+          {
+            "heading": "発表と用語",
+            "body": "GitHubは2026年10月15日に両機能を一般提供（GA）。PRは変更の取り込みを求めるレビュー依頼。CodeQLは脆弱性の疑いをアラートで示すコード解析。"
+          },
+          {
+            "heading": "AI Scan",
+            "body": "CodeQL未対応領域のPR変更を調べ、脆弱性候補を指摘する。",
+            "nodeRefs": [
+              "s1-n1"
+            ]
+          },
+          {
+            "heading": "Agentic autofix",
+            "body": "既存アラートから修正を支援する。図は並列の役割で、AI Scanから直接つながる自動処理を意味しない。",
+            "nodeRefs": [
+              "s1-n2"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "GitHubのAI検出と修正支援は、別の入口で働く",
+        "criterion": "検出対象／修正対象",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "s1-fact",
+          "type": "text",
+          "statement": "GitHubは2026年10月15日、両機能の一般提供（GA）を発表。\nPRは変更の取り込みを求めるレビュー依頼。CodeQLはコードを解析し、脆弱性の疑いをアラートで示す。\nAI ScanはCodeQL未対応領域の検出を補い、Agentic autofixは既存アラートの修正を支援する。図は並列の役割で、直接つながる自動処理を意味しない。",
+          "sourceIds": [
+            "scan-ga",
+            "fix-ga",
+            "scan-doc",
+            "fix-doc"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "scan-ga",
+          "title": "AI Scan 一般提供発表",
+          "url": "https://github.blog/changelog/2026-10-15-ai-scan-for-pull-requests-generally-available/",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16",
+          "date": "2026-10-15"
+        },
+        {
+          "id": "fix-ga",
+          "title": "Agentic autofix 一般提供発表",
+          "url": "https://github.blog/changelog/2026-10-15-agentic-autofix-for-code-scanning-alerts-general-availability/",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16",
+          "date": "2026-10-15"
+        },
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-02",
+      "keyMessage": "AI ScanはPRに助言を返すが、マージを止めない",
+      "slideRole": "solution",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "s2-n1",
+            "label": "対象のPR",
+            "description": "未対応領域の変更",
+            "evidenceRefs": [
+              "s2-fact"
+            ]
+          },
+          {
+            "id": "s2-n2",
+            "label": "AI解析",
+            "description": "周辺コードも参照",
+            "evidenceRefs": [
+              "s2-fact"
+            ]
+          },
+          {
+            "id": "s2-n3",
+            "label": "PR上の指摘",
+            "description": "担当者が確認",
+            "evidenceRefs": [
+              "s2-fact"
+            ]
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "どこを調べ、結果はどう使う？",
+        "sections": [
+          {
+            "heading": "対象のPR",
+            "body": "PHP・Bashなどが対象。fork（別管理の複製）由来とDependabot（依存更新bot）作成PRは対象外。",
+            "nodeRefs": [
+              "s2-n1"
+            ]
+          },
+          {
+            "heading": "AI解析",
+            "body": "code scanning（脆弱性検査）とAI Scanを有効にすると、PR作成・追加コミットで実行。周辺コードも参照。",
+            "nodeRefs": [
+              "s2-n2"
+            ]
+          },
+          {
+            "heading": "PR上の指摘",
+            "body": "指摘はPR上だけでアラート一覧に蓄積しない。検査チェックは失敗せず、ruleset（取り込み規則）でマージを阻止できない。【解釈】指摘なし・マージ可能でも安全とは限らない。",
+            "nodeRefs": [
+              "s2-n3"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "AI ScanはPRに助言を返すが、マージを止めない",
+        "criterion": "対象入力から担当者の確認まで",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "s2-fact",
+          "type": "text",
+          "statement": "PHPやBashなどが対象。code scanning（脆弱性検査）とAI Scanを有効にすると、PR作成・追加コミットで実行する。別管理の複製であるfork由来と、依存更新botのDependabot作成PRは対象外。\n指摘はPR上だけで、既存アラート一覧に蓄積しない。検査チェックを失敗させず、ruleset（取り込み規則）でマージを阻止できない。\n【解釈】指摘なし・マージ可能だけでは安全と判定できない。",
+          "sourceIds": [
+            "scan-doc",
+            "scan-ga"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "scan-ga",
+          "title": "AI Scan 一般提供発表",
+          "url": "https://github.blog/changelog/2026-10-15-ai-scan-for-pull-requests-generally-available/",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16",
+          "date": "2026-10-15"
+        }
+      ]
+    },
+    {
+      "id": "github-03",
+      "keyMessage": "Agentic autofixは修正を検証し、下書きPRを開く",
+      "slideRole": "solution",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "s3-n1",
+            "label": "アラート割当",
+            "description": "既定ブランチが対象",
+            "evidenceRefs": [
+              "s3-fact"
+            ]
+          },
+          {
+            "id": "s3-n2",
+            "label": "調査・修正・検証",
+            "description": "CodeQLを再実行",
+            "evidenceRefs": [
+              "s3-fact"
+            ]
+          },
+          {
+            "id": "s3-n3",
+            "label": "下書きPR",
+            "description": "人が差分と動作を確認",
+            "evidenceRefs": [
+              "s3-fact"
+            ]
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "従来の修正案提示と何が違う？",
+        "sections": [
+          {
+            "heading": "アラート割当",
+            "body": "既定ブランチのアラートを割り当てる。AI ScanのPR上の指摘が、この流れに直接入るとは説明されていない。",
+            "nodeRefs": [
+              "s3-n1"
+            ]
+          },
+          {
+            "heading": "調査・修正・検証",
+            "body": "関連コードを探索し、修正と検証を反復する。通常のCopilot Autofixは単発の修正案だが、こちらは調査・再検証を伴う。",
+            "nodeRefs": [
+              "s3-n2"
+            ]
+          },
+          {
+            "heading": "下書きPR",
+            "body": "下書きの修正PRを作る。最大25件のアラートを一つのPRで扱える。",
+            "nodeRefs": [
+              "s3-n3"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "Agentic autofixは修正を検証し、下書きPRを開く",
+        "criterion": "割当からレビューまで",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "s3-fact",
+          "type": "text",
+          "statement": "基準となる既定ブランチのアラートを割り当てると、関連コードを探索し、修正と検証を反復する。最大25件を一つのPRで扱える。\n通常のCopilot Autofixは単発の修正案。Agentic autofixは調査・再検証を伴い、下書きPRを作る。\nAI ScanのPR上の指摘が、この既存アラート用の流れに直接入るとは説明されていない。",
+          "sourceIds": [
+            "fix-ga",
+            "fix-doc",
+            "resolve-doc"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "fix-ga",
+          "title": "Agentic autofix 一般提供発表",
+          "url": "https://github.blog/changelog/2026-10-15-agentic-autofix-for-code-scanning-alerts-general-availability/",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16",
+          "date": "2026-10-15"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "resolve-doc",
+          "title": "Resolving code scanning alerts",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/resolve-alerts",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-04",
+      "keyMessage": "利用可否と管理者設定を先に確かめる",
+      "slideRole": "solution",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "s4-n1",
+            "label": "所有者・公開範囲",
+            "description": "個人か組織か",
+            "evidenceRefs": [
+              "s4-fact"
+            ]
+          },
+          {
+            "id": "s4-n2",
+            "label": "実効設定",
+            "description": "上位の許可も必要",
+            "evidenceRefs": [
+              "s4-fact"
+            ]
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "自分のリポジトリですぐ使える？",
+        "sections": [
+          {
+            "heading": "所有者・公開範囲",
+            "body": "AI Scanは公開とCode Security等を持つ組織の非公開が対象。個人の非公開は対象外。Agentic autofixも公開・対象組織を案内。個別の適格性は要確認。",
+            "nodeRefs": [
+              "s4-n1"
+            ]
+          },
+          {
+            "heading": "実効設定",
+            "body": "Copilotライセンス不要でも管理者設定は必要。試用版の利用組織も再有効化が必要。",
+            "nodeRefs": [
+              "s4-n2"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "両機能の利用可否と管理者設定",
+        "criterion": "適格性／有効化設定",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "s4-fact",
+          "type": "text",
+          "statement": "AI Scanは公開リポジトリが対象。組織の非公開はCode Security等が必要で、個人の非公開は対象外。\nAgentic autofixも公開・対象組織を案内。Copilotライセンス不要でも管理者設定が必要で、試用版利用組織も再有効化が必要。適格性は要確認。\n両機能はAI credits（従量課金の単位）、修正側はActions（処理の実行基盤）の時間も消費。停止付き予算が尽きると実行を制限する。",
+          "sourceIds": [
+            "scan-doc",
+            "access-doc",
+            "fix-doc",
+            "budget-doc"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "access-doc",
+          "title": "Managing access to agentic autofix",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/managing-access-to-agentic-autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "budget-doc",
+          "title": "Setting up budgets",
+          "url": "https://docs.github.com/en/billing/how-tos/set-up-budgets",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-04-cost",
+      "keyMessage": "利用費用は従量課金と実行時間を確かめる",
+      "slideRole": "solution",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "s4-n3",
+            "label": "費用上限",
+            "description": "請求先と停止を確認",
+            "evidenceRefs": [
+              "s4-fact"
+            ]
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "何が消費され、どう止める？",
+        "sections": [
+          {
+            "heading": "費用上限",
+            "body": "両機能はAI credits（従量課金単位）を消費。修正側はActions（実行基盤）の時間も消費。停止付き予算の枯渇で実行を制限。",
+            "nodeRefs": [
+              "s4-n3"
+            ]
+          },
+          {
+            "heading": "組織の有効化で注意すること",
+            "body": "組織のAI Scan有効化は対象全リポジトリに即時適用し、個別除外前に費用が生じ得る。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "従量費用と停止条件、組織有効化の注意",
+        "criterion": "消費する資源／組織適用範囲",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "s4-fact",
+          "type": "text",
+          "statement": "AI Scanは公開リポジトリが対象。組織の非公開はCode Security等が必要で、個人の非公開は対象外。\nAgentic autofixも公開・対象組織を案内。Copilotライセンス不要でも管理者設定が必要で、試用版利用組織も再有効化が必要。適格性は要確認。\n両機能はAI credits（従量課金の単位）、修正側はActions（処理の実行基盤）の時間も消費。停止付き予算が尽きると実行を制限する。",
+          "sourceIds": [
+            "scan-doc",
+            "access-doc",
+            "fix-doc",
+            "budget-doc"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "access-doc",
+          "title": "Managing access to agentic autofix",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/managing-access-to-agentic-autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "budget-doc",
+          "title": "Setting up budgets",
+          "url": "https://docs.github.com/en/billing/how-tos/set-up-budgets",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-05",
+      "keyMessage": "修正の検証結果と、採用の判断は別に残る",
+      "slideRole": "solution",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "s5-n1",
+            "label": "検出の限界",
+            "description": "誤検出・見逃し",
+            "evidenceRefs": [
+              "s5-fact"
+            ]
+          },
+          {
+            "id": "s5-n2",
+            "label": "検証の範囲",
+            "description": "ルール群に依存",
+            "evidenceRefs": [
+              "s5-fact"
+            ]
+          },
+          {
+            "id": "s5-n3",
+            "label": "採用の責任",
+            "description": "仕様と回帰を確認",
+            "evidenceRefs": [
+              "s5-fact"
+            ]
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "CodeQLが通れば安全と言える？",
+        "sections": [
+          {
+            "heading": "検出の限界",
+            "body": "AI Scanには誤検出があり、全体検査も対象外。",
+            "nodeRefs": [
+              "s5-n1"
+            ]
+          },
+          {
+            "heading": "検証の範囲",
+            "body": "修正側はCodeQLのcode scanning query suite（検査ルール群）を再実行。独自クエリ、security-extended、他社ツール由来では修正を確認できない。提案の成否とは別。",
+            "nodeRefs": [
+              "s5-n2"
+            ]
+          },
+          {
+            "heading": "採用の責任",
+            "body": "【解釈】アラートの終了は全脆弱性の解消を証明しない。人が差分・ログと、既存機能を確かめる回帰テストを確認する。",
+            "nodeRefs": [
+              "s5-n3"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "修正の検証結果と、採用の判断は別に残る",
+        "criterion": "検出／検証／採用",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "s5-fact",
+          "type": "text",
+          "statement": "AI Scanには誤検出があり、全体検査も対象外。\n修正側はCodeQLのcode scanning query suite（検査ルール群）を再実行。独自クエリ、security-extended、他社ツール由来では修正を確認できない。提案の成否とは別。\n【解釈】アラートの終了は全脆弱性の解消を証明しない。人が差分・ログと、既存機能を確かめる回帰テストを確認する。",
+          "sourceIds": [
+            "scan-doc",
+            "fix-doc",
+            "resolve-doc"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "resolve-doc",
+          "title": "Resolving code scanning alerts",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/resolve-alerts",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-06",
+      "keyMessage": "小さな検証で、見つける力と直す負担を測る",
+      "slideRole": "solution",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "s6-n1",
+            "label": "範囲を合意",
+            "description": "適用先・担当者・予算"
+          },
+          {
+            "id": "s6-n2",
+            "label": "個別に評価",
+            "description": "検出側と修正側"
+          },
+          {
+            "id": "s6-n3",
+            "label": "採否を判断",
+            "description": "品質と総費用"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "SE・PMとして次に何を決める？",
+        "sections": [
+          {
+            "heading": "範囲を合意",
+            "body": "【提案】管理者と適用先・請求・停止上限・除外手順を合意する。組織設定を単一リポジトリだけの試行と考えない。",
+            "nodeRefs": [
+              "s6-n1"
+            ]
+          },
+          {
+            "heading": "個別に評価",
+            "body": "検出側は指摘の妥当性・確認時間、修正側は成功・手直し・テスト・実費を記録。",
+            "nodeRefs": [
+              "s6-n2"
+            ]
+          },
+          {
+            "heading": "採否を判断",
+            "body": "開発者とセキュリティ担当が同条件の従来手順と比べて採否を決める。実測効果は未確認。",
+            "nodeRefs": [
+              "s6-n3"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "小さな検証で、見つける力と直す負担を測る",
+        "criterion": "合意／測定／判断",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "budget-doc",
+          "title": "Setting up budgets",
+          "url": "https://docs.github.com/en/billing/how-tos/set-up-budgets",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-07",
+      "keyMessage": "公式情報と執筆者の判断を区別する",
+      "slideRole": "summary",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "s7-n1",
+            "label": "公式発表・Docs",
+            "description": "機能と条件の根拠"
+          },
+          {
+            "id": "s7-n2",
+            "label": "執筆者の整理",
+            "description": "図解・解釈・検証案"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "出典：10月15日発表／16日確認（JST）",
+        "sections": [
+          {
+            "heading": "公式発表・Docs",
+            "body": "https://github.blog/changelog/2026-10-15-ai-scan-for-pull-requests-generally-available/\nhttps://github.blog/changelog/2026-10-15-agentic-autofix-for-code-scanning-alerts-general-availability/\n詳細DocsのURLは次の2頁。利用条件は導入前に再確認。",
+            "nodeRefs": [
+              "s7-n1"
+            ]
+          },
+          {
+            "heading": "執筆者の整理",
+            "body": "図解の分類、限界からの解釈、検証方法の提案は執筆者の整理。導入効果を実測したものではない。",
+            "nodeRefs": [
+              "s7-n2"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "発表日は10月15日。条件は現行Docsで再確認する",
+        "criterion": "出典事実／執筆者の判断",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "scan-ga",
+          "title": "AI Scan 一般提供発表",
+          "url": "https://github.blog/changelog/2026-10-15-ai-scan-for-pull-requests-generally-available/",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16",
+          "date": "2026-10-15"
+        },
+        {
+          "id": "fix-ga",
+          "title": "Agentic autofix 一般提供発表",
+          "url": "https://github.blog/changelog/2026-10-15-agentic-autofix-for-code-scanning-alerts-general-availability/",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16",
+          "date": "2026-10-15"
+        },
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "access-doc",
+          "title": "Managing access to agentic autofix",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/how-tos/manage-security-alerts/manage-code-scanning-alerts/managing-access-to-agentic-autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "budget-doc",
+          "title": "Setting up budgets",
+          "url": "https://docs.github.com/en/billing/how-tos/set-up-budgets",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-08",
+      "keyMessage": "AI Scanの詳細条件は公式Docsから確認する",
+      "slideRole": "summary",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "docs-scan",
+            "label": "AI Scan",
+            "description": "対象・制約・設定・課金"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "公式Docs：2026年10月16日確認（JST）",
+        "sections": [
+          {
+            "heading": "AI Scan",
+            "body": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+            "nodeRefs": [
+              "docs-scan"
+            ]
+          },
+          {
+            "heading": "導入前の再確認",
+            "body": "各Docsから管理者設定・予算設定へ進める。条件は変更され得る。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "AI Scanの詳細条件の出典",
+        "criterion": "機能別の公式Docs",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    },
+    {
+      "id": "github-08-autofix",
+      "keyMessage": "修正支援の詳細条件は公式Docsから確認する",
+      "slideRole": "summary",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "docs-fix",
+            "label": "Agentic autofix",
+            "description": "修正方法・検証範囲・利用条件"
+          }
+        ]
+      },
+      "explanation": {
+        "readerQuestion": "公式Docs：2026年10月16日確認（JST）",
+        "sections": [
+          {
+            "heading": "Agentic autofix",
+            "body": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+            "nodeRefs": [
+              "docs-fix"
+            ]
+          },
+          {
+            "heading": "導入前の再確認",
+            "body": "各Docsから管理者設定・予算設定へ進める。条件は変更され得る。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "Agentic autofixの詳細条件の出典",
+        "criterion": "機能別の公式Docs",
+        "rationale": "読者の問いに必要な関係だけを表す。全セキュリティ工程の網羅や意味上のMECE認定は行わない。",
+        "exclusions": [
+          "導入済みという主張",
+          "性能・工数削減率の推定"
+        ],
+        "unresolvedQuestions": [
+          "個別リポジトリでの適格性・設定・実費は未確認"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "scan-doc",
+          "title": "AI Scan for pull requests",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/ai-powered-security-detections",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        },
+        {
+          "id": "fix-doc",
+          "title": "About autofix for code scanning",
+          "url": "https://docs.github.com/en/enterprise-cloud@latest/code-security/concepts/code-scanning/autofix-for-code-scanning",
+          "publisher": "GitHub",
+          "accessedAt": "2026-10-16"
+        }
+      ]
+    }
+  ]
+}

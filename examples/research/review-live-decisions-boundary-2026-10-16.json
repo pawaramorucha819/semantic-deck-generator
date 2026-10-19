@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "日次リサーチ資料のレビュー記録。アシスタント評価と機械検査を区別し、ユーザー承認を意味しない。",
+  "deckPath": "examples/research/live-decisions-boundary-2026-10-16.json",
+  "reviewedAt": "2026-10-16T21:40:00+09:00",
+  "reviewer": {
+    "kind": "assistant",
+    "role": "author and independent reader"
+  },
+  "userApproval": false,
+  "artifacts": {
+    "visualPlanPath": "generated/live-decisions-boundary-2026-10-16.visual-plan.json",
+    "renderReportPath": "generated/live-decisions-boundary-2026-10-16.render-report.json",
+    "structureReviewPath": "generated/live-decisions-boundary-2026-10-16.structure-review.json",
+    "renderedPagesPath": "preview"
+  },
+  "machineChecks": {
+    "schemaAndReferences": "passed",
+    "duplicateLabels": "passed",
+    "relationshipEdges": "passed: 4 nodes and 3 forward edges on each slide",
+    "layoutReport": "passed: zero issues",
+    "fallbackSelection": "passed: process/standard on both, no fallback",
+    "findings": [],
+    "nativeObjects": [
+      {
+        "slideId": "live-completion-boundary",
+        "nativeShapes": 20,
+        "nativeChevrons": 4,
+        "rasterPictures": 0,
+        "missingVisibleInputText": [],
+        "allSourceUrlsInNotes": true
+      },
+      {
+        "slideId": "reversible-operation-test",
+        "nativeShapes": 20,
+        "nativeChevrons": 4,
+        "rasterPictures": 0,
+        "missingVisibleInputText": [],
+        "allSourceUrlsInNotes": true
+      }
+    ],
+    "aggregate": {
+      "command": "npm run check",
+      "typecheck": "passed",
+      "testsPassed": 708,
+      "testFilesPassed": 30,
+      "build": "passed"
+    },
+    "strictGeneration": "passed",
+    "pdfPageCount": 2,
+    "pdfHyperlinkAnnotations": 0
+  },
+  "humanReview": {
+    "sourceFactsAndAssumptions": "not-reviewed-by-human",
+    "relationshipFaithfulness": "not-reviewed-by-human",
+    "semanticMECE": "unverified",
+    "semanticMECERationale": "単一の処理段階に沿った著者の分解。有限集合検査や意味の網羅性の証明は行っていない。",
+    "scopeExclusionsAndUnknowns": "not-reviewed-by-human",
+    "projectedReadability": "not-reviewed-by-human",
+    "notesAndSourceLinks": "not-reviewed-by-human"
+  },
+  "assistantReview": {
+    "sourceFactsAndAssumptions": "passed within the listed source sections",
+    "relationshipFaithfulness": "accepted for this bounded example",
+    "semanticMECE": "unverified",
+    "scopeExclusionsAndUnknowns": "explicit in input; no quantitative latency claim",
+    "wholePageVisualInspection": "Both final PNG pages inspected after the final regeneration",
+    "viewer": "LibreOfficeDev 26.8.0.0.alpha0 PDF, Poppler PNG at 1600 px wide",
+    "nativePowerPoint": "not-inspected",
+    "notesAndSourceLinks": "All source URLs in PPTX notes and visible PDF text. No PDF clickable-link annotations.",
+    "independentReader": "Both final pages independently re-inspected after the last wording change. Native process flow, all content, arrows and sources accepted. This is an assistant review, not user approval.",
+    "readerAnswers": [
+      "The app hop is removed from the judgment request, not from executing the operation.",
+      "Decisions chooses; the app operates and reads actual state; Live waits for observed results.",
+      "The reversible-operation acceptance trial is an author proposal and has not been run."
+    ],
+    "layoutDefects": []
+  },
+  "slideFeedback": [
+    {
+      "slideId": "live-completion-boundary",
+      "status": "assistant-reviewed",
+      "finding": "Message and main native process agree. Custom/native route comparison is visible prose; a separate comparison graph is not added.",
+      "requestedChange": "Shorten the first description to remove a one-word orphan line; shorten app stage label to avoid a one-character wrap.",
+      "reasonOrSource": "Independent full-page reader review and author pixel inspection",
+      "verifiedAfterChange": true
+    },
+    {
+      "slideId": "reversible-operation-test",
+      "status": "assistant-reviewed",
+      "finding": "Reversible theme example, failure cases, and acceptance criteria are explicit.",
+      "requestedChange": "Make the app operation and both acceptance criteria explicit.",
+      "reasonOrSource": "Author review against the page question",
+      "verifiedAfterChange": true
+    }
+  ],
+  "revisions": [
+    {
+      "change": "Replace overflowing side-explanation composition with existing full-width process pattern",
+      "reason": "No layout or renderer code changes permitted; retain the claim, actor roles, sources and proposal distinction."
+    },
+    {
+      "change": "Use a single processing-stage decomposition axis",
+      "reason": "Actor is a label of a stage, not a second classification axis."
+    }
+  ],
+  "decision": "accepted-by-assistant-for-bounded-example; user-review-pending",
+  "nextRevisionGoal": "If a true two-path comparison is needed later, design a separately authorized compositional pattern rather than implying this sample implements one.",
+  "revisionEffortMinutes": null,
+  "revisionEffortNote": "Elapsed effort was not measured; not represented as zero.",
+  "limitations": [
+    "No live API calls, product activation, or operational acceptance test.",
+    "Transcript triggers are outside the main diagram scope.",
+    "Session update acknowledgement and fixed delegation type are retained as source-grounded notes, not a full configuration guide.",
+    "Native PowerPoint rendering is unverified. Noto Sans CJK JP and Noto Sans are required for comparable PPTX layout.",
+    "PDF source URLs are visible and copyable text, not clickable annotations."
+  ]
+}

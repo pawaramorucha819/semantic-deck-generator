@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1.0",
+  "generatorHead": "292e3bf3a6894613c25bd0e98941872c742d0409",
+  "mainHead": "fc8db657d520ccbbf538a91ae06d024ae847334a",
+  "featureStatus": "PR #3 open/unmerged; source code and lockfile match tested head",
+  "inputPath": "examples/research/license-gate-2026-10-17.json",
+  "inputSha256": "9e798dfb0d1c42d80a3fe775cd026a07d8dd1fda77423c8ebb4a44f8731e2326",
+  "commands": [
+    "npm run check",
+    "npm run sdg -- generate examples/research/license-gate-2026-10-17.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated",
+    "npm run preview -- examples/research/generated/license-gate-2026-10-17.pptx .preview/license-gate-2026-10-17"
+  ],
+  "validation": {
+    "tests": 708,
+    "testFiles": 30,
+    "typecheck": "pass",
+    "build": "pass",
+    "strictLayoutIssues": 0,
+    "fallback": false,
+    "pages": 2,
+    "renderer": "LibreOffice + Poppler, Noto Sans CJK JP, Node 24.19.0",
+    "nativePowerPoint": "unverified",
+    "semanticMECE": "unverified",
+    "liveAPItrial": "not-run",
+    "userApproval": "not-claimed",
+    "pdfSourceLinks": "visible text; no clickable annotations"
+  },
+  "artifacts": {
+    "pptxSha256": "536ab958697d3a13ac6abd9028a07795c95f8b7cac5960c5348abb1807c1f042",
+    "pdfSha256": "94da6a97b3c73d7821f474c008bd6916e965c6dcf4fc263897ba28efc8653927"
+  }
+}

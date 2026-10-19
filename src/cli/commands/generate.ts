@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { relative } from "node:path";
 import {
   buildGenerationContext,
@@ -38,6 +39,7 @@ Options
   --section <slideId>   そのスライドを章扉 (section master) にする (複数可)
   --no-title-slide      表紙を付けない
   --no-candidates       Visual Plan に候補一覧を含めない
+  --argument-review <file>  入力ハッシュに結び付いた意味レビューを検証する（任意）
   --report              配置と意味構造の Review Report を書き出す
   --advisor-report      Advisor Report（候補・参照・AI 推薦の詳細）を書き出す
   --strict              レイアウト警告が 1 件でもあれば終了コード 1
@@ -60,7 +62,7 @@ const GENERATE_FLAGS = {
     "strict",
     "quiet",
   ],
-  string: ["config", "out-dir", "theme", "template", "ai-mode"],
+  string: ["config", "out-dir", "theme", "template", "ai-mode", "argument-review"],
   repeatable: ["template-dir", "pattern-dir", "knowledge-dir", "section"],
 } as const;
 
@@ -158,6 +160,7 @@ export async function runGenerate(argv: readonly string[]): Promise<number> {
 
   const result = await generateFromFile(input, {
     ...context.generateOptions,
+    ...(stringFlag(args, "argument-review") ? { argumentReview: JSON.parse(await readFile(stringFlag(args, "argument-review")!, "utf8")) } : {}),
     ...(context.outputDir ? { outDir: context.outputDir } : {}),
     writeReport: context.writeRenderReport,
     writeAdvisorReport: context.writeAdvisorReport,

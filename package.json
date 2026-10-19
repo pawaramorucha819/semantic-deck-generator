@@ -21,7 +21,8 @@
     "example:decomposition": "node scripts/example-decomposition.mjs",
     "preview": "node scripts/preview-pptx.mjs",
     "check": "npm run typecheck && npm test && npm run build",
-    "example:explanatory": "node --import tsx src/cli/main.ts generate examples/research/nec-explained-2026-10-15.json --no-title-slide --ai-mode off --report --strict --theme portable"
+    "example:explanatory": "node --import tsx src/cli/main.ts generate examples/research/nec-explained-2026-10-15.json --no-title-slide --ai-mode off --report --strict --theme portable",
+    "example:partition": "node --import tsx src/cli/main.ts generate examples/arguments/nec-candidate-quality-2026-10-16.json --argument-review examples/arguments/nec-assistant-review.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/arguments/generated"
   },
   "dependencies": {
     "jszip": "^3.10.1",

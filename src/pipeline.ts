@@ -1,3 +1,4 @@
+import { validateArgumentReview } from "./review/argument.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { parsePresentation } from "./domain/schema.js";
@@ -43,6 +44,8 @@ import { getTheme, type PresentationTheme } from "./theme/theme.js";
  */
 
 export interface GenerateOptions {
+  /** Optional authored review; when supplied it must match this exact semantic input. */
+  argumentReview?: unknown;
   /** ビルトインテーマ ID（'default' | 'midnight'） */
   themeId?: string;
   /** 直接 Theme を渡す場合（themeId より優先） */
@@ -127,6 +130,7 @@ export async function generate(
   spec: PresentationSpec,
   options: GenerateOptions = {},
 ): Promise<GenerateResult> {
+  if (options.argumentReview !== undefined) validateArgumentReview(spec, options.argumentReview);
   const { template, assets } = templateOf(options);
   const theme = themeOf(options, template);
 
@@ -224,7 +228,7 @@ export async function generateFromFile(
     reportPath = join(outDir, `${stem}.render-report.json`);
     await writeFile(reportPath, serializeRenderReport(result.renderReport), "utf8");
     structureReviewPath = join(outDir, `${stem}.structure-review.json`);
-    await writeFile(structureReviewPath, `${JSON.stringify(buildStructureReview(spec, result.plan), null, 2)}\n`, "utf8");
+    await writeFile(structureReviewPath, `${JSON.stringify(buildStructureReview(spec, result.plan, options.argumentReview), null, 2)}\n`, "utf8");
   }
 
   let advisorReportPath: string | undefined;

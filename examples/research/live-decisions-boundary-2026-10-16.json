@@ -1,0 +1,179 @@
+{
+  "title": "GPT-LiveとDecisions：判断の直結と操作完了の境界",
+  "subtitle": "2026年10月15日追加のAPI仕様を読む",
+  "slides": [
+    {
+      "id": "live-completion-boundary",
+      "keyMessage": "判断を直結しても、操作完了には実状態の確認が要る",
+      "supportingMessage": "呼出経路の変更：custom は Live → アプリ → Decisions ／ native は Live → Decisions",
+      "slideRole": "insight",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "live-request",
+            "label": "Live：受付",
+            "description": "音声対話を担う。\n依頼を認識し、Decisionsへ直接委任。",
+            "evidenceRefs": [
+              "native-route"
+            ]
+          },
+          {
+            "id": "decisions-choice",
+            "label": "Decisions：判断",
+            "description": "定義済みの選択肢から、行う操作を選ぶ。\n選択だけでは操作は完了しない。",
+            "evidenceRefs": [
+              "native-route"
+            ]
+          },
+          {
+            "id": "app-observation",
+            "label": "アプリ：実行",
+            "description": "選ばれた操作を実行。\n変更後の実状態を読み戻し、観測結果をLiveへ返す。",
+            "evidenceRefs": [
+              "observed-result"
+            ]
+          },
+          {
+            "id": "live-report",
+            "label": "Live：報告",
+            "description": "アプリの結果を待ち、確認できた状態を音声で伝える。\n速度の改善量は未測定。",
+            "evidenceRefs": [
+              "observed-result"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "native delegationで一つの音声依頼を受けてから操作結果を返すまで",
+        "criterion": "音声依頼を受けてから結果を報告するまでの処理段階",
+        "rationale": "各処理段階に担当主体を対応づけ、判断へのアプリ経由と操作・観測の責任を区別する。矢印は処理の受け渡しを表す。",
+        "exclusions": [
+          "custom経路の完全なシーケンス図",
+          "transcript triggerの並列経路",
+          "認証・再試行・異常系の全工程",
+          "GPT-Live 1.1のAPI提供状況",
+          "速度の定量評価"
+        ],
+        "unresolvedQuestions": [
+          "実アプリでの遅延・判断精度・状態読戻しの信頼性は未評価"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "native-route",
+          "type": "text",
+          "statement": "公式Guideはcustom delegationでLiveがアプリへ通知し、アプリがDecisionsを呼ぶのに対し、native delegationではLiveがDecisionsを直接呼ぶと説明。2026年10月15日Changelogはgpt-live-1、gpt-6-luna、v1/live/sessionsのnative Decisions統合を掲載。",
+          "sourceIds": [
+            "voice-guide",
+            "api-change"
+          ]
+        },
+        {
+          "id": "observed-result",
+          "type": "text",
+          "statement": "公式Guideの操作例では、アプリが設定を変更して実状態を確認し、該当delegation_idを付けてsession.commentary.appendで観測結果をLiveへ返す。Liveへの指示にも、アプリが結果を返すまで説明を待つと明示されている。",
+          "sourceIds": [
+            "voice-guide"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "voice-guide",
+          "title": "Guide https://developers.openai.com/api/docs/guides/decisions-voice",
+          "url": "https://developers.openai.com/api/docs/guides/decisions-voice",
+          "publisher": "OpenAI（10/16確認）",
+          "accessedAt": "2026-10-16",
+          "locator": "Native delegation; Let Live delegate; Run actions and report results"
+        },
+        {
+          "id": "api-change",
+          "title": "API Changelog https://developers.openai.com/api/docs/changelog",
+          "url": "https://developers.openai.com/api/docs/changelog",
+          "publisher": "OpenAI（gpt-live-1 / gpt-6-luna）",
+          "date": "2026-10-15",
+          "accessedAt": "2026-10-16",
+          "locator": "October 2026, Oct 15 native Decisions integration"
+        }
+      ]
+    },
+    {
+      "id": "reversible-operation-test",
+      "keyMessage": "戻せる1操作で「実状態と完了報告の一致」を試す",
+      "supportingMessage": "執筆者の検証案・未実施。例：検証用アプリの画面テーマ切替。実測結果ではない。",
+      "slideRole": "recommendation",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "test-setup",
+            "label": "条件を固定",
+            "description": "初期状態は明るいテーマ。\n操作・選択肢・読戻し方法を固定する。"
+          },
+          {
+            "id": "test-request",
+            "label": "依頼・操作",
+            "description": "「暗いテーマにして」と依頼。判断を受けてアプリが操作。\n判断時刻と操作時刻を別に記録。"
+          },
+          {
+            "id": "test-observe",
+            "label": "実状態を読む",
+            "description": "設定値を再取得する。\n操作失敗・読戻し失敗も試し、確認前の完了報告がないか調べる。"
+          },
+          {
+            "id": "test-match",
+            "label": "報告と照合",
+            "description": "実状態と報告が一致し、確認前の完了報告がないことが合格条件。\n最後にテーマを元へ戻す。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "検証用アプリの可逆な一操作について、完了報告の正しさを確認する提案手順",
+        "criterion": "試験を準備して観測結果を判定する順序",
+        "rationale": "準備・入力・観測・判定を同じ試験の工程として分ける。業務全体の安全性や全異常系の網羅は主張しない。",
+        "exclusions": [
+          "試験の実行",
+          "有料APIの呼出し",
+          "実環境への変更",
+          "本番適用の承認",
+          "性能改善率の推定"
+        ],
+        "unresolvedQuestions": [
+          "実装・権限・ロギング方法は未選定",
+          "各環境の適切な合格閾値は未評価"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "update-constraint",
+          "type": "text",
+          "statement": "公式Guideは、質問変更時にsession.updateを送り、対応するsession.updatedを待ってからその工程のdecision itemを追加するよう求める。delegationのtypeはセッション作成時に設定し、セッション中は固定。",
+          "sourceIds": [
+            "voice-guide"
+          ]
+        },
+        {
+          "id": "readback-basis",
+          "type": "text",
+          "statement": "公式Guideの例はアプリによる操作後に実状態を確認して結果をLiveへ返す。この仕様を根拠に、執筆者は可逆操作で実状態と完了報告の一致を試す案を示す。試験は未実施。",
+          "sourceIds": [
+            "voice-guide"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "voice-guide",
+          "title": "仕様の根拠 https://developers.openai.com/api/docs/guides/decisions-voice",
+          "url": "https://developers.openai.com/api/docs/guides/decisions-voice",
+          "publisher": "OpenAI（2026-10-16確認）",
+          "accessedAt": "2026-10-16",
+          "locator": "Choose when to decide; Run actions and report results"
+        }
+      ]
+    }
+  ]
+}

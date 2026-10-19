@@ -64,6 +64,8 @@ export interface VisualPattern<TBindings = unknown> {
   readonly fallback?: boolean;
   /** Must call ctx.layoutBody exactly once through shared footer composition. */
   readonly supportsExplanatoryLayout?: boolean;
+  /** Explicit evidence arguments must not degrade into a pattern that drops their meaning. */
+  readonly supportedArgumentKinds?: readonly ["partition-with-unknowns"];
 
   readonly compatibility: PatternCompatibility;
   readonly constraints?: PatternConstraints;

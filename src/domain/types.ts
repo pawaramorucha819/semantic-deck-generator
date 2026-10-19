@@ -1,3 +1,6 @@
+import type { PartitionArgument, PartitionEvidence } from "./partition.js";
+export type { PartitionArgument, PartitionEvidence } from "./partition.js";
+
 /**
  * Domain Model — 「意味・論理」層
  *
@@ -46,7 +49,7 @@ export type LogicalRelation = (typeof LOGICAL_RELATIONS)[number];
  * 将来拡張する場合は (1) ここに種別名を追加し (2) 対応する `*Evidence` を定義し
  * (3) `src/domain/schema.ts` の discriminated union に 1 バリアント足すだけで済みます。
  */
-export const EVIDENCE_TYPES = ["metric", "caseStudy", "text", "comparison"] as const;
+export const EVIDENCE_TYPES = ["metric", "caseStudy", "text", "comparison", "partition"] as const;
 export type EvidenceType = (typeof EVIDENCE_TYPES)[number];
 
 export interface Source {
@@ -123,7 +126,7 @@ export interface ComparisonEvidence extends EvidenceBase {
   };
 }
 
-export type Evidence = MetricEvidence | CaseStudyEvidence | TextEvidence | ComparisonEvidence;
+export type Evidence = MetricEvidence | CaseStudyEvidence | TextEvidence | ComparisonEvidence | PartitionEvidence;
 
 /**
  * SemanticContent — スライドで「見せる対象」となる情報構造。
@@ -214,7 +217,7 @@ export interface Decomposition {
 /** Visible, reader-facing explanations. Facts and interpretations remain author responsibility. */
 export interface SlideExplanation {
   readerQuestion: string;
-  sections: Array<{ heading: string; body: string }>;
+  sections: Array<{ heading: string; body: string; nodeRefs?: string[] }>;
 }
 
 export interface SlideSpec {
@@ -230,6 +233,8 @@ export interface SlideSpec {
   /** 分解対象・軸・境界・未解決点。意味の妥当性は人によるレビューが必要。 */
   decomposition?: Decomposition;
   explanation?: SlideExplanation;
+  /** A bounded, explicitly linked quantitative argument with unknown quality. */
+  argument?: PartitionArgument;
   /** 主張を裏付ける根拠。スライドに載せる情報の容器ではない。 */
   evidence: Evidence[];
   sources?: Source[];
@@ -247,3 +252,4 @@ export const isMetric = (e: Evidence): e is MetricEvidence => e.type === "metric
 export const isCaseStudy = (e: Evidence): e is CaseStudyEvidence => e.type === "caseStudy";
 export const isTextEvidence = (e: Evidence): e is TextEvidence => e.type === "text";
 export const isComparison = (e: Evidence): e is ComparisonEvidence => e.type === "comparison";
+export const isPartition = (e: Evidence): e is PartitionEvidence => e.type === "partition";
