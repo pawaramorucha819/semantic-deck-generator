@@ -1,0 +1,101 @@
+{
+  "title": "数値根拠によるボディ欠落の再現",
+  "slides": [
+    {
+      "id": "points-metric",
+      "keyMessage": "並列の判断項目",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "label": "品質",
+            "description": "正しく検索できるか"
+          },
+          {
+            "label": "時間",
+            "description": "確認にかかる時間"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "導入判断の観点",
+        "criterion": "判断指標の種類",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "m",
+          "type": "metric",
+          "statement": "再現テスト用の仮の数値。実測ではない。",
+          "data": {
+            "label": "仮の値",
+            "value": 42,
+            "unit": "件"
+          }
+        }
+      ]
+    },
+    {
+      "id": "timeline-comparison",
+      "keyMessage": "一度だけ進む確認工程",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "timeline",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "label": "受付",
+            "description": "対象を登録"
+          },
+          {
+            "label": "確認",
+            "description": "担当者が確認"
+          },
+          {
+            "label": "承認",
+            "description": "責任者が判断"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "受付から承認まで",
+        "criterion": "時間順の工程",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "c",
+          "type": "comparison",
+          "statement": "再現テスト用の仮の数値。実測ではない。",
+          "data": {
+            "items": [
+              {
+                "label": "A",
+                "value": 1
+              },
+              {
+                "label": "B",
+                "value": 2
+              },
+              {
+                "label": "C",
+                "value": 3
+              }
+            ],
+            "unit": "件"
+          }
+        }
+      ]
+    }
+  ]
+}

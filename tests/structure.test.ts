@@ -150,13 +150,13 @@ describe("bounded raw body decomposition contract", () => {
     expect(() => validateDecompositionDraft(raw, draft)).toThrow(/Duplicate source/);
   });
 
-  it("rejects numeric evidence that can select a non-body pattern without fallback", () => {
+  it("keeps raw-body evidence restrictions even when ordinary selection preserves the body", () => {
     const { raw, draft } = fixture();
     const review = approval(raw, draft);
     draft.slide.evidence = [{ id: "metric-1", type: "metric", statement: "A numeric assertion", data: { value: 42, label: "Reported count" } }];
     const ordinaryPresentation = parsePresentation({ title: raw.title, slides: [draft.slide] });
     const ordinaryPlan = buildVisualPlan(ordinaryPresentation);
-    expect(ordinaryPlan.slides[0]!.patternId).toBe("big-number");
+    expect(ordinaryPlan.slides[0]!.patternId).toBe("three-reasons");
     expect(ordinaryPlan.slides[0]!.fallbackUsed).toBe(false);
     expect(() => validateDecompositionDraft(raw, draft)).toThrow(/requires evidence=\[\]/);
     expect(() => buildDecompositionReview(raw, draft)).toThrow(/body-preservation contract/);

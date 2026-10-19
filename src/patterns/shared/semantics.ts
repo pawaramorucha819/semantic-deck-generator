@@ -7,7 +7,6 @@ import {
   type SlideRole,
   type SlideSpec,
 } from "../../domain/types.js";
-import { isRelationshipContent } from "../../domain/content.js";
 
 /**
  * SlideSpec から Pattern 用の素材を取り出すためのヘルパ群。
@@ -106,7 +105,8 @@ export interface BeforeAfterFacts {
 export function extractBeforeAfter(slide: SlideSpec): BeforeAfterFacts | undefined {
   // 配列に 2 値あるだけでは時間順序は分からない。矢印・変化率を使うには
   // 入力側で before_after と明示されている必要がある。
-  if (slide.logicalRelation !== "before_after" || isRelationshipContent(slide.content)) {
+  // 数値専用図には著者指定の content を保持する場所がない。
+  if (slide.logicalRelation !== "before_after" || slide.content !== undefined) {
     return undefined;
   }
 
@@ -192,8 +192,9 @@ export interface ChartFacts {
 export function extractChartSeries(slide: SlideSpec): ChartFacts | undefined {
   // 同一軸の値だけでは part/whole・相関・分布は表現できない。
   // 対応する意味モデルと描画が揃うまでは棒グラフで代用せず abstain する。
+  // points / sequence を含む明示 content を根拠の系列で置き換えない。
   if (
-    isRelationshipContent(slide.content) ||
+    slide.content !== undefined ||
     (slide.logicalRelation !== "claim_evidence" &&
       slide.logicalRelation !== "comparison" &&
       slide.logicalRelation !== "timeline")
