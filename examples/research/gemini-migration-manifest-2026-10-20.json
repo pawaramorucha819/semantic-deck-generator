@@ -1,0 +1,26 @@
+{
+  "generatorRepo": "pawaramorucha819/semantic-deck-generator",
+  "generatorMainSha": "a818355e486741248e81b6aa0999321189af2d2b",
+  "codeProvenance": "GitHub tree全blob SHA-1とローカル生成用スナップショットを照合、一致。PR4/5未マージ実装不使用。",
+  "codeChanged": false,
+  "dependencies": "既存node_modulesを再利用、新規導入なし。Node v24.19.0、LibreOffice/Poppler/Noto Sans CJK JP利用可能。",
+  "commands": [
+    "cd main && npm run sdg -- generate ../gemini-migration-2026-10-20.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir ../generated",
+    "cd main && npm run preview -- ../generated/gemini-migration-2026-10-20.pptx ../preview"
+  ],
+  "validation": "strict警告0・fallbackなし、全2ページ目視。コード変更なしのためnpm run checkは未再実行。",
+  "sha256": {
+    "gemini-migration-2026-10-20.json": "e6f60b3591341f912b50de439b140e0debaf76396af0cf0e3e77ce708b463838",
+    "generated/gemini-migration-2026-10-20.pptx": "39470dbdc25779c2173f2d08337d0be10370bc419df33b5e1e68243505b23ef5",
+    "preview/gemini-migration-2026-10-20.pdf": "1780e842d66ac90748f82b3698534db2e8a16ed86ab72bd5406bcd6c49277078"
+  },
+  "notification": "not-sent",
+  "repositorySave": "PR #5のexamples/researchへ入力・レビュー・manifestのみ保存。生成にPR #5のコードは使用せずmain a818355を使用。",
+  "lastVerifiedAt": "2026-10-20T10:56:10Z",
+  "saveBaseHead": "bf9011dd0b1dffade2a208ae8d51a7e1960a32d8",
+  "finalHeadCI": "unknown; not verified",
+  "repositoryReproductionCommands": [
+    "npm run sdg -- generate examples/research/gemini-migration-2026-10-20.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated",
+    "npm run preview -- examples/research/generated/gemini-migration-2026-10-20.pptx .preview/gemini-migration-2026-10-20"
+  ]
+}
