@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "jszip": "^3.10.1",
-    "pptxgenjs": "^3.12.0",
+    "pptxgenjs": "3.12.0",
     "zod": "^3.23.8"
   },
   "peerDependencies": {
@@ -42,6 +42,14 @@
     "@types/node": "^22.10.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vitest": "4.1.11"
+  },
+  "overrides": {
+    "vitest@4.1.11": {
+      "vite": "6.4.3"
+    },
+    "pptxgenjs@3.12.0": {
+      "image-size": "2.0.4"
+    }
   }
 }
