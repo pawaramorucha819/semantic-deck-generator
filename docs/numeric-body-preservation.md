@@ -30,3 +30,7 @@ npm run check
 npm run sdg -- generate examples/relationships/body-with-numeric-evidence.json --no-title-slide --ai-mode off --report --strict --theme portable
 npm run preview -- examples/relationships/generated/body-with-numeric-evidence.pptx .preview/body-with-numeric-evidence
 ```
+
+## 後続修正
+
+上記の sequence + claim_evidence の既知課題は、[工程選択の限定修正](sequence-selection.md)で明示的に拒否する。元入力や根拠を変更せず、著者による関係指定またはページ分割を案内する。

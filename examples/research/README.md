@@ -102,3 +102,16 @@ npm run preview -- examples/research/generated/license-gate-2026-10-17.pptx .pre
 ```
 
 `license-gate-manifest-2026-10-17.json` と `review-license-gate-2026-10-17.json` に生成head・再現条件・独立アシスタント評価を記録。コード変更なし、708テスト、strict配置警告0。全2頁をLibreOfficeで目視しました。意味上のMECE・PowerPointネイティブ表示・API実試験は未検証。PDF出典は文字として表示し、クリック用注釈はありません。
+
+## IEA電力接続とAI基盤調達（2026-10-19）
+
+`iea-power-procurement-2026-10-19.json` は親アシスタント提供の完全な入力を保持した4頁。複数条件の合流、同じ3観点の詳説、確認順序、出典範囲と限界を示す。事実・助手の示唆を可視で分け、34政策地域/約90%は調査範囲であり効果値ではない。IEA固有の調達フレームワークではない。
+
+```sh
+npm run sdg -- generate examples/research/iea-power-procurement-2026-10-19.json --no-title-slide --ai-mode off --report --strict --theme portable --out-dir examples/research/generated
+npm run preview -- examples/research/generated/iea-power-procurement-2026-10-19.pptx .preview/iea-power-procurement-2026-10-19
+```
+
+親の3頁初稿で合流入力の文字高超過を検出し、概略と詳細を分けて4頁化したとの報告を `review-iea-power-procurement-2026-10-19.json` に記録。初稿は未受領で、そのoverflow自体は当方で未再現。最終4頁はCodexがstrict再生成・全頁目視し、独立アシスタントも全頁確認。警告0・fallbackなし・切れ/重なりの指摘なし。レビューは助手の自己評価でユーザー承認ではない。原典の再調査は行っていない。PowerPointネイティブ表示と意味上のMECE完全性は未確認。Library保存は未完了。
+
+入力ハッシュ・生成コードhead・再現条件は `iea-power-procurement-manifest-2026-10-19.json`。図を除くと失われる意味は1頁の複数条件の合流と3頁の確認順序。フッターの発行元/日付重複、最終頁URLの改行は軽微な改善候補として残す。使用上限に伴い、この保存点で停止し親レビュー待ちとする。

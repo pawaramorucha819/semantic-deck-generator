@@ -1,0 +1,109 @@
+{
+  "title": "工程・時系列の明示と根拠保持（人工回帰例）",
+  "slides": [
+    {
+      "id": "authored-process",
+      "keyMessage": "一度だけ進む確認工程",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "label": "受付",
+            "description": "対象を登録"
+          },
+          {
+            "label": "確認",
+            "description": "担当者が確認"
+          },
+          {
+            "label": "承認",
+            "description": "責任者が判断"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "受付から承認まで",
+        "criterion": "時間順の工程",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "m",
+          "type": "metric",
+          "statement": "回帰テスト用の仮の件数。実測ではない。",
+          "data": {
+            "value": 42,
+            "unit": "件",
+            "label": "仮の件数"
+          }
+        },
+        {
+          "id": "t",
+          "type": "text",
+          "statement": "回帰テスト用の仮の根拠。実在する調査結果ではない。",
+          "data": {
+            "label": "仮の根拠"
+          }
+        }
+      ]
+    },
+    {
+      "id": "authored-timeline",
+      "keyMessage": "一度だけ進む確認工程",
+      "supportingMessage": "関係の検証用サンプル。実在サービスの仕様・効果を示すものではありません。",
+      "slideRole": "analysis",
+      "logicalRelation": "timeline",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "label": "受付",
+            "description": "対象を登録"
+          },
+          {
+            "label": "確認",
+            "description": "担当者が確認"
+          },
+          {
+            "label": "承認",
+            "description": "責任者が判断"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "受付から承認まで",
+        "criterion": "時間順の工程",
+        "rationale": "各要素と関係を明示し、描画で方向・順序・所属が維持されるか検証する。",
+        "unresolvedQuestions": [
+          "意味上の漏れ・重複は、対象業務を知る人が確認する。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "m",
+          "type": "metric",
+          "statement": "回帰テスト用の仮の件数。実測ではない。",
+          "data": {
+            "value": 42,
+            "unit": "件",
+            "label": "仮の件数"
+          }
+        },
+        {
+          "id": "t",
+          "type": "text",
+          "statement": "回帰テスト用の仮の根拠。実在する調査結果ではない。",
+          "data": {
+            "label": "仮の根拠"
+          }
+        }
+      ]
+    }
+  ]
+}

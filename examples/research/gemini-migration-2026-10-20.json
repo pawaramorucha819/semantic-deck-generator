@@ -1,0 +1,136 @@
+{
+  "title": "Gemini Preview停止期限と移行受入",
+  "slides": [
+    {
+      "id": "deadline-targets",
+      "keyMessage": "旧Previewの停止期限が近い。利用IDごとに移行先を確認",
+      "supportingMessage": "対象：Gemini API。既報の未登録期限を10/20に把握。新発表ではない。Previewは試験提供版。",
+      "slideRole": "analysis",
+      "logicalRelation": "claim_evidence",
+      "content": {
+        "kind": "points",
+        "items": [
+          {
+            "id": "research",
+            "label": "調査Agent：10/23停止予定",
+            "description": "対象：deep-research-pro-preview-12-2025\n後継：deep-research-preview-04-2026\nまたは deep-research-max-preview-04-2026\n10/8発表。interactions.create の agent を変更。\n通常版は速度、maxは調査の網羅性を重視。",
+            "evidenceRefs": [
+              "research-fact"
+            ]
+          },
+          {
+            "id": "video",
+            "label": "動画モデル：最早10/22停止",
+            "description": "対象：veo-3.1-lite-generate-preview\nveo-3.1-generate-preview\nveo-3.1-fast-generate-preview\ngemini-omni-flash-preview\n推奨後継：gemini-omni-1.1-flash\n「最早」は確定した停止時刻を意味しない。",
+            "evidenceRefs": [
+              "video-fact"
+            ]
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "Google公式一覧にある今回確認した停止対象5 ID",
+        "criterion": "用途別（調査Agent／動画モデル）",
+        "rationale": "用途を分け、各対象ID・期限・後継を同じ順で比較する。全Geminiの停止予定を網羅しない。",
+        "exclusions": [
+          "他モデルの停止予定",
+          "個別アプリの移行互換性"
+        ],
+        "unresolvedQuestions": [
+          "本人の利用有無、実停止時刻とタイムゾーン、移行互換性は未確認。"
+        ]
+      },
+      "evidence": [
+        {
+          "id": "research-fact",
+          "type": "text",
+          "statement": "Googleは10月8日の変更履歴で旧Deep Research Agentを10月23日に停止し、interactions.createのagentを後継へ更新するよう案内。",
+          "sourceIds": [
+            "change"
+          ]
+        },
+        {
+          "id": "video-fact",
+          "type": "text",
+          "statement": "停止一覧はVeo 3.1の3 Preview IDとOmni Flash Previewに2026年10月22日、推奨後継にgemini-omni-1.1-flashを記載。Previewの日付は最早停止日。時刻・TZは未確認。",
+          "sourceIds": [
+            "deprecations"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "id": "change",
+          "title": "Google公式変更履歴 https://ai.google.dev/gemini-api/docs/changelog",
+          "url": "https://ai.google.dev/gemini-api/docs/changelog",
+          "publisher": "Google",
+          "date": "2026-10-08",
+          "accessedAt": "2026-10-20",
+          "locator": "October 8: Deep Research Agent deprecation"
+        },
+        {
+          "id": "deprecations",
+          "title": "Google公式停止一覧 https://ai.google.dev/gemini-api/docs/deprecations",
+          "url": "https://ai.google.dev/gemini-api/docs/deprecations",
+          "publisher": "Google",
+          "accessedAt": "2026-10-20",
+          "locator": "Veo / Gemini Omni Flash / preview shutdown policy"
+        }
+      ]
+    },
+    {
+      "id": "migration-acceptance",
+      "keyMessage": "ID置換だけで移行完了としない。成果物と受入条件を残す",
+      "supportingMessage": "助手の提案・未実施。矢印は確認の順序。本人の利用有無、互換性、停止時刻・TZは未確認。",
+      "slideRole": "recommendation",
+      "logicalRelation": "process",
+      "content": {
+        "kind": "sequence",
+        "steps": [
+          {
+            "id": "inventory",
+            "label": "1 棚卸：対象を確定",
+            "description": "設定・コード・定期処理を検索。\n成果物：利用箇所／担当／後継の一覧。\n受入：対象5 IDの使用有無が判明。"
+          },
+          {
+            "id": "validate",
+            "label": "2 検証：差分を記録",
+            "description": "代表入力で旧版と後継を比較。\n成果物：品質・形式・費用・遅延の差分。\n受入：業務側が定めた基準に適合。"
+          },
+          {
+            "id": "accept",
+            "label": "3 受入：運用を確認",
+            "description": "切替後の実処理と監視を確認。\n成果物：判定記録と障害時の代替手順。\n受入：旧ID依存が残らず復旧策がある。"
+          }
+        ]
+      },
+      "decomposition": {
+        "scope": "対象IDを使う場合の移行判断と受入",
+        "criterion": "棚卸から運用受入までの確認段階",
+        "rationale": "前段の成果物が次段の判断入力になる順序。Google指定手順や実施済み結果ではない。",
+        "exclusions": [
+          "自動移行",
+          "API実行",
+          "本番変更",
+          "全異常系の網羅"
+        ],
+        "unresolvedQuestions": [
+          "アプリ固有の合格閾値と代替先は未決定。",
+          "停止後に旧IDへ戻せるとは限らない。"
+        ]
+      },
+      "evidence": [],
+      "sources": [
+        {
+          "id": "change",
+          "title": "移行案の起点 https://ai.google.dev/gemini-api/docs/changelog",
+          "url": "https://ai.google.dev/gemini-api/docs/changelog",
+          "publisher": "Google",
+          "date": "2026-10-08",
+          "accessedAt": "2026-10-20",
+          "locator": "October 8: Deep Research Agent deprecation"
+        }
+      ]
+    }
+  ]
+}

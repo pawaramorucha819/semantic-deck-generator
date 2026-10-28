@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "日次リサーチ資料の人手レビュー記録。生成入力ではなく、CLIへの自動反映は行わない。",
+  "deckPath": "gemini-migration-2026-10-20.json",
+  "reviewedAt": "2026-10-20T10:56:10Z",
+  "reviewer": "assistant (not user approval)",
+  "artifacts": {
+    "visualPlanPath": "generated/gemini-migration-2026-10-20.visual-plan.json",
+    "renderReportPath": "generated/gemini-migration-2026-10-20.render-report.json",
+    "structureReviewPath": "generated/gemini-migration-2026-10-20.structure-review.json",
+    "renderedPagesPath": "preview/"
+  },
+  "machineChecks": {
+    "schemaAndReferences": "pass",
+    "duplicateLabels": "pass",
+    "relationshipEdges": "pass",
+    "layoutReport": "pass-zero-warnings",
+    "fallbackSelection": "none",
+    "findings": [
+      "mainの既存three-reasons/processを使用。新レイアウト追加なし。"
+    ]
+  },
+  "humanReview": {
+    "sourceFactsAndAssumptions": "assistant-reviewed",
+    "relationshipFaithfulness": "assistant-reviewed",
+    "semanticMECE": "unverified",
+    "semanticMECERationale": "対象5 IDは用途2区分。業界全体や移行全工程の意味的網羅性は保証しない。",
+    "scopeExclusionsAndUnknowns": "assistant-reviewed",
+    "projectedReadability": "LibreOffice/Poppler全2頁画像を確認。PowerPoint未確認。",
+    "notesAndSourceLinks": "一次URLは紙面およびノートに存在。",
+    "reviewPrompts": [
+      "何がいつ停止しどのIDへ移行するか読めるか",
+      "ID変更以外の完了条件を説明できるか",
+      "10/20新発表ではなく既報と分かるか",
+      "提案・未実施と事実が分かれるか"
+    ]
+  },
+  "slideFeedback": [
+    {
+      "slideId": "deadline-targets",
+      "status": "assistant-reviewed",
+      "finding": "2用途で対象・期限・後継を同順に比較。5 IDと一次URLが欠落せず読める。関係は並列で因果なし。 親助手の独立目視で対象提供面の明記を提案。Gemini API限定を補足文へ追加し再生成・目視、はみ出しなし。",
+      "requestedChange": null,
+      "reasonOrSource": "Google changelog / deprecations 2026-10-20確認",
+      "verifiedAfterChange": true
+    },
+    {
+      "slideId": "migration-acceptance",
+      "status": "assistant-reviewed",
+      "finding": "順序矢印と直下の成果物・受入条件が対応。計画だけでは測定結果を得られないため、代表入力の比較へ文言修正。1文字だけの改行も軽減。",
+      "requestedChange": "代表入力で旧版と後継を比較する表現へ修正、棚卸の文章短縮",
+      "reasonOrSource": "助手自身のレビュー。ユーザーFBではない。",
+      "verifiedAfterChange": true
+    }
+  ],
+  "decision": "assistant-reviewed-awaiting-user",
+  "nextRevisionGoal": "ユーザー実物レビューで対象・期限・後継・受入条件を補足なしで追えるか確認",
+  "revisionEffortMinutes": null,
+  "revisionEffortNote": "実測した場合のみ記入。未計測を0として扱わない。",
+  "explicitUserFeedback": null,
+  "limitations": [
+    "ユーザー承認なし",
+    "API試験・本番変更なし",
+    "PowerPointネイティブ表示未確認",
+    "意味的MECE未保証",
+    "停止時刻/TZと本人利用有無は未確認"
+  ],
+  "independentAssistantReview": "親助手が両ページを目視確認。対象提供面の追記後は作成助手が再確認。ユーザー承認ではない。"
+}
